@@ -17,6 +17,7 @@ function App() {
   const [compileError, setCompileError] = useState<string | null>(null);
   const [isCompiling, setIsCompiling] = useState(false);
   const [pageCount, setPageCount] = useState(0);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Preview tab state
   const [activeTab, setActiveTab] = useState<PreviewTab>('latex');
@@ -72,6 +73,7 @@ function App() {
       setCompileError(null);
       setPageCount(result.page_count);
       setActiveTab('pdf');
+      setHasUnsavedChanges(false);
     } else {
       setCompileError(result.error || 'Unknown error');
       setPdfBase64(null);
@@ -142,6 +144,7 @@ function App() {
       // Clear compiled PDF since content changed
       setPdfBase64(null);
       setPageCount(0);
+      setHasUnsavedChanges(true);
       return true;
     }
     return false;
@@ -291,6 +294,7 @@ function App() {
                   onChange={setTexContent}
                   onCompile={handleCompile}
                   isCompiling={isCompiling}
+                  hasUnsavedChanges={hasUnsavedChanges}
                 />
               ) : (
                 <PdfPreview

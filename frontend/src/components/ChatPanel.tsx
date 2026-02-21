@@ -14,8 +14,21 @@ interface ChatPanelProps {
 export function ChatPanel({ messages, onSendMessage, onApplyEdit, isLoading, isThinking, streamingContent }: ChatPanelProps) {
   const [input, setInput] = useState('');
   const [appliedEdits, setAppliedEdits] = useState<Set<string>>(new Set());
+  const [expandedEdits, setExpandedEdits] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const toggleEditExpanded = (editKey: string) => {
+    setExpandedEdits(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(editKey)) {
+        newSet.delete(editKey);
+      } else {
+        newSet.add(editKey);
+      }
+      return newSet;
+    });
+  };
 
   const adjustTextareaHeight = useCallback(() => {
     const textarea = textareaRef.current;
@@ -102,41 +115,61 @@ export function ChatPanel({ messages, onSendMessage, onApplyEdit, isLoading, isT
             {edits.map((edit, editIndex) => {
               const editKey = `${messageIndex}-${editIndex}`;
               const isApplied = appliedEdits.has(editKey);
+              const isExpanded = expandedEdits.has(editKey);
+              const needsTruncation = edit.find.length > 80 || edit.replace.length > 120;
 
               return (
                 <div key={editIndex} className={`edit-block ${isApplied ? 'applied' : ''}`}>
                   <div className="edit-diff">
                     <div className="edit-remove">
                       <span className="diff-label">Find:</span>
-                      <code>{edit.find.slice(0, 100)}{edit.find.length > 100 ? '...' : ''}</code>
+                      <code>
+                        {isExpanded || !needsTruncation
+                          ? edit.find
+                          : `${edit.find.slice(0, 80)}${edit.find.length > 80 ? '...' : ''}`}
+                      </code>
                     </div>
                     <div className="edit-add">
                       <span className="diff-label">Replace:</span>
-                      <code>{edit.replace.slice(0, 150)}{edit.replace.length > 150 ? '...' : ''}</code>
+                      <code>
+                        {isExpanded || !needsTruncation
+                          ? edit.replace
+                          : `${edit.replace.slice(0, 120)}${edit.replace.length > 120 ? '...' : ''}`}
+                      </code>
                     </div>
                   </div>
-                  <button
-                    className={`apply-edit-btn ${isApplied ? 'applied' : ''}`}
-                    onClick={() => handleApplyEdit(edit, editKey)}
-                    disabled={isApplied}
-                  >
-                    {isApplied ? (
-                      <>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                        Applied
-                      </>
-                    ) : (
-                      <>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                        </svg>
-                        Apply to CV
-                      </>
+                  <div className="edit-actions">
+                    {needsTruncation && (
+                      <button
+                        className="expand-edit-btn"
+                        onClick={() => toggleEditExpanded(editKey)}
+                      >
+                        {isExpanded ? 'Show less' : 'Show full'}
+                      </button>
                     )}
-                  </button>
+                    <button
+                      className={`apply-edit-btn ${isApplied ? 'applied' : ''}`}
+                      onClick={() => handleApplyEdit(edit, editKey)}
+                      disabled={isApplied}
+                    >
+                      {isApplied ? (
+                        <>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                          Applied
+                        </>
+                      ) : (
+                        <>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                          </svg>
+                          Apply to CV
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               );
             })}
