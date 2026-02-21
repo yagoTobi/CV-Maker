@@ -833,6 +833,43 @@ section h2 {
   opacity: 0.5;
 }
 
+.pdf-placeholder.has-changes .placeholder-icon {
+  opacity: 1;
+  color: var(--warning);
+}
+
+.placeholder-hint {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.pdf-placeholder.has-changes {
+  background: rgba(234, 179, 8, 0.05);
+  border: 1px dashed var(--warning);
+  border-radius: var(--radius);
+  margin: 1rem;
+}
+
+.pdf-placeholder .compile-btn.pulse {
+  background: var(--warning);
+  animation: btn-pulse 2s ease-in-out infinite;
+}
+
+.pdf-placeholder .compile-btn.pulse:hover {
+  background: #ca9a07;
+}
+
+@keyframes btn-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(234, 179, 8, 0);
+  }
+}
+
 .pdf-error {
   color: var(--accent);
 }

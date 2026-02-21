@@ -329,6 +329,7 @@ function App() {
                   error={compileError}
                   isCompiling={isCompiling}
                   onCompile={handleCompile}
+                  hasUnsavedChanges={hasUnsavedChanges}
                 />
               )}
             </div>
