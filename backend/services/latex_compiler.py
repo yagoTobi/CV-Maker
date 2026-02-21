@@ -85,15 +85,32 @@ class LaTeXCompiler:
     def _get_page_count(self, pdf_bytes: bytes) -> int:
         """Extract page count from PDF bytes."""
         try:
-            # Method 1: Look for /Count in the page tree
-            pdf_text = pdf_bytes.decode('latin-1')
-            count_match = re.search(r'/Type\s*/Pages[^>]*/Count\s*(\d+)', pdf_text)
-            if count_match:
-                return int(count_match.group(1))
+            # Try PyPDF2 first (most reliable)
+            try:
+                import io
+                from PyPDF2 import PdfReader
+                reader = PdfReader(io.BytesIO(pdf_bytes))
+                return len(reader.pages)
+            except ImportError:
+                pass
 
-            # Method 2: Count /Type /Page occurrences (less reliable but fallback)
-            page_count = len(re.findall(r'/Type\s*/Page[^s]', pdf_text))
-            return max(1, page_count)
+            # Fallback: Parse PDF structure
+            pdf_text = pdf_bytes.decode('latin-1')
+
+            # Look for the root Pages object with /Count
+            # Pattern: /Type /Pages ... /Count N
+            # We need to find the Pages object (not Page) and get its Count
+            pages_match = re.search(r'/Type\s*/Pages\s*[^>]*?/Count\s*(\d+)', pdf_text, re.DOTALL)
+            if pages_match:
+                return int(pages_match.group(1))
+
+            # Alternative: count individual /Type /Page entries (not /Pages)
+            # Use word boundary to avoid matching /Pages
+            page_count = len(re.findall(r'/Type\s*/Page\s*[^s]', pdf_text))
+            if page_count > 0:
+                return page_count
+
+            return 1
         except Exception:
             return 1  # Default to 1 if we can't determine
 

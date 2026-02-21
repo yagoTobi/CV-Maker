@@ -60,10 +60,62 @@ export function parseEditsFromResponse(content: string): CVEdit[] {
   return edits;
 }
 
+// Normalize whitespace for comparison (but preserve for replacement)
+function normalizeWhitespace(str: string): string {
+  return str.replace(/\s+/g, ' ').trim();
+}
+
+// Find the actual text in CV that matches the normalized version
+function findActualMatch(cvContent: string, searchText: string): string | null {
+  const normalizedSearch = normalizeWhitespace(searchText);
+
+  // Try exact match first
+  if (cvContent.includes(searchText)) {
+    return searchText;
+  }
+
+  // Try to find a substring that normalizes to the same thing
+  // Split CV into chunks and try to find matching section
+  const lines = cvContent.split('\n');
+
+  for (let i = 0; i < lines.length; i++) {
+    // Try increasingly larger chunks starting from each line
+    for (let j = i; j < Math.min(i + 10, lines.length); j++) {
+      const chunk = lines.slice(i, j + 1).join('\n');
+      if (normalizeWhitespace(chunk) === normalizedSearch) {
+        return chunk;
+      }
+    }
+  }
+
+  // Try single line matches
+  for (const line of lines) {
+    if (normalizeWhitespace(line) === normalizedSearch) {
+      return line;
+    }
+  }
+
+  return null;
+}
+
 // Apply edits to CV content
 export function applyEdit(cvContent: string, edit: CVEdit): string | null {
+  // Try exact match first
   if (cvContent.includes(edit.find)) {
     return cvContent.replace(edit.find, edit.replace);
   }
+
+  // Try to find with normalized whitespace
+  const actualMatch = findActualMatch(cvContent, edit.find);
+  if (actualMatch) {
+    return cvContent.replace(actualMatch, edit.replace);
+  }
+
+  // Try trimmed version
+  const trimmedFind = edit.find.trim();
+  if (cvContent.includes(trimmedFind)) {
+    return cvContent.replace(trimmedFind, edit.replace);
+  }
+
   return null; // Edit couldn't be applied
 }

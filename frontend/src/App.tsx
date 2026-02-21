@@ -34,7 +34,11 @@ function App() {
   const [streamingContent, setStreamingContent] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
+  const [hasAnalyzed, setHasAnalyzed] = useState(false);
   const streamingContentRef = useRef('');
+
+  // Edit history for undo
+  const [editHistory, setEditHistory] = useState<Map<string, string>>(new Map());
 
   // Match analysis state
   const [matchAnalysis, setMatchAnalysis] = useState<MatchAnalysisType | null>(null);
@@ -120,6 +124,7 @@ function App() {
         }
         setIsAnalyzing(false);
         setIsThinking(false);
+        setHasAnalyzed(true);
       }
     );
   }, [texContent, jobDescription, companyName, api]);
@@ -137,9 +142,11 @@ function App() {
   }, [texContent, jobDescription, companyName, api]);
 
   // Apply edit from AI suggestion
-  const handleApplyEdit = useCallback((edit: CVEdit): boolean => {
+  const handleApplyEdit = useCallback((edit: CVEdit, editKey: string): boolean => {
     const newContent = applyEdit(texContent, edit);
     if (newContent) {
+      // Save current content for undo
+      setEditHistory(prev => new Map(prev).set(editKey, texContent));
       setTexContent(newContent);
       // Clear compiled PDF since content changed
       setPdfBase64(null);
@@ -149,6 +156,24 @@ function App() {
     }
     return false;
   }, [texContent]);
+
+  // Undo an edit
+  const handleUndoEdit = useCallback((editKey: string): boolean => {
+    const previousContent = editHistory.get(editKey);
+    if (previousContent) {
+      setTexContent(previousContent);
+      setEditHistory(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(editKey);
+        return newMap;
+      });
+      setPdfBase64(null);
+      setPageCount(0);
+      setHasUnsavedChanges(true);
+      return true;
+    }
+    return false;
+  }, [editHistory]);
 
   // Send chat message
   const handleSendMessage = useCallback(async (message: string) => {
@@ -203,6 +228,7 @@ function App() {
               onJobDescriptionChange={setJobDescription}
               onAnalyze={handleAnalyze}
               isAnalyzing={isAnalyzing}
+              hasAnalyzed={hasAnalyzed}
             />
           </section>
 
@@ -237,6 +263,7 @@ function App() {
                   messages={messages}
                   onSendMessage={handleSendMessage}
                   onApplyEdit={handleApplyEdit}
+                  onUndoEdit={handleUndoEdit}
                   isLoading={isAnalyzing}
                   isThinking={isThinking}
                   streamingContent={streamingContent}
