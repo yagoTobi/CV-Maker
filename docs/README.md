@@ -15,6 +15,7 @@ CV Maker is a web application that combines a LaTeX-based CV editor with AI assi
 - **Match Analysis**: Quantitative analysis showing how well your CV matches a job description
 - **Edit Suggestions**: AI-generated inline edits that can be applied with one click
 - **Undo Support**: Ability to undo AI-suggested edits
+- **Clean UI**: Zed-inspired light theme with professional, minimal aesthetics
 
 ## Tech Stack
 
@@ -91,7 +92,7 @@ CV-Maker/
 
 ## Documentation
 
-- [Architecture](./ARCHITECTURE.md) - Technical architecture details
+- [Architecture](./ARCHITECTURE.md) - Technical architecture and design system details
 - [Development Guide](./DEVELOPMENT.md) - Setup and development guidelines
 - [Changelog](./CHANGELOG.md) - Version history and changes
 - [Roadmap](./ROADMAP.md) - Future plans and TODO items

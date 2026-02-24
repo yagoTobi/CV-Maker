@@ -17,11 +17,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Bundled fonts (Lato, Raleway) for Deedy Resume template
 - Bundled LaTeX packages (tabu.sty, varwidth.sty) for McDowell CV template
 - Improved error logging with context lines for LaTeX compilation failures
+- Design system documentation in ARCHITECTURE.md
 
 ### Changed
 - Reorganized CV templates into `cv-templates/` folder
 - Updated LaTeX compiler to automatically select correct engine per template
 - Compiler now copies font directories for templates that require them
+- **UI Redesign**: Replaced dark theme with Zed-inspired light aesthetic
+  - New color palette: soft gray-blue backgrounds (#F8FAFC), white cards, blue accent (#3B82F6)
+  - Typography: IBM Plex Sans for UI, IBM Plex Mono for code
+  - Template selector: subtle grid pattern background, clean card design
+  - Editor: professional, minimal styling with consistent border treatments
 
 ### Fixed
 - React hooks violation causing blank screen after template selection

@@ -146,6 +146,48 @@ backend/
 └── main.py                # FastAPI app entry
 ```
 
+## Design System
+
+CV Maker uses a Zed-inspired light theme with a clean, professional aesthetic.
+
+### Color Palette
+
+| Variable | Value | Usage |
+|----------|-------|-------|
+| `--bg-primary` | `#F8FAFC` | Main background |
+| `--bg-secondary` | `#FFFFFF` | Cards, panels |
+| `--bg-tertiary` | `#F1F5F9` | Section backgrounds |
+| `--accent` | `#3B82F6` | Primary actions, links |
+| `--accent-hover` | `#2563EB` | Hover states |
+| `--accent-light` | `#DBEAFE` | Accent backgrounds |
+| `--text-primary` | `#1E293B` | Main text |
+| `--text-secondary` | `#64748B` | Secondary text |
+| `--text-muted` | `#94A3B8` | Placeholder, hints |
+| `--border-color` | `#E2E8F0` | Standard borders |
+| `--success` | `#10B981` | Success states |
+| `--warning` | `#F59E0B` | Warning states |
+| `--error` | `#EF4444` | Error states |
+
+### Typography
+
+- **Primary font**: IBM Plex Sans (400, 500, 600 weights)
+- **Monospace font**: IBM Plex Mono (code blocks, LaTeX editor)
+
+### Design Principles
+
+1. **Light and airy** - Soft gray-blue backgrounds, white cards
+2. **Subtle borders** - 1px borders with muted colors, no harsh outlines
+3. **Minimal shadows** - Light, subtle shadows for depth
+4. **Blue accent** - Consistent use of `#3B82F6` for interactive elements
+5. **Professional tone** - Clean, formal aesthetic suitable for CV editing
+
+### Component Styling
+
+- **Cards**: White background, 1px border, 8px border-radius, subtle shadow
+- **Buttons**: Blue accent for primary, gray for secondary
+- **Inputs**: White background, blue focus ring
+- **Tabs**: Pill-style with blue active state
+
 ## Security Considerations
 
 - CORS configured for local development only
