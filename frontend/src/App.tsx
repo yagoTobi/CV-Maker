@@ -1,265 +1,111 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { LatexEditor, JobInput, ChatPanel, PdfPreview, MatchAnalysis, TemplateSelector } from './components';
-import type { Template } from './components';
-import { useApi } from './hooks/useApi';
-import type { Message, UserProfile, MatchAnalysis as MatchAnalysisType, CVEdit } from './types';
-import { applyEdit } from './types';
-import './App.css';
+import { useTemplates, useCompiler, useChat } from './hooks';
+import { api } from './services/api';
+import type { UserProfile } from './types';
+import styles from './App.module.css';
 
 type PreviewTab = 'latex' | 'pdf';
 type AiTab = 'chat' | 'match';
 type AppScreen = 'template-select' | 'editor';
 
 function App() {
-  // App screen state
+  // Screen navigation
   const [currentScreen, setCurrentScreen] = useState<AppScreen>('template-select');
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
 
-  // LaTeX content
-  const [texContent, setTexContent] = useState('');
-
-  // PDF state
-  const [pdfBase64, setPdfBase64] = useState<string | null>(null);
-  const [compileError, setCompileError] = useState<string | null>(null);
-  const [isCompiling, setIsCompiling] = useState(false);
-  const [pageCount, setPageCount] = useState(0);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-
-  // Preview tab state
+  // UI tabs
   const [activeTab, setActiveTab] = useState<PreviewTab>('latex');
-
-  // AI section tab state
   const [aiTab, setAiTab] = useState<AiTab>('match');
 
   // Job input state
   const [companyName, setCompanyName] = useState('');
   const [jobDescription, setJobDescription] = useState('');
 
-  // Chat state
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [streamingContent, setStreamingContent] = useState('');
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isThinking, setIsThinking] = useState(false);
-  const [hasAnalyzed, setHasAnalyzed] = useState(false);
-  const streamingContentRef = useRef('');
-
-  // Edit history for undo
-  const [editHistory, setEditHistory] = useState<Map<string, string>>(new Map());
-
-  // Match analysis state
-  const [matchAnalysis, setMatchAnalysis] = useState<MatchAnalysisType | null>(null);
-  const [isLoadingMatch, setIsLoadingMatch] = useState(false);
-
   // User profile
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
-  const api = useApi();
+  // Hooks
+  const templates = useTemplates();
+  const compiler = useCompiler();
 
-  // Load templates list and user data on mount
+  // Memoize the options object to prevent recreation on each render
+  const chatOptions = useMemo(() => ({
+    onContentChanged: (newContent: string) => {
+      templates.updateContent(newContent);
+      compiler.clearPdf();
+    },
+  }), [templates.updateContent, compiler.clearPdf]);
+
+  // Chat hook
+  const chat = useChat(
+    templates.content,
+    jobDescription,
+    companyName,
+    userProfile,
+    chatOptions
+  );
+
+  // Load user profile on mount
   useEffect(() => {
-    const init = async () => {
-      setIsLoadingTemplates(true);
-      const [templatesList, profile] = await Promise.all([
-        api.fetchTemplates(),
-        api.loadUserData(),
-      ]);
-      setTemplates(templatesList);
-      setIsLoadingTemplates(false);
-      if (profile) {
+    let mounted = true;
+
+    api.loadUserData().then((profile) => {
+      if (mounted && profile) {
         setUserProfile(profile);
       }
+    });
+
+    return () => {
+      mounted = false;
     };
-    init();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Handle template selection
   const handleTemplateSelect = useCallback(async (templateId: string) => {
-    setSelectedTemplateId(templateId);
-    const { content } = await api.loadTemplateContent(templateId);
-    if (content) {
-      setTexContent(content);
+    const success = await templates.selectTemplate(templateId);
+    if (success) {
       setCurrentScreen('editor');
     }
-  }, [api]);
+  }, [templates.selectTemplate]);
 
   // Compile LaTeX to PDF
   const handleCompile = useCallback(async () => {
-    setIsCompiling(true);
-    setCompileError(null);
-
-    const result = await api.compileLatex(texContent, selectedTemplateId || undefined);
-
-    if (result.success && result.pdf_base64) {
-      setPdfBase64(result.pdf_base64);
-      setCompileError(null);
-      setPageCount(result.page_count);
+    const success = await compiler.compile(templates.content, templates.selectedId || undefined);
+    if (success) {
       setActiveTab('pdf');
-      setHasUnsavedChanges(false);
-    } else {
-      setCompileError(result.error || 'Unknown error');
-      setPdfBase64(null);
-      setPageCount(0);
     }
+  }, [compiler.compile, templates.content, templates.selectedId]);
 
-    setIsCompiling(false);
-  }, [texContent, selectedTemplateId, api]);
-
-  // Analyze job description (chat)
+  // Analyze job description
   const handleAnalyze = useCallback(async () => {
-    if (!jobDescription.trim()) return;
-
-    // Switch to chat tab and start analysis
     setAiTab('chat');
-    setIsAnalyzing(true);
-    setIsThinking(true);
-    setStreamingContent('');
-    setMessages([]);
-    streamingContentRef.current = '';
-
-    // Also trigger match analysis in background
-    api.getMatchAnalysis(texContent, jobDescription, companyName).then((result) => {
-      if (result) {
-        setMatchAnalysis(result);
-      }
-    });
-
-    await api.analyzeJob(
-      texContent,
-      jobDescription,
-      companyName,
-      (chunk) => {
-        setIsThinking(false);
-        streamingContentRef.current += chunk;
-        setStreamingContent(streamingContentRef.current);
-      },
-      () => {
-        const finalContent = streamingContentRef.current;
-        streamingContentRef.current = '';
-        setStreamingContent('');
-        if (finalContent) {
-          setMessages([{ role: 'assistant', content: finalContent }]);
-        }
-        setIsAnalyzing(false);
-        setIsThinking(false);
-        setHasAnalyzed(true);
-      }
-    );
-  }, [texContent, jobDescription, companyName, api]);
-
-  // Get match analysis
-  const handleMatchAnalysis = useCallback(async () => {
-    if (!jobDescription.trim()) return;
-
-    setIsLoadingMatch(true);
-    const result = await api.getMatchAnalysis(texContent, jobDescription, companyName);
-    if (result) {
-      setMatchAnalysis(result);
-    }
-    setIsLoadingMatch(false);
-  }, [texContent, jobDescription, companyName, api]);
-
-  // Apply edit from AI suggestion
-  const handleApplyEdit = useCallback((edit: CVEdit, editKey: string): boolean => {
-    const newContent = applyEdit(texContent, edit);
-    if (newContent) {
-      // Save current content for undo
-      setEditHistory(prev => new Map(prev).set(editKey, texContent));
-      setTexContent(newContent);
-      // Clear compiled PDF since content changed
-      setPdfBase64(null);
-      setPageCount(0);
-      setHasUnsavedChanges(true);
-      return true;
-    }
-    return false;
-  }, [texContent]);
-
-  // Undo an edit
-  const handleUndoEdit = useCallback((editKey: string): boolean => {
-    const previousContent = editHistory.get(editKey);
-    if (previousContent) {
-      setTexContent(previousContent);
-      setEditHistory(prev => {
-        const newMap = new Map(prev);
-        newMap.delete(editKey);
-        return newMap;
-      });
-      setPdfBase64(null);
-      setPageCount(0);
-      setHasUnsavedChanges(true);
-      return true;
-    }
-    return false;
-  }, [editHistory]);
-
-  // Send chat message
-  const handleSendMessage = useCallback(async (message: string) => {
-    const newMessages: Message[] = [...messages, { role: 'user', content: message }];
-    setMessages(newMessages);
-    setStreamingContent('');
-    setIsAnalyzing(true);
-    setIsThinking(true);
-    streamingContentRef.current = '';
-
-    await api.streamChat(
-      {
-        messages: newMessages,
-        cv_content: texContent,
-        job_description: jobDescription,
-        company_name: companyName,
-        user_profile: userProfile || undefined,
-        stream: true,
-      },
-      (chunk) => {
-        setIsThinking(false);
-        streamingContentRef.current += chunk;
-        setStreamingContent(streamingContentRef.current);
-      },
-      () => {
-        const finalContent = streamingContentRef.current;
-        streamingContentRef.current = '';
-        setStreamingContent('');
-        if (finalContent) {
-          setMessages((prev) => [...prev, { role: 'assistant', content: finalContent }]);
-        }
-        setIsAnalyzing(false);
-        setIsThinking(false);
-      }
-    );
-  }, [messages, texContent, jobDescription, companyName, userProfile, api]);
+    await chat.analyzeJob();
+  }, [chat.analyzeJob]);
 
   // Handle going back to template selection
   const handleChangeTemplate = useCallback(() => {
     setCurrentScreen('template-select');
-    setTexContent('');
-    setPdfBase64(null);
-    setPageCount(0);
-    setCompileError(null);
-    setHasUnsavedChanges(false);
-    setMessages([]);
-    setMatchAnalysis(null);
-    setHasAnalyzed(false);
-  }, []);
+    templates.reset();
+    compiler.reset();
+    chat.reset();
+  }, [templates.reset, compiler.reset, chat.reset]);
 
   // Template selection screen
   if (currentScreen === 'template-select') {
     return (
       <TemplateSelector
-        templates={templates}
+        templates={templates.templates}
         onSelect={handleTemplateSelect}
-        isLoading={isLoadingTemplates}
+        isLoading={templates.isLoading}
       />
     );
   }
 
   // Editor screen
   return (
-    <div className="app">
-      <header className="app-header">
-        <button className="change-template-btn" onClick={handleChangeTemplate}>
+    <div className={styles.app}>
+      <header className={styles.header}>
+        <button className={styles.changeTemplateBtn} onClick={handleChangeTemplate}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="m15 18-6-6 6-6"/>
           </svg>
@@ -268,9 +114,9 @@ function App() {
         <h1>Your CV Editor</h1>
       </header>
 
-      <main className="app-main">
-        <div className="left-panel">
-          <section className="job-posting-section">
+      <main className={styles.main}>
+        <div className={styles.leftPanel}>
+          <section className={styles.jobPostingSection}>
             <h2>Job Posting</h2>
             <JobInput
               companyName={companyName}
@@ -278,22 +124,22 @@ function App() {
               onCompanyNameChange={setCompanyName}
               onJobDescriptionChange={setJobDescription}
               onAnalyze={handleAnalyze}
-              isAnalyzing={isAnalyzing}
-              hasAnalyzed={hasAnalyzed}
+              isAnalyzing={chat.isAnalyzing}
+              hasAnalyzed={chat.hasAnalyzed}
             />
           </section>
 
-          <section className="ai-section">
-            <div className="ai-section-header">
-              <div className="ai-tabs">
+          <section className={styles.aiSection}>
+            <div className={styles.aiSectionHeader}>
+              <div className={styles.aiTabs}>
                 <button
-                  className={`ai-tab-btn ${aiTab === 'match' ? 'active' : ''}`}
+                  className={`${styles.aiTabBtn} ${aiTab === 'match' ? styles.active : ''}`}
                   onClick={() => setAiTab('match')}
                 >
                   Match Analysis
                 </button>
                 <button
-                  className={`ai-tab-btn ${aiTab === 'chat' ? 'active' : ''}`}
+                  className={`${styles.aiTabBtn} ${aiTab === 'chat' ? styles.active : ''}`}
                   onClick={() => setAiTab('chat')}
                 >
                   AI Conversation
@@ -301,52 +147,52 @@ function App() {
               </div>
             </div>
 
-            <div className="ai-content">
+            <div className={styles.aiContent}>
               {aiTab === 'match' ? (
                 <MatchAnalysis
-                  analysis={matchAnalysis}
-                  isLoading={isLoadingMatch}
-                  onAnalyze={handleMatchAnalysis}
+                  analysis={chat.matchAnalysis}
+                  isLoading={chat.isLoadingMatch}
+                  onAnalyze={chat.getMatchAnalysis}
                   hasJobDescription={!!jobDescription.trim()}
                 />
               ) : (
                 <ChatPanel
-                  messages={messages}
-                  onSendMessage={handleSendMessage}
-                  onApplyEdit={handleApplyEdit}
-                  onUndoEdit={handleUndoEdit}
-                  isLoading={isAnalyzing}
-                  isThinking={isThinking}
-                  streamingContent={streamingContent}
+                  messages={chat.messages}
+                  onSendMessage={chat.sendMessage}
+                  onApplyEdit={chat.applyEdit}
+                  onUndoEdit={chat.undoEdit}
+                  isLoading={chat.isAnalyzing}
+                  isThinking={chat.isThinking}
+                  streamingContent={chat.streamingContent}
                 />
               )}
             </div>
           </section>
         </div>
 
-        <div className="right-panel">
-          <section className="preview-section">
-            <div className="preview-header">
-              <div className="preview-title">
+        <div className={styles.rightPanel}>
+          <section className={styles.previewSection}>
+            <div className={styles.previewHeader}>
+              <div className={styles.previewTitle}>
                 <h2>CV Preview</h2>
-                {pageCount > 0 && (
-                  <span className={`page-count ${pageCount > 1 ? 'warning' : 'good'}`}>
-                    {pageCount} {pageCount === 1 ? 'page' : 'pages'}
-                    {pageCount > 1 && (
-                      <span className="page-warning-icon" title="CV should fit on one page">⚠️</span>
+                {compiler.pageCount > 0 && (
+                  <span className={`${styles.pageCount} ${compiler.pageCount > 1 ? styles.warning : styles.good}`}>
+                    {compiler.pageCount} {compiler.pageCount === 1 ? 'page' : 'pages'}
+                    {compiler.pageCount > 1 && (
+                      <span className={styles.pageWarningIcon} title="CV should fit on one page">⚠️</span>
                     )}
                   </span>
                 )}
               </div>
-              <div className="preview-tabs">
+              <div className={styles.previewTabs}>
                 <button
-                  className={`tab-btn ${activeTab === 'latex' ? 'active' : ''}`}
+                  className={`${styles.tabBtn} ${activeTab === 'latex' ? styles.active : ''}`}
                   onClick={() => setActiveTab('latex')}
                 >
                   LaTeX Code
                 </button>
                 <button
-                  className={`tab-btn ${activeTab === 'pdf' ? 'active' : ''}`}
+                  className={`${styles.tabBtn} ${activeTab === 'pdf' ? styles.active : ''}`}
                   onClick={() => setActiveTab('pdf')}
                 >
                   PDF
@@ -354,33 +200,33 @@ function App() {
               </div>
             </div>
 
-            {pageCount > 1 && (
-              <div className="page-count-warning">
+            {compiler.pageCount > 1 && (
+              <div className={styles.pageCountWarning}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="12" cy="12" r="10" />
                   <line x1="12" y1="8" x2="12" y2="12" />
                   <line x1="12" y1="16" x2="12.01" y2="16" />
                 </svg>
-                Your CV is {pageCount} pages. Most recruiters expect a 1-page CV. Consider removing less relevant content.
+                Your CV is {compiler.pageCount} pages. Most recruiters expect a 1-page CV. Consider removing less relevant content.
               </div>
             )}
 
-            <div className="preview-content">
+            <div className={styles.previewContent}>
               {activeTab === 'latex' ? (
                 <LatexEditor
-                  value={texContent}
-                  onChange={setTexContent}
+                  value={templates.content}
+                  onChange={templates.updateContent}
                   onCompile={handleCompile}
-                  isCompiling={isCompiling}
-                  hasUnsavedChanges={hasUnsavedChanges}
+                  isCompiling={compiler.isCompiling}
+                  hasUnsavedChanges={compiler.hasUnsavedChanges}
                 />
               ) : (
                 <PdfPreview
-                  pdfBase64={pdfBase64}
-                  error={compileError}
-                  isCompiling={isCompiling}
+                  pdfBase64={compiler.pdfBase64}
+                  error={compiler.error}
+                  isCompiling={compiler.isCompiling}
                   onCompile={handleCompile}
-                  hasUnsavedChanges={hasUnsavedChanges}
+                  hasUnsavedChanges={compiler.hasUnsavedChanges}
                 />
               )}
             </div>

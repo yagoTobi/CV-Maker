@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { Message, CVEdit } from '../types';
 import { parseEditsFromResponse } from '../types';
+import styles from './ChatPanel.module.css';
 
 interface ChatPanelProps {
   messages: Message[];
@@ -59,7 +60,6 @@ export function ChatPanel({ messages, onSendMessage, onApplyEdit, onUndoEdit, is
   };
 
   const handleApplyEdit = (edit: CVEdit, editKey: string) => {
-    // Clear any previous failure state
     setFailedEdits(prev => {
       const newSet = new Set(prev);
       newSet.delete(editKey);
@@ -71,7 +71,6 @@ export function ChatPanel({ messages, onSendMessage, onApplyEdit, onUndoEdit, is
       setAppliedEdits(prev => new Set(prev).add(editKey));
     } else {
       setFailedEdits(prev => new Set(prev).add(editKey));
-      // Clear failure state after 3 seconds
       setTimeout(() => {
         setFailedEdits(prev => {
           const newSet = new Set(prev);
@@ -94,13 +93,8 @@ export function ChatPanel({ messages, onSendMessage, onApplyEdit, onUndoEdit, is
   };
 
   const renderContent = (content: string, messageIndex: number) => {
-    // Check for edits in the content
     const edits = parseEditsFromResponse(content);
-
-    // Remove edit blocks from displayed content
     let displayContent = content.replace(/<<<EDIT>>>[\s\S]*?<<<END_EDIT>>>/g, '').trim();
-
-    // Split by code blocks
     const parts = displayContent.split(/(```[\s\S]*?```)/g);
 
     return (
@@ -111,8 +105,8 @@ export function ChatPanel({ messages, onSendMessage, onApplyEdit, onUndoEdit, is
             const language = match?.[1] || '';
             const code = match?.[2] || part.replace(/```\w*\n?/g, '').replace(/```$/, '');
             return (
-              <pre key={i} className="code-block">
-                {language && <span className="code-language">{language}</span>}
+              <pre key={i} className={styles.codeBlock}>
+                {language && <span className={styles.codeLanguage}>{language}</span>}
                 <code>{code}</code>
               </pre>
             );
@@ -121,8 +115,8 @@ export function ChatPanel({ messages, onSendMessage, onApplyEdit, onUndoEdit, is
         })}
 
         {edits.length > 0 && (
-          <div className="edit-suggestions">
-            <div className="edit-header">
+          <div className={styles.editSuggestions}>
+            <div className={styles.editHeader}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -135,30 +129,27 @@ export function ChatPanel({ messages, onSendMessage, onApplyEdit, onUndoEdit, is
               const isFailed = failedEdits.has(editKey);
 
               return (
-                <div key={editIndex} className={`edit-block ${isApplied ? 'applied' : ''} ${isFailed ? 'failed' : ''}`}>
-                  <div className="edit-diff">
-                    <div className="edit-remove">
-                      <span className="diff-label">Find:</span>
+                <div key={editIndex} className={`${styles.editBlock} ${isApplied ? styles.applied : ''} ${isFailed ? styles.failed : ''}`}>
+                  <div className={styles.editDiff}>
+                    <div className={styles.editRemove}>
+                      <span className={styles.diffLabel}>Find:</span>
                       <code>{edit.find}</code>
                     </div>
-                    <div className="edit-add">
-                      <span className="diff-label">Replace:</span>
+                    <div className={styles.editAdd}>
+                      <span className={styles.diffLabel}>Replace:</span>
                       <code>{edit.replace}</code>
                     </div>
                   </div>
-                  <div className="edit-actions">
+                  <div className={styles.editActions}>
                     {isApplied ? (
                       <>
-                        <button
-                          className="undo-edit-btn"
-                          onClick={() => handleUndoEdit(editKey)}
-                        >
+                        <button className={styles.undoEditBtn} onClick={() => handleUndoEdit(editKey)}>
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M3 7v6h6M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6.36 2.64L3 13" />
                           </svg>
                           Undo
                         </button>
-                        <span className="applied-badge">
+                        <span className={styles.appliedBadge}>
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <polyline points="20 6 9 17 4 12" />
                           </svg>
@@ -166,7 +157,7 @@ export function ChatPanel({ messages, onSendMessage, onApplyEdit, onUndoEdit, is
                         </span>
                       </>
                     ) : isFailed ? (
-                      <span className="failed-badge">
+                      <span className={styles.failedBadge}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <circle cx="12" cy="12" r="10" />
                           <line x1="15" y1="9" x2="9" y2="15" />
@@ -175,10 +166,7 @@ export function ChatPanel({ messages, onSendMessage, onApplyEdit, onUndoEdit, is
                         Text not found in CV
                       </span>
                     ) : (
-                      <button
-                        className="apply-edit-btn"
-                        onClick={() => handleApplyEdit(edit, editKey)}
-                      >
+                      <button className={styles.applyEditBtn} onClick={() => handleApplyEdit(edit, editKey)}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -197,34 +185,34 @@ export function ChatPanel({ messages, onSendMessage, onApplyEdit, onUndoEdit, is
   };
 
   return (
-    <div className="chat-panel">
-      <div className="messages-container">
+    <div className={styles.container}>
+      <div className={styles.messagesContainer}>
         {messages.length === 0 && !streamingContent && (
-          <div className="empty-state">
-            <div className="empty-icon">
+          <div className={styles.emptyState}>
+            <div className={styles.emptyIcon}>
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
             </div>
             <p>Paste a job description above and click "Analyze" to start the conversation.</p>
-            <p className="hint">Ask the AI to edit your CV directly, e.g., "Add my Python experience to the skills section"</p>
+            <p className={styles.hint}>Ask the AI to edit your CV directly, e.g., "Add my Python experience to the skills section"</p>
           </div>
         )}
         {messages.map((msg, index) => (
-          <div key={index} className={`message ${msg.role}`}>
-            <div className="message-avatar">
+          <div key={index} className={`${styles.message} ${msg.role === 'user' ? styles.user : styles.assistant}`}>
+            <div className={styles.messageAvatar}>
               {msg.role === 'user' ? 'You' : 'AI'}
             </div>
-            <div className="message-bubble">
-              <div className="message-content">{renderContent(msg.content, index)}</div>
+            <div className={styles.messageBubble}>
+              <div className={styles.messageContent}>{renderContent(msg.content, index)}</div>
             </div>
           </div>
         ))}
         {isThinking && !streamingContent && (
-          <div className="message assistant thinking">
-            <div className="message-avatar">AI</div>
-            <div className="message-bubble">
-              <div className="thinking-indicator">
+          <div className={`${styles.message} ${styles.assistant}`}>
+            <div className={styles.messageAvatar}>AI</div>
+            <div className={styles.messageBubble}>
+              <div className={styles.thinkingIndicator}>
                 <span></span>
                 <span></span>
                 <span></span>
@@ -233,16 +221,16 @@ export function ChatPanel({ messages, onSendMessage, onApplyEdit, onUndoEdit, is
           </div>
         )}
         {streamingContent && (
-          <div className="message assistant streaming">
-            <div className="message-avatar">AI</div>
-            <div className="message-bubble">
-              <div className="message-content">{renderContent(streamingContent, -1)}</div>
+          <div className={`${styles.message} ${styles.assistant}`}>
+            <div className={styles.messageAvatar}>AI</div>
+            <div className={styles.messageBubble}>
+              <div className={styles.messageContent}>{renderContent(streamingContent, -1)}</div>
             </div>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
-      <form onSubmit={handleSubmit} className="chat-input-form">
+      <form onSubmit={handleSubmit} className={styles.inputForm}>
         <textarea
           ref={textareaRef}
           value={input}

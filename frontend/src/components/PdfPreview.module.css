@@ -1,0 +1,132 @@
+/* PDF Preview Component */
+.container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-tertiary);
+}
+
+.container iframe {
+  flex: 1;
+  border: none;
+  background: white;
+}
+
+.loading,
+.error,
+.placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  padding: 2rem;
+  text-align: center;
+}
+
+.placeholderIcon {
+  margin-bottom: 1rem;
+  opacity: 0.4;
+  color: var(--text-muted);
+}
+
+.placeholder.hasChanges .placeholderIcon {
+  opacity: 1;
+  color: var(--warning);
+}
+
+.placeholderHint {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.placeholder.hasChanges {
+  background: var(--warning-light);
+  border: 1px dashed var(--warning);
+  border-radius: var(--radius);
+  margin: 1rem;
+}
+
+.compileBtn {
+  margin-top: 1rem;
+  padding: 0.625rem 1.25rem;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.compileBtn:hover {
+  background: var(--accent-hover);
+}
+
+.compileBtn.pulse {
+  background: var(--warning);
+  animation: btn-pulse 2s ease-in-out infinite;
+}
+
+.compileBtn.pulse:hover {
+  background: #D97706;
+}
+
+@keyframes btn-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+}
+
+.error {
+  color: var(--error);
+}
+
+.error pre {
+  background: var(--bg-secondary);
+  padding: 1rem;
+  border-radius: var(--radius-sm);
+  overflow: auto;
+  max-width: 100%;
+  font-size: 0.75rem;
+  margin: 1rem 0;
+  text-align: left;
+  border: 1px solid var(--border-color);
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.retryBtn {
+  margin-top: 1rem;
+  padding: 0.625rem 1.25rem;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.retryBtn:hover {
+  background: var(--accent-hover);
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border-color);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

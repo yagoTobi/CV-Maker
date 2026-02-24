@@ -1,5 +1,6 @@
 import CodeMirror from '@uiw/react-codemirror';
-import { javascript } from '@codemirror/lang-javascript';
+import { latex } from 'codemirror-lang-latex';
+import styles from './LatexEditor.module.css';
 
 interface LatexEditorProps {
   value: string;
@@ -11,25 +12,25 @@ interface LatexEditorProps {
 
 export function LatexEditor({ value, onChange, onCompile, isCompiling, hasUnsavedChanges }: LatexEditorProps) {
   return (
-    <div className="latex-editor">
-      <div className="editor-toolbar">
+    <div className={styles.container}>
+      <div className={styles.toolbar}>
         <button
           onClick={onCompile}
           disabled={isCompiling}
-          className={`compile-btn ${hasUnsavedChanges ? 'has-changes' : ''}`}
+          className={`${styles.compileBtn} ${hasUnsavedChanges ? styles.hasChanges : ''}`}
         >
-          {hasUnsavedChanges && <span className="pulse-indicator"></span>}
+          {hasUnsavedChanges && <span className={styles.pulseIndicator}></span>}
           {isCompiling ? 'Compiling...' : 'Compile PDF'}
         </button>
       </div>
-      <div className="editor-container">
+      <div className={styles.editorContainer}>
         <CodeMirror
           value={value}
           height="100%"
-          extensions={[javascript()]}
+          extensions={[latex()]}
           onChange={onChange}
           theme="dark"
-          className="code-editor"
+          className={styles.codeEditor}
         />
       </div>
     </div>

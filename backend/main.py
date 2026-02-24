@@ -3,6 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 
+# Load CORS origins from environment variable, with fallback for local dev
+CORS_ORIGINS = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:5173,http://127.0.0.1:5173"
+).split(",")
+
 from routes.compile import router as compile_router
 from routes.chat import router as chat_router
 from routes.user_data import router as user_data_router
@@ -13,10 +19,10 @@ app = FastAPI(title="CV Maker API")
 # CORS middleware for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # Include routers
@@ -31,15 +37,3 @@ async def health_check():
     return {"status": "healthy"}
 
 
-@app.get("/api/template")
-async def get_template():
-    """Load the base CV template."""
-    template_path = os.path.join(
-        os.path.dirname(__file__), "..", "cv-templates", "med-length-proff-cv", "CV - English.tex"
-    )
-    try:
-        with open(template_path, "r") as f:
-            content = f.read()
-        return {"content": content}
-    except FileNotFoundError:
-        return {"error": "Template not found", "content": ""}

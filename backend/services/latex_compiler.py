@@ -5,8 +5,9 @@ import shutil
 import base64
 import re
 import logging
-from typing import Tuple
 from dataclasses import dataclass
+
+from config.templates import TEMPLATES, get_template
 
 logger = logging.getLogger(__name__)
 
@@ -20,25 +21,19 @@ class CompileResult:
 
 
 class LaTeXCompiler:
-    # Template configurations
-    TEMPLATES = {
-        "med-length-proff-cv": {
-            "folder": "med-length-proff-cv",
-            "files": ["resume.cls"],
-            "engine": "pdflatex",
-        },
-        "deedy-resume": {
-            "folder": "deedy-resume",
-            "files": ["deedy-resume-openfont.cls", "publications.bib"],
-            "directories": ["fonts"],
-            "engine": "xelatex",
-        },
-        "mcdowell-cv": {
-            "folder": "mcdowell-cv-master",
-            "files": ["mcdowellcv.cls", "tabu.sty", "varwidth.sty"],
-            "engine": "xelatex",
-        },
-    }
+    # Dangerous LaTeX commands that could execute shell commands or access files
+    DANGEROUS_PATTERNS = [
+        r'\\write18\s*\{',          # Shell escape
+        r'\\immediate\\write18',     # Immediate shell escape
+        r'\\input\s*\|',            # Pipe input (shell command)
+        r'\\openin',                # Open file for reading
+        r'\\openout',               # Open file for writing
+        r'\\read',                  # Read from file
+        r'\\closein',               # Close input file
+        r'\\closeout',              # Close output file
+        r'\\catcode',               # Change category codes (can be used for exploits)
+        r'\\csname\s+input\s+\|',   # Alternative pipe input
+    ]
 
     def __init__(self):
         self.pdflatex_path = shutil.which("pdflatex") or "/Library/TeX/texbin/pdflatex"
@@ -46,6 +41,25 @@ class LaTeXCompiler:
         self.templates_dir = os.path.join(
             os.path.dirname(__file__), "..", "..", "cv-templates"
         )
+        # Compile dangerous patterns once
+        self._dangerous_regex = re.compile(
+            '|'.join(self.DANGEROUS_PATTERNS),
+            re.IGNORECASE
+        )
+
+    def _sanitize_content(self, content: str) -> tuple[str, list[str]]:
+        """
+        Remove dangerous LaTeX commands that could execute shell commands.
+        Returns sanitized content and list of removed patterns.
+        """
+        removed = []
+
+        def replace_dangerous(match):
+            removed.append(match.group(0)[:50])  # Log first 50 chars
+            return '% [REMOVED: potentially dangerous command]'
+
+        sanitized = self._dangerous_regex.sub(replace_dangerous, content)
+        return sanitized, removed
 
     def compile(self, tex_content: str, cls_content: str = None, template_id: str = None) -> CompileResult:
         """
@@ -56,12 +70,17 @@ class LaTeXCompiler:
         """
         logger.info(f"Compiling with template_id: {template_id}")
 
+        # Sanitize content before compilation
+        sanitized_content, removed_patterns = self._sanitize_content(tex_content)
+        if removed_patterns:
+            logger.warning(f"Removed dangerous patterns: {removed_patterns}")
+
         with tempfile.TemporaryDirectory() as temp_dir:
             tex_path = os.path.join(temp_dir, "document.tex")
 
-            # Write the main tex file
+            # Write the sanitized tex file
             with open(tex_path, "w") as f:
-                f.write(tex_content)
+                f.write(sanitized_content)
 
             # Copy template files based on template_id
             self._copy_template_files(temp_dir, template_id, cls_content)
@@ -179,27 +198,27 @@ class LaTeXCompiler:
 
     def _get_engine_path(self, template_id: str = None) -> str:
         """Get the appropriate LaTeX engine path for a template."""
-        if template_id and template_id in self.TEMPLATES:
-            engine = self.TEMPLATES[template_id].get("engine", "pdflatex")
-            if engine == "xelatex":
-                return self.xelatex_path
+        config = get_template(template_id) if template_id else None
+        if config and config.engine == "xelatex":
+            return self.xelatex_path
         return self.pdflatex_path
 
     def _copy_template_files(self, temp_dir: str, template_id: str = None, cls_content: str = None):
         """Copy template support files (cls, bib, etc.) to temp directory."""
-        # If template_id is provided and valid, copy its files
-        if template_id and template_id in self.TEMPLATES:
-            template_config = self.TEMPLATES[template_id]
-            template_folder = os.path.join(self.templates_dir, template_config["folder"])
+        config = get_template(template_id) if template_id else None
 
-            # Copy individual files
-            for filename in template_config["files"]:
+        if config:
+            template_folder = os.path.join(self.templates_dir, config.folder)
+
+            # Copy cls file and extra files
+            files_to_copy = [config.cls_file] + config.extra_files
+            for filename in files_to_copy:
                 src_path = os.path.join(template_folder, filename)
                 if os.path.exists(src_path):
                     shutil.copy(src_path, os.path.join(temp_dir, filename))
 
             # Copy directories (e.g., fonts)
-            for dirname in template_config.get("directories", []):
+            for dirname in config.extra_dirs:
                 src_dir = os.path.join(template_folder, dirname)
                 if os.path.exists(src_dir) and os.path.isdir(src_dir):
                     shutil.copytree(src_dir, os.path.join(temp_dir, dirname))

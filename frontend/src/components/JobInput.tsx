@@ -1,3 +1,5 @@
+import styles from './JobInput.module.css';
+
 interface JobInputProps {
   companyName: string;
   jobDescription: string;
@@ -24,9 +26,9 @@ export function JobInput({
   };
 
   return (
-    <div className="job-input">
-      <div className="input-row">
-        <div className="input-group">
+    <div className={styles.container}>
+      <div className={styles.inputRow}>
+        <div className={styles.inputGroup}>
           <label htmlFor="company-name">Company</label>
           <input
             id="company-name"
@@ -34,30 +36,24 @@ export function JobInput({
             value={companyName}
             onChange={(e) => onCompanyNameChange(e.target.value)}
             placeholder="Company name..."
-          />
-        </div>
-        <div className="input-group">
-          <label htmlFor="job-title">Role / Title</label>
-          <input
-            id="job-title"
-            type="text"
-            placeholder="Job title..."
+            maxLength={100}
           />
         </div>
       </div>
-      <div className="input-group description-group">
+      <div className={`${styles.inputGroup} ${styles.descriptionGroup}`}>
         <label htmlFor="job-description">Description</label>
         <textarea
           id="job-description"
           value={jobDescription}
           onChange={(e) => onJobDescriptionChange(e.target.value)}
           placeholder="Paste the full job description here..."
+          maxLength={50000}
         />
       </div>
       <button
         onClick={onAnalyze}
         disabled={isAnalyzing || !jobDescription.trim()}
-        className={`analyze-btn ${hasAnalyzed ? 'reanalyze' : ''}`}
+        className={`${styles.analyzeBtn} ${hasAnalyzed ? styles.reanalyze : ''}`}
       >
         {hasAnalyzed && !isAnalyzing && (
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

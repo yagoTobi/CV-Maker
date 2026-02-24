@@ -1,3 +1,5 @@
+import styles from './PdfPreview.module.css';
+
 interface PdfPreviewProps {
   pdfBase64: string | null;
   error: string | null;
@@ -9,9 +11,9 @@ interface PdfPreviewProps {
 export function PdfPreview({ pdfBase64, error, isCompiling, onCompile, hasUnsavedChanges }: PdfPreviewProps) {
   if (isCompiling) {
     return (
-      <div className="pdf-preview">
-        <div className="pdf-loading">
-          <div className="spinner"></div>
+      <div className={styles.container}>
+        <div className={styles.loading}>
+          <div className={styles.spinner}></div>
           <p>Compiling PDF...</p>
         </div>
       </div>
@@ -20,12 +22,12 @@ export function PdfPreview({ pdfBase64, error, isCompiling, onCompile, hasUnsave
 
   if (error) {
     return (
-      <div className="pdf-preview">
-        <div className="pdf-error">
+      <div className={styles.container}>
+        <div className={styles.error}>
           <h4>Compilation Error</h4>
           <pre>{error}</pre>
           {onCompile && (
-            <button className="retry-btn" onClick={onCompile}>
+            <button className={styles.retryBtn} onClick={onCompile}>
               Try Again
             </button>
           )}
@@ -36,9 +38,9 @@ export function PdfPreview({ pdfBase64, error, isCompiling, onCompile, hasUnsave
 
   if (!pdfBase64) {
     return (
-      <div className="pdf-preview">
-        <div className={`pdf-placeholder ${hasUnsavedChanges ? 'has-changes' : ''}`}>
-          <div className="placeholder-icon">
+      <div className={styles.container}>
+        <div className={`${styles.placeholder} ${hasUnsavedChanges ? styles.hasChanges : ''}`}>
+          <div className={styles.placeholderIcon}>
             {hasUnsavedChanges ? (
               <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -55,13 +57,13 @@ export function PdfPreview({ pdfBase64, error, isCompiling, onCompile, hasUnsave
             )}
           </div>
           <p>{hasUnsavedChanges ? 'Changes made to your CV!' : 'No PDF generated yet'}</p>
-          <p className="placeholder-hint">
+          <p className={styles.placeholderHint}>
             {hasUnsavedChanges
               ? 'Compile to see your updated CV'
               : 'Click below to generate your PDF'}
           </p>
           {onCompile && (
-            <button className={`compile-btn ${hasUnsavedChanges ? 'pulse' : ''}`} onClick={onCompile}>
+            <button className={`${styles.compileBtn} ${hasUnsavedChanges ? styles.pulse : ''}`} onClick={onCompile}>
               {hasUnsavedChanges ? 'Compile to Preview' : 'Compile PDF'}
             </button>
           )}
@@ -71,7 +73,7 @@ export function PdfPreview({ pdfBase64, error, isCompiling, onCompile, hasUnsave
   }
 
   return (
-    <div className="pdf-preview">
+    <div className={styles.container}>
       <iframe
         src={`data:application/pdf;base64,${pdfBase64}`}
         title="PDF Preview"
