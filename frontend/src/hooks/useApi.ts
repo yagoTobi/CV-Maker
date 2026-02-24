@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import axios from 'axios';
 import type { CompileResponse, ChatRequest, UserProfile, MatchAnalysis } from '../types';
+import type { Template } from '../components';
 
 const API_BASE = 'http://localhost:8000/api';
 
@@ -8,12 +9,13 @@ export function useApi() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const compileLatex = useCallback(async (texContent: string): Promise<CompileResponse> => {
+  const compileLatex = useCallback(async (texContent: string, templateId?: string): Promise<CompileResponse> => {
     setLoading(true);
     setError(null);
     try {
       const response = await axios.post<CompileResponse>(`${API_BASE}/compile`, {
         tex_content: texContent,
+        template_id: templateId,
       });
       return response.data;
     } catch (err) {
@@ -32,6 +34,35 @@ export function useApi() {
     } catch (err) {
       console.error('Failed to load template:', err);
       return '';
+    }
+  }, []);
+
+  const fetchTemplates = useCallback(async (): Promise<Template[]> => {
+    try {
+      const response = await axios.get<{ templates: Template[] }>(`${API_BASE}/templates`);
+      // Convert relative preview URLs to absolute URLs pointing to backend
+      return response.data.templates.map(t => ({
+        ...t,
+        previewUrl: `http://localhost:8000${t.previewUrl}`,
+      }));
+    } catch (err) {
+      console.error('Failed to fetch templates:', err);
+      return [];
+    }
+  }, []);
+
+  const loadTemplateContent = useCallback(async (templateId: string): Promise<{ content: string; clsContent: string | null }> => {
+    try {
+      const response = await axios.get<{ content: string; cls_content: string | null }>(
+        `${API_BASE}/templates/${templateId}/content`
+      );
+      return {
+        content: response.data.content,
+        clsContent: response.data.cls_content,
+      };
+    } catch (err) {
+      console.error('Failed to load template content:', err);
+      return { content: '', clsContent: null };
     }
   }, []);
 
@@ -217,6 +248,8 @@ export function useApi() {
     error,
     compileLatex,
     loadTemplate,
+    fetchTemplates,
+    loadTemplateContent,
     streamChat,
     analyzeJob,
     getMatchAnalysis,

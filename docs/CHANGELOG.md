@@ -9,7 +9,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
-- Project documentation folder (`/docs`)
+- Template selection screen with 3 CV templates (Professional CV, Deedy Resume, McDowell CV)
+- Template preview images on selection screen
+- Support for multiple LaTeX engines (pdflatex and xelatex)
+- Backend API endpoints for template listing and content retrieval (`/api/templates`, `/api/templates/{id}/preview`, `/api/templates/{id}/content`)
+- "Templates" button in editor header to change template
+- Bundled fonts (Lato, Raleway) for Deedy Resume template
+- Bundled LaTeX packages (tabu.sty, varwidth.sty) for McDowell CV template
+- Improved error logging with context lines for LaTeX compilation failures
+
+### Changed
+- Reorganized CV templates into `cv-templates/` folder
+- Updated LaTeX compiler to automatically select correct engine per template
+- Compiler now copies font directories for templates that require them
+
+### Fixed
+- React hooks violation causing blank screen after template selection
+- Preview images not loading due to relative URL issue
 
 ---
 

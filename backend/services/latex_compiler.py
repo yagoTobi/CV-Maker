@@ -4,8 +4,11 @@ import os
 import shutil
 import base64
 import re
+import logging
 from typing import Tuple
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -17,16 +20,42 @@ class CompileResult:
 
 
 class LaTeXCompiler:
+    # Template configurations
+    TEMPLATES = {
+        "med-length-proff-cv": {
+            "folder": "med-length-proff-cv",
+            "files": ["resume.cls"],
+            "engine": "pdflatex",
+        },
+        "deedy-resume": {
+            "folder": "deedy-resume",
+            "files": ["deedy-resume-openfont.cls", "publications.bib"],
+            "directories": ["fonts"],
+            "engine": "xelatex",
+        },
+        "mcdowell-cv": {
+            "folder": "mcdowell-cv-master",
+            "files": ["mcdowellcv.cls", "tabu.sty", "varwidth.sty"],
+            "engine": "xelatex",
+        },
+    }
+
     def __init__(self):
         self.pdflatex_path = shutil.which("pdflatex") or "/Library/TeX/texbin/pdflatex"
+        self.xelatex_path = shutil.which("xelatex") or "/Library/TeX/texbin/xelatex"
+        self.templates_dir = os.path.join(
+            os.path.dirname(__file__), "..", "..", "cv-templates"
+        )
 
-    def compile(self, tex_content: str, cls_content: str = None) -> CompileResult:
+    def compile(self, tex_content: str, cls_content: str = None, template_id: str = None) -> CompileResult:
         """
         Compile LaTeX content to PDF.
 
         Returns:
             CompileResult with success status, PDF data, error message, and page count
         """
+        logger.info(f"Compiling with template_id: {template_id}")
+
         with tempfile.TemporaryDirectory() as temp_dir:
             tex_path = os.path.join(temp_dir, "document.tex")
 
@@ -34,21 +63,22 @@ class LaTeXCompiler:
             with open(tex_path, "w") as f:
                 f.write(tex_content)
 
-            # Copy the resume.cls file if provided, otherwise try to copy from template
-            cls_source = os.path.join(
-                os.path.dirname(__file__), "..", "..", "cv-templates", "med-length-proff-cv", "resume.cls"
-            )
-            if os.path.exists(cls_source):
-                shutil.copy(cls_source, os.path.join(temp_dir, "resume.cls"))
-            elif cls_content:
-                with open(os.path.join(temp_dir, "resume.cls"), "w") as f:
-                    f.write(cls_content)
+            # Copy template files based on template_id
+            self._copy_template_files(temp_dir, template_id, cls_content)
 
-            # Run pdflatex twice for proper references
+            # Log files in temp directory
+            files_in_dir = os.listdir(temp_dir)
+            logger.info(f"Files in compile directory: {files_in_dir}")
+
+            # Determine which LaTeX engine to use
+            engine_path = self._get_engine_path(template_id)
+            logger.info(f"Using engine: {engine_path}")
+
+            # Run LaTeX twice for proper references
             for _ in range(2):
                 result = subprocess.run(
                     [
-                        self.pdflatex_path,
+                        engine_path,
                         "-interaction=nonstopmode",
                         "-halt-on-error",
                         "document.tex"
@@ -56,7 +86,7 @@ class LaTeXCompiler:
                     cwd=temp_dir,
                     capture_output=True,
                     text=True,
-                    timeout=60
+                    timeout=90  # XeLaTeX can be slower
                 )
 
                 if result.returncode != 0:
@@ -117,14 +147,21 @@ class LaTeXCompiler:
     def _extract_error(self, log_path: str, output: str) -> str:
         """Extract meaningful error messages from LaTeX output."""
         errors = []
+        context_lines = []
 
         if os.path.exists(log_path):
             with open(log_path, "r", errors="ignore") as f:
                 log_content = f.read()
-                # Look for error lines
-                for line in log_content.split("\n"):
-                    if line.startswith("!") or "Error:" in line:
-                        errors.append(line.strip())
+                lines = log_content.split("\n")
+
+                # Find error lines and capture context
+                for i, line in enumerate(lines):
+                    if line.startswith("!") or "Error:" in line or "Fatal" in line:
+                        # Capture the error line and a few lines of context
+                        start = max(0, i - 2)
+                        end = min(len(lines), i + 5)
+                        context = lines[start:end]
+                        errors.append("\n".join(context))
 
         if not errors:
             # Fall back to stdout/stderr
@@ -133,8 +170,49 @@ class LaTeXCompiler:
                     errors.append(line.strip())
 
         if errors:
-            return "\n".join(errors[:5])  # Return first 5 errors
-        return "Unknown compilation error"
+            # Return more context - up to 20 lines total
+            full_error = "\n---\n".join(errors[:3])
+            if len(full_error) > 2000:
+                full_error = full_error[:2000] + "\n... (truncated)"
+            return full_error
+        return "Unknown compilation error. Check LaTeX syntax."
+
+    def _get_engine_path(self, template_id: str = None) -> str:
+        """Get the appropriate LaTeX engine path for a template."""
+        if template_id and template_id in self.TEMPLATES:
+            engine = self.TEMPLATES[template_id].get("engine", "pdflatex")
+            if engine == "xelatex":
+                return self.xelatex_path
+        return self.pdflatex_path
+
+    def _copy_template_files(self, temp_dir: str, template_id: str = None, cls_content: str = None):
+        """Copy template support files (cls, bib, etc.) to temp directory."""
+        # If template_id is provided and valid, copy its files
+        if template_id and template_id in self.TEMPLATES:
+            template_config = self.TEMPLATES[template_id]
+            template_folder = os.path.join(self.templates_dir, template_config["folder"])
+
+            # Copy individual files
+            for filename in template_config["files"]:
+                src_path = os.path.join(template_folder, filename)
+                if os.path.exists(src_path):
+                    shutil.copy(src_path, os.path.join(temp_dir, filename))
+
+            # Copy directories (e.g., fonts)
+            for dirname in template_config.get("directories", []):
+                src_dir = os.path.join(template_folder, dirname)
+                if os.path.exists(src_dir) and os.path.isdir(src_dir):
+                    shutil.copytree(src_dir, os.path.join(temp_dir, dirname))
+        else:
+            # Fallback: copy default resume.cls for backwards compatibility
+            default_cls = os.path.join(
+                self.templates_dir, "med-length-proff-cv", "resume.cls"
+            )
+            if os.path.exists(default_cls):
+                shutil.copy(default_cls, os.path.join(temp_dir, "resume.cls"))
+            elif cls_content:
+                with open(os.path.join(temp_dir, "resume.cls"), "w") as f:
+                    f.write(cls_content)
 
 
 compiler = LaTeXCompiler()

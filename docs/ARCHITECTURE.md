@@ -32,7 +32,8 @@ CV Maker follows a client-server architecture with a React frontend and FastAPI 
 
 | Component | Purpose |
 |-----------|---------|
-| `App.tsx` | Main application container, state management |
+| `App.tsx` | Main application container, state management, screen routing |
+| `TemplateSelector.tsx` | CV template selection screen with previews |
 | `LatexEditor.tsx` | CodeMirror-based LaTeX editor |
 | `PdfPreview.tsx` | PDF rendering and display |
 | `ChatPanel.tsx` | AI conversation interface with edit suggestions |
@@ -43,6 +44,9 @@ CV Maker follows a client-server architecture with a React frontend and FastAPI 
 
 State is managed at the `App` component level using React hooks:
 
+- `currentScreen` - Current app screen ('template-select' | 'editor')
+- `selectedTemplateId` - Selected CV template ID
+- `templates` - Available template list
 - `texContent` - Current LaTeX source
 - `pdfBase64` - Compiled PDF as base64
 - `messages` - Chat history
@@ -59,10 +63,12 @@ State is managed at the `App` component level using React hooks:
 
 | Route | Method | Purpose |
 |-------|--------|---------|
-| `/api/compile` | POST | Compile LaTeX to PDF |
+| `/api/compile` | POST | Compile LaTeX to PDF (accepts template_id for engine selection) |
 | `/api/chat` | POST | Stream AI responses |
-| `/api/match-analysis` | POST | Get CV-job match score |
-| `/api/template` | GET | Load CV template |
+| `/api/chat/match-analysis` | POST | Get CV-job match score |
+| `/api/templates` | GET | List available templates |
+| `/api/templates/{id}/preview` | GET | Get template preview image |
+| `/api/templates/{id}/content` | GET | Get template LaTeX content |
 | `/api/user-data` | GET/POST | User profile CRUD |
 | `/api/health` | GET | Health check |
 
@@ -70,7 +76,7 @@ State is managed at the `App` component level using React hooks:
 
 | Service | Purpose |
 |---------|---------|
-| `latex_compiler.py` | Handles LaTeX compilation via pdflatex |
+| `latex_compiler.py` | Handles LaTeX compilation (pdflatex/xelatex based on template) |
 | `cv_analyzer.py` | CV analysis and match scoring |
 | `bedrock.py` | AWS Bedrock client wrapper |
 
@@ -105,19 +111,21 @@ User clicks apply → LaTeX updated → Previous state saved for undo
 ```
 src/
 ├── components/
-│   ├── ChatPanel.tsx      # AI conversation UI
-│   ├── JobInput.tsx       # Job description input
-│   ├── LatexEditor.tsx    # Code editor
-│   ├── MatchAnalysis.tsx  # Match score display
-│   ├── PdfPreview.tsx     # PDF viewer
-│   └── index.ts           # Component exports
+│   ├── ChatPanel.tsx          # AI conversation UI
+│   ├── JobInput.tsx           # Job description input
+│   ├── LatexEditor.tsx        # Code editor
+│   ├── MatchAnalysis.tsx      # Match score display
+│   ├── PdfPreview.tsx         # PDF viewer
+│   ├── TemplateSelector.tsx   # Template selection screen
+│   ├── TemplateSelector.css   # Template selector styles
+│   └── index.ts               # Component exports
 ├── hooks/
-│   └── useApi.ts          # API communication
+│   └── useApi.ts              # API communication
 ├── types/
-│   └── index.ts           # TypeScript definitions
-├── App.tsx                # Main app component
-├── App.css                # App styles
-└── main.tsx               # Entry point
+│   └── index.ts               # TypeScript definitions
+├── App.tsx                    # Main app component
+├── App.css                    # App styles
+└── main.tsx                   # Entry point
 ```
 
 ### Backend (`/backend`)
@@ -127,11 +135,12 @@ backend/
 ├── routes/
 │   ├── chat.py            # Chat/AI endpoints
 │   ├── compile.py         # LaTeX compilation
+│   ├── templates.py       # Template listing and retrieval
 │   └── user_data.py       # User data management
 ├── services/
 │   ├── bedrock.py         # AWS Bedrock client
 │   ├── cv_analyzer.py     # CV analysis logic
-│   └── latex_compiler.py  # LaTeX compilation
+│   └── latex_compiler.py  # LaTeX compilation (pdflatex/xelatex)
 ├── prompts/
 │   └── cv_agent.py        # AI prompt templates
 └── main.py                # FastAPI app entry

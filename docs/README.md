@@ -34,8 +34,16 @@ CV Maker is a web application that combines a LaTeX-based CV editor with AI assi
 ### Prerequisites
 - Node.js 18+
 - Python 3.10+
-- LaTeX distribution (TeX Live or MacTeX)
+- LaTeX distribution (TeX Live or MacTeX) with both pdflatex and xelatex
 - AWS credentials configured for Bedrock access
+
+### LaTeX Package Requirements
+
+If using a minimal TeX installation (e.g., BasicTeX), install required packages:
+
+```bash
+sudo tlmgr install changepage ifplatform enumitem textpos isodate titlesec catchfile substr
+```
 
 ### Running the Application
 
@@ -57,6 +65,16 @@ npm run dev
 
 The application will be available at `http://localhost:5173`.
 
+## Available Templates
+
+| Template | Description | LaTeX Engine |
+|----------|-------------|--------------|
+| **Professional CV** | Clean, traditional layout ideal for corporate roles | pdflatex |
+| **Deedy Resume** | Compact two-column design for tech roles | xelatex |
+| **McDowell CV** | Minimalist single-column with elegant spacing | xelatex |
+
+Each template includes a preview image and all necessary class files. Templates requiring xelatex use the `fontspec` package for custom fonts.
+
 ## Project Structure
 
 ```
@@ -64,9 +82,9 @@ CV-Maker/
 ├── frontend/          # React frontend application
 ├── backend/           # FastAPI backend server
 ├── cv-templates/      # LaTeX CV templates
-│   ├── med-length-proff-cv/   # Medium-length professional CV
-│   ├── deedy-resume/          # Deedy resume template
-│   └── mcdowell-cv-master/    # McDowell CV template
+│   ├── med-length-proff-cv/   # Professional CV (pdflatex)
+│   ├── deedy-resume/          # Deedy resume (xelatex)
+│   └── mcdowell-cv-master/    # McDowell CV (xelatex)
 ├── user_data/         # User profile data
 └── docs/              # Project documentation
 ```

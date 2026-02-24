@@ -11,6 +11,7 @@ router = APIRouter()
 class CompileRequest(BaseModel):
     tex_content: str
     cls_content: str | None = None
+    template_id: str | None = None
 
 
 class CompileResponse(BaseModel):
@@ -24,7 +25,11 @@ class CompileResponse(BaseModel):
 async def compile_latex(request: CompileRequest):
     """Compile LaTeX content to PDF."""
     try:
-        result = compiler.compile(request.tex_content, request.cls_content)
+        result = compiler.compile(
+            request.tex_content,
+            cls_content=request.cls_content,
+            template_id=request.template_id
+        )
 
         return CompileResponse(
             success=result.success,
@@ -41,7 +46,11 @@ async def compile_latex(request: CompileRequest):
 async def compile_latex_pdf(request: CompileRequest):
     """Compile LaTeX and return PDF directly."""
     try:
-        result = compiler.compile(request.tex_content, request.cls_content)
+        result = compiler.compile(
+            request.tex_content,
+            cls_content=request.cls_content,
+            template_id=request.template_id
+        )
 
         if result.success and result.pdf_base64:
             pdf_bytes = base64.b64decode(result.pdf_base64)

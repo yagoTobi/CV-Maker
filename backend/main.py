@@ -6,6 +6,7 @@ import os
 from routes.compile import router as compile_router
 from routes.chat import router as chat_router
 from routes.user_data import router as user_data_router
+from routes.templates import router as templates_router
 
 app = FastAPI(title="CV Maker API")
 
@@ -22,6 +23,7 @@ app.add_middleware(
 app.include_router(compile_router, prefix="/api", tags=["compile"])
 app.include_router(chat_router, prefix="/api", tags=["chat"])
 app.include_router(user_data_router, prefix="/api", tags=["user-data"])
+app.include_router(templates_router, prefix="/api", tags=["templates"])
 
 
 @app.get("/api/health")

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { LatexEditor, JobInput, ChatPanel, PdfPreview, MatchAnalysis } from './components';
+import { LatexEditor, JobInput, ChatPanel, PdfPreview, MatchAnalysis, TemplateSelector } from './components';
+import type { Template } from './components';
 import { useApi } from './hooks/useApi';
 import type { Message, UserProfile, MatchAnalysis as MatchAnalysisType, CVEdit } from './types';
 import { applyEdit } from './types';
@@ -7,8 +8,15 @@ import './App.css';
 
 type PreviewTab = 'latex' | 'pdf';
 type AiTab = 'chat' | 'match';
+type AppScreen = 'template-select' | 'editor';
 
 function App() {
+  // App screen state
+  const [currentScreen, setCurrentScreen] = useState<AppScreen>('template-select');
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+
   // LaTeX content
   const [texContent, setTexContent] = useState('');
 
@@ -49,14 +57,16 @@ function App() {
 
   const api = useApi();
 
-  // Load template and user data on mount
+  // Load templates list and user data on mount
   useEffect(() => {
     const init = async () => {
-      const template = await api.loadTemplate();
-      if (template) {
-        setTexContent(template);
-      }
-      const profile = await api.loadUserData();
+      setIsLoadingTemplates(true);
+      const [templatesList, profile] = await Promise.all([
+        api.fetchTemplates(),
+        api.loadUserData(),
+      ]);
+      setTemplates(templatesList);
+      setIsLoadingTemplates(false);
       if (profile) {
         setUserProfile(profile);
       }
@@ -65,12 +75,22 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Handle template selection
+  const handleTemplateSelect = useCallback(async (templateId: string) => {
+    setSelectedTemplateId(templateId);
+    const { content } = await api.loadTemplateContent(templateId);
+    if (content) {
+      setTexContent(content);
+      setCurrentScreen('editor');
+    }
+  }, [api]);
+
   // Compile LaTeX to PDF
   const handleCompile = useCallback(async () => {
     setIsCompiling(true);
     setCompileError(null);
 
-    const result = await api.compileLatex(texContent);
+    const result = await api.compileLatex(texContent, selectedTemplateId || undefined);
 
     if (result.success && result.pdf_base64) {
       setPdfBase64(result.pdf_base64);
@@ -85,7 +105,7 @@ function App() {
     }
 
     setIsCompiling(false);
-  }, [texContent, api]);
+  }, [texContent, selectedTemplateId, api]);
 
   // Analyze job description (chat)
   const handleAnalyze = useCallback(async () => {
@@ -211,9 +231,40 @@ function App() {
     );
   }, [messages, texContent, jobDescription, companyName, userProfile, api]);
 
+  // Handle going back to template selection
+  const handleChangeTemplate = useCallback(() => {
+    setCurrentScreen('template-select');
+    setTexContent('');
+    setPdfBase64(null);
+    setPageCount(0);
+    setCompileError(null);
+    setHasUnsavedChanges(false);
+    setMessages([]);
+    setMatchAnalysis(null);
+    setHasAnalyzed(false);
+  }, []);
+
+  // Template selection screen
+  if (currentScreen === 'template-select') {
+    return (
+      <TemplateSelector
+        templates={templates}
+        onSelect={handleTemplateSelect}
+        isLoading={isLoadingTemplates}
+      />
+    );
+  }
+
+  // Editor screen
   return (
     <div className="app">
       <header className="app-header">
+        <button className="change-template-btn" onClick={handleChangeTemplate}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m15 18-6-6 6-6"/>
+          </svg>
+          Templates
+        </button>
         <h1>Your CV Editor</h1>
       </header>
 
