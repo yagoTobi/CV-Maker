@@ -36,7 +36,7 @@ class LaTeXCompiler:
 
             # Copy the resume.cls file if provided, otherwise try to copy from template
             cls_source = os.path.join(
-                os.path.dirname(__file__), "..", "..", "LaTeX-CV-Template", "resume.cls"
+                os.path.dirname(__file__), "..", "..", "cv-templates", "med-length-proff-cv", "resume.cls"
             )
             if os.path.exists(cls_source):
                 shutil.copy(cls_source, os.path.join(temp_dir, "resume.cls"))

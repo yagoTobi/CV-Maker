@@ -33,7 +33,7 @@ async def health_check():
 async def get_template():
     """Load the base CV template."""
     template_path = os.path.join(
-        os.path.dirname(__file__), "..", "LaTeX-CV-Template", "CV - English.tex"
+        os.path.dirname(__file__), "..", "cv-templates", "med-length-proff-cv", "CV - English.tex"
     )
     try:
         with open(template_path, "r") as f:
