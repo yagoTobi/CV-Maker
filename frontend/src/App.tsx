@@ -2,16 +2,20 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { LatexEditor, JobInput, ChatPanel, PdfPreview, MatchAnalysis, TemplateSelector } from './components';
 import { useTemplates, useCompiler, useChat } from './hooks';
 import { api } from './services/api';
-import type { UserProfile } from './types';
+import type { UserProfile, CVFormData, CVVersion, CVVersionMeta } from './types';
+import LandingScreen from './components/LandingScreen';
+import Dashboard from './components/Dashboard';
+import CVFormBuilder from './components/CVFormBuilder';
+import VersionSwitcher from './components/VersionSwitcher';
 import styles from './App.module.css';
 
 type PreviewTab = 'latex' | 'pdf';
 type AiTab = 'chat' | 'match';
-type AppScreen = 'template-select' | 'editor';
+type AppScreen = 'landing' | 'dashboard' | 'template-select' | 'form-builder' | 'editor';
 
 function App() {
   // Screen navigation
-  const [currentScreen, setCurrentScreen] = useState<AppScreen>('template-select');
+  const [currentScreen, setCurrentScreen] = useState<AppScreen>('landing');
 
   // UI tabs
   const [activeTab, setActiveTab] = useState<PreviewTab>('latex');
@@ -24,11 +28,19 @@ function App() {
   // User profile
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
+  // Version state
+  const [activeVersion, setActiveVersion] = useState<CVVersion | null>(null);
+  const [formData, setFormData] = useState<CVFormData | null>(null);
+  const [savedVersions, setSavedVersions] = useState<CVVersionMeta[]>([]);
+  const [isSavingVersion, setIsSavingVersion] = useState(false);
+
+  // Track which template was selected in template-select step (for build flow)
+  const [selectedTemplateForBuild, setSelectedTemplateForBuild] = useState<string | null>(null);
+
   // Hooks
   const templates = useTemplates();
   const compiler = useCompiler();
 
-  // Memoize the options object to prevent recreation on each render
   const chatOptions = useMemo(() => ({
     onContentChanged: (newContent: string) => {
       templates.updateContent(newContent);
@@ -36,7 +48,6 @@ function App() {
     },
   }), [templates.updateContent, compiler.clearPdf]);
 
-  // Chat hook
   const chat = useChat(
     templates.content,
     jobDescription,
@@ -45,28 +56,98 @@ function App() {
     chatOptions
   );
 
-  // Load user profile on mount
+  // Load user profile and saved versions on mount
   useEffect(() => {
     let mounted = true;
 
-    api.loadUserData().then((profile) => {
-      if (mounted && profile) {
-        setUserProfile(profile);
-      }
+    Promise.all([
+      api.loadUserData(),
+      api.listVersions(),
+    ]).then(([profile, versions]) => {
+      if (!mounted) return;
+      if (profile) setUserProfile(profile);
+      setSavedVersions(versions);
     });
 
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
-  // Handle template selection
-  const handleTemplateSelect = useCallback(async (templateId: string) => {
-    const success = await templates.selectTemplate(templateId);
+  // --- Navigation handlers ---
+
+  const handleGoToLanding = useCallback(() => {
+    setCurrentScreen('landing');
+  }, []);
+
+  const handleGoToDashboard = useCallback(() => {
+    setCurrentScreen('dashboard');
+  }, []);
+
+  const handleGoToTuneFlow = useCallback(async () => {
+    const success = await templates.selectTemplate('med-length-proff-cv');
     if (success) {
+      setActiveVersion(null);
+      setFormData(null);
       setCurrentScreen('editor');
     }
   }, [templates.selectTemplate]);
+
+  // Template selected from TemplateSelector (Build path) → go to form-builder
+  const handleTemplateBuildSelect = useCallback((templateId: string) => {
+    setSelectedTemplateForBuild(templateId);
+    setCurrentScreen('form-builder');
+  }, []);
+
+  // Form builder generated LaTeX — load into editor (no content fetch needed, we already have it)
+  const handleFormGenerated = useCallback((texContent: string, templateId: string, fd: CVFormData) => {
+    setFormData(fd);
+    templates.setTemplateId(templateId);
+    templates.updateContent(texContent);
+    setCurrentScreen('editor');
+    compiler.compile(texContent, templateId);
+    setActiveTab('pdf');
+  }, [templates.setTemplateId, templates.updateContent, compiler.compile]);
+
+  // Version loaded from dashboard or switcher
+  const handleVersionLoad = useCallback((version: CVVersion) => {
+    templates.updateContent(version.texContent);
+    if (version.formData) setFormData(version.formData);
+    if (version.jobDescription) setJobDescription(version.jobDescription);
+    if (version.companyName) setCompanyName(version.companyName);
+    setActiveVersion(version);
+    setCurrentScreen('editor');
+  }, [templates.updateContent]);
+
+  const handleSaveVersion = useCallback(async (name: string) => {
+    setIsSavingVersion(true);
+    const saved = await api.saveVersion({
+      name,
+      templateId: templates.selectedId || 'med-length-proff-cv',
+      texContent: templates.content,
+      formData: formData || undefined,
+      jobDescription: jobDescription || undefined,
+      companyName: companyName || undefined,
+      matchScore: chat.matchAnalysis?.match_score,
+    });
+    if (saved) {
+      setActiveVersion(saved);
+      const meta: CVVersionMeta = {
+        id: saved.id,
+        name: saved.name,
+        templateId: saved.templateId,
+        jobDescription: saved.jobDescription,
+        companyName: saved.companyName,
+        matchScore: saved.matchScore,
+        createdAt: saved.createdAt,
+      };
+      setSavedVersions(prev => [meta, ...prev]);
+    }
+    setIsSavingVersion(false);
+  }, [templates.selectedId, templates.content, formData, jobDescription, companyName, chat.matchAnalysis]);
+
+  const handleSwitchVersion = useCallback(async (id: string) => {
+    const version = await api.getVersion(id);
+    if (version) handleVersionLoad(version);
+  }, [handleVersionLoad]);
 
   // Compile LaTeX to PDF
   const handleCompile = useCallback(async () => {
@@ -82,21 +163,58 @@ function App() {
     await chat.analyzeJob();
   }, [chat.analyzeJob]);
 
-  // Handle going back to template selection
+  // Go back to landing, resetting editor state
   const handleChangeTemplate = useCallback(() => {
-    setCurrentScreen('template-select');
+    setCurrentScreen('landing');
     templates.reset();
     compiler.reset();
     chat.reset();
+    setActiveVersion(null);
+    setFormData(null);
+    setCompanyName('');
+    setJobDescription('');
   }, [templates.reset, compiler.reset, chat.reset]);
 
-  // Template selection screen
+  // --- Screen renders ---
+
+  if (currentScreen === 'landing') {
+    return (
+      <LandingScreen
+        hasSavedVersions={savedVersions.length > 0}
+        onBuildCV={() => setCurrentScreen('template-select')}
+        onTuneForJob={handleGoToTuneFlow}
+        onMyCV={handleGoToDashboard}
+      />
+    );
+  }
+
+  if (currentScreen === 'dashboard') {
+    return (
+      <Dashboard
+        onVersionLoad={handleVersionLoad}
+        onBack={handleGoToLanding}
+        onVersionsChange={setSavedVersions}
+      />
+    );
+  }
+
   if (currentScreen === 'template-select') {
     return (
       <TemplateSelector
         templates={templates.templates}
-        onSelect={handleTemplateSelect}
+        onSelect={handleTemplateBuildSelect}
         isLoading={templates.isLoading}
+        onBack={handleGoToLanding}
+      />
+    );
+  }
+
+  if (currentScreen === 'form-builder') {
+    return (
+      <CVFormBuilder
+        templateId={selectedTemplateForBuild || 'med-length-proff-cv'}
+        onGenerated={handleFormGenerated}
+        onBack={() => setCurrentScreen('template-select')}
       />
     );
   }
@@ -109,9 +227,19 @@ function App() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="m15 18-6-6 6-6"/>
           </svg>
-          Templates
+          Home
         </button>
         <h1>Your CV Editor</h1>
+        <div className={styles.headerRight}>
+          <VersionSwitcher
+            activeVersion={activeVersion}
+            versions={savedVersions}
+            onSave={handleSaveVersion}
+            onSwitch={handleSwitchVersion}
+            isSaving={isSavingVersion}
+            onDashboard={handleGoToDashboard}
+          />
+        </div>
       </header>
 
       <main className={styles.main}>

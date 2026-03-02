@@ -12,9 +12,10 @@ interface TemplateSelectorProps {
   templates: Template[];
   onSelect: (templateId: string) => void;
   isLoading?: boolean;
+  onBack?: () => void;
 }
 
-export function TemplateSelector({ templates, onSelect, isLoading }: TemplateSelectorProps) {
+export function TemplateSelector({ templates, onSelect, isLoading, onBack }: TemplateSelectorProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -41,6 +42,14 @@ export function TemplateSelector({ templates, onSelect, isLoading }: TemplateSel
     <div className="template-selector">
       <div className="template-selector-content">
         <header className="template-header">
+          {onBack && (
+            <button className="template-back-btn" onClick={onBack}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m15 18-6-6 6-6"/>
+              </svg>
+              Back
+            </button>
+          )}
           <span className="template-eyebrow">Step 1 of 2</span>
           <h1>Choose Your Template</h1>
           <p className="template-subtitle">
