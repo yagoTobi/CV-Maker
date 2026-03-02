@@ -24,11 +24,19 @@
 
 \name{(( personal.fullName | latex_escape ))}
 \address{%
-(% if personal.phone -%)\href{tel:(( personal.phone | latex_escape ))}{(( personal.phone | latex_escape ))}(% endif -%)(% if personal.phone and personal.email %)\enspace|\enspace(% endif -%)(% if personal.email %)\href{mailto:(( personal.email ))}{(( personal.email | latex_escape ))}(% endif -%)(% if personal.location %)\enspace|\enspace (( personal.location | latex_escape ))(% endif -%)(% for link in personal.links -%)\enspace|\enspace\href{(( link.url ))}{(( link.label | latex_escape ))}(% endfor %)}
+(% for item in personal_items -%)(% if item.url -%)\href{(( item.url ))}{(( item.value | latex_escape ))}(% else -%)(( item.value | latex_escape ))(% endif -%)(% if not loop.last %)\enspace{}|\enspace{}(% endif -%)(% endfor %)}
 
 \begin{document}
 
-(% if work %)
+(% if personal.summary %)
+\begin{rSection}{Summary}
+(( personal.summary | latex_escape ))
+\end{rSection}
+
+(% endif %)
+(% for _sec in section_order %)
+
+(% if _sec == 'work' and work %)
 \begin{rSection}{Experience}
 (% for job in work %)
     \begin{rSubsection}{(( job.company | latex_escape ))}{\textbf{(( job.startDate | latex_escape ))(% if job.endDate %)\,--\,(( job.endDate | latex_escape ))(% endif %)}}{(( job.title | latex_escape ))}{(( job.location | latex_escape ))}
@@ -38,9 +46,8 @@
     \end{rSubsection}
 (% endfor %)
 \end{rSection}
-(% endif %)
 
-(% if education %)
+(% elif _sec == 'education' and education %)
 \begin{rSection}{Education}
 (% for edu in education %)
     \begin{rSubsection}{(( edu.school | latex_escape ))}{\textbf{(( edu.startDate | latex_escape ))(% if edu.endDate %)\,--\,(( edu.endDate | latex_escape ))(% endif %)}}{(( edu.degree | latex_escape ))}{(( edu.location | latex_escape ))}
@@ -53,9 +60,8 @@
     \end{rSubsection}
 (% endfor %)
 \end{rSection}
-(% endif %)
 
-(% if skills %)
+(% elif _sec == 'skills' and skills %)
 \begin{rSection}{Skills}
     \begin{tabular}{@{} >{\bfseries}l @{\hspace{2ex}} l @{}}
 (% for cat in skills %)
@@ -63,9 +69,8 @@
 (% endfor %)
     \end{tabular}
 \end{rSection}
-(% endif %)
 
-(% if projects %)
+(% elif _sec == 'projects' and projects %)
 \begin{rSection}{Projects}
 (% for proj in projects %)
     \textbf{(( proj.name | latex_escape ))} (% if proj.year %)\hfill (( proj.year | latex_escape ))(% endif %)\\
@@ -73,9 +78,8 @@
     \vspace{0.5em}
 (% endfor %)
 \end{rSection}
-(% endif %)
 
-(% if awards %)
+(% elif _sec == 'awards' and awards %)
 \begin{rSection}{Awards}
     \begin{tabular}{@{} l @{\hspace{2ex}} l @{}}
 (% for award in awards %)
@@ -83,6 +87,8 @@
 (% endfor %)
     \end{tabular}
 \end{rSection}
+
 (% endif %)
+(% endfor %)
 
 \end{document}

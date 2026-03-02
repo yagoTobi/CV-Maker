@@ -106,6 +106,9 @@ export interface PersonalInfo {
   phone: string;
   location: string;
   links: Array<{ label: string; url: string }>;
+  summary?: string;
+  /** Ordered list of header fields: 'phone' | 'email' | 'location' | 'links' */
+  personalOrder?: string[];
 }
 
 export interface WorkEntry {
@@ -147,6 +150,8 @@ export interface Award {
 
 export interface CVFormData {
   templateId: string;
+  /** Ordered list of section ids: 'work' | 'education' | 'skills' | 'projects' | 'awards' */
+  sectionOrder?: string[];
   personalInfo: PersonalInfo;
   workExperience: WorkEntry[];
   education: EducationEntry[];

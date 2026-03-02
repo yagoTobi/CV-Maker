@@ -6,15 +6,25 @@
 \usepackage{amsmath}
 
 \name{(( personal.fullName | latex_escape ))}
-\address{(( personal.location | latex_escape ))}
+\address{(% if personal.location %)(( personal.location | latex_escape ))(% endif %)}
 \contacts{%
-(% if personal.phone %)(( personal.phone | latex_escape ))(% endif -%)(% if personal.phone and personal.email %)\linebreak (% endif -%)(% if personal.email %)(( personal.email | latex_escape ))(% endif -%)(% for link in personal.links %)\linebreak (( link.label | latex_escape )): (( link.url ))(% endfor %)}
+(% set contact_items = personal_items | selectattr('field', 'ne', 'location') | list -%)(% for item in contact_items -%)(( item.value | latex_escape ))(% if not loop.last %)\linebreak (% endif -%)(% endfor %)}
 
 \begin{document}
 
 \makeheader
 
-(% if work %)
+(% if personal.summary %)
+\begin{cvsection}{Summary}
+    \begin{cvsubsection}{}{}{}
+        (( personal.summary | latex_escape ))
+    \end{cvsubsection}
+\end{cvsection}
+
+(% endif %)
+(% for _sec in section_order %)
+
+(% if _sec == 'work' and work %)
 \begin{cvsection}{Employment}
 (% for job in work %)
     \begin{cvsubsection}{(( job.title | latex_escape ))}{(( job.company | latex_escape ))}{(( job.startDate | latex_escape ))(% if job.endDate %)\,--\,(( job.endDate | latex_escape ))(% endif %)(% if job.location %)\,(( job.location | latex_escape ))(% endif %)}
@@ -28,9 +38,8 @@
     \end{cvsubsection}
 (% endfor %)
 \end{cvsection}
-(% endif %)
 
-(% if education %)
+(% elif _sec == 'education' and education %)
 \begin{cvsection}{Education}
 (% for edu in education %)
     \begin{cvsubsection}{(( edu.location | latex_escape ))}{(( edu.school | latex_escape ))}{(( edu.startDate | latex_escape ))(% if edu.endDate %)\,--\,(( edu.endDate | latex_escape ))(% endif %)}
@@ -43,21 +52,8 @@
     \end{cvsubsection}
 (% endfor %)
 \end{cvsection}
-(% endif %)
 
-(% if projects %)
-\begin{cvsection}{Technical Experience}
-    \begin{cvsubsection}{Projects}{}{}
-        \begin{itemize}
-(% for proj in projects %)
-            \item \textbf{(( proj.name | latex_escape ))} (% if proj.year %)(( proj.year | latex_escape ))(% endif %). (( proj.description | latex_escape ))(% if proj.technologies %)\,(( proj.technologies | latex_escape ))(% endif %)
-(% endfor %)
-        \end{itemize}
-    \end{cvsubsection}
-\end{cvsection}
-(% endif %)
-
-(% if skills %)
+(% elif _sec == 'skills' and skills %)
 \begin{cvsection}{Skills}
     \begin{cvsubsection}{}{}{}
         \begin{itemize}
@@ -67,9 +63,19 @@
         \end{itemize}
     \end{cvsubsection}
 \end{cvsection}
-(% endif %)
 
-(% if awards %)
+(% elif _sec == 'projects' and projects %)
+\begin{cvsection}{Technical Experience}
+    \begin{cvsubsection}{Projects}{}{}
+        \begin{itemize}
+(% for proj in projects %)
+            \item \textbf{(( proj.name | latex_escape ))} (% if proj.year %)(( proj.year | latex_escape ))(% endif %). (( proj.description | latex_escape ))(% if proj.technologies %)\,(( proj.technologies | latex_escape ))(% endif %)
+(% endfor %)
+        \end{itemize}
+    \end{cvsubsection}
+\end{cvsection}
+
+(% elif _sec == 'awards' and awards %)
 \begin{cvsection}{Additional Experience and Awards}
     \begin{cvsubsection}{}{}{}
         \begin{itemize}
@@ -79,6 +85,8 @@
         \end{itemize}
     \end{cvsubsection}
 \end{cvsection}
+
 (% endif %)
+(% endfor %)
 
 \end{document}

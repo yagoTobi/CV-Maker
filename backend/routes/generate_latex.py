@@ -49,6 +49,32 @@ def latex_escape(value: str) -> str:
 
 _jinja_env.filters["latex_escape"] = latex_escape
 
+_DEFAULT_PERSONAL_ORDER = ["phone", "email", "location", "links"]
+
+
+def _build_personal_items(personal, order: list) -> list:
+    """Build an ordered list of personal header items for template rendering.
+
+    Each item is a dict with 'field', 'value', and 'url' (None for plain text).
+    Links are expanded inline so the template just loops once.
+    """
+    items = []
+    for field in order:
+        if field == "phone" and personal.phone:
+            items.append({"field": "phone", "value": personal.phone, "url": f"tel:{personal.phone}"})
+        elif field == "email" and personal.email:
+            items.append({"field": "email", "value": personal.email, "url": f"mailto:{personal.email}"})
+        elif field == "location" and personal.location:
+            items.append({"field": "location", "value": personal.location, "url": None})
+        elif field == "links":
+            for link in personal.links:
+                url = link.get("url", "")
+                label = link.get("label") or url
+                if url:
+                    items.append({"field": "link", "value": label, "url": url})
+    return items
+
+
 _TEMPLATE_FILE_MAP = {
     "med-length-proff-cv": "med-length-proff-cv.tex.j2",
     "deedy-resume": "deedy-resume.tex.j2",
@@ -71,13 +97,16 @@ async def generate_latex(form_data: CVFormData):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load template: {e}")
 
+    personal_order = form_data.personalInfo.personalOrder or _DEFAULT_PERSONAL_ORDER
     context = {
         "personal": form_data.personalInfo,
+        "personal_items": _build_personal_items(form_data.personalInfo, personal_order),
         "work": form_data.workExperience,
         "education": form_data.education,
         "skills": form_data.skills,
         "projects": form_data.projects or [],
         "awards": form_data.awards or [],
+        "section_order": form_data.sectionOrder or ["work", "education", "skills", "projects", "awards"],
     }
 
     try:

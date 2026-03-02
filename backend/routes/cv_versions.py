@@ -19,6 +19,8 @@ class PersonalInfo(BaseModel):
     phone: str = ""
     location: str = ""
     links: List[dict] = []
+    summary: Optional[str] = None
+    personalOrder: Optional[List[str]] = None  # e.g. ['phone', 'email', 'location', 'links']
 
 
 class WorkEntry(BaseModel):
@@ -60,6 +62,7 @@ class Award(BaseModel):
 
 class CVFormData(BaseModel):
     templateId: str
+    sectionOrder: Optional[List[str]] = None  # e.g. ['work', 'education', 'skills', 'projects', 'awards']
     personalInfo: PersonalInfo = PersonalInfo()
     workExperience: List[WorkEntry] = []
     education: List[EducationEntry] = []
