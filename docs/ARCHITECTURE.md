@@ -5,26 +5,60 @@
 CV Maker follows a client-server architecture with a React frontend and FastAPI backend.
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         Frontend (React)                         │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐   │
-│  │ LaTeX Editor │  │  PDF Preview │  │ AI Chat / Analysis   │   │
-│  └──────────────┘  └──────────────┘  └──────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                       Backend (FastAPI)                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐   │
-│  │ Compile API  │  │   Chat API   │  │   User Data API      │   │
-│  └──────────────┘  └──────────────┘  └──────────────────────┘   │
-│          │                │                                      │
-│          ▼                ▼                                      │
-│  ┌──────────────┐  ┌──────────────┐                             │
-│  │LaTeX Compiler│  │ AWS Bedrock  │                             │
-│  └──────────────┘  └──────────────┘                             │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Frontend (React)                                │
+│                                                                              │
+│  ┌────────────────┐  ┌──────────────────┐  ┌──────────────┐                 │
+│  │  Landing /     │  │  Form Builder    │  │   Editor     │                 │
+│  │  Dashboard     │  │  (Build path)    │  │  (both paths)│                 │
+│  └────────────────┘  └──────────────────┘  └──────────────┘                 │
+│                                                                              │
+│  Screens: landing → template-select → form-builder → editor                 │
+│           landing → editor (Tune path, Professional CV pre-loaded)          │
+│           landing → dashboard → editor (load saved version)                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Backend (FastAPI)                               │
+│                                                                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
+│  │ Compile API  │  │ Generate LaTeX│  │   Chat API   │  │  Version API │    │
+│  │ /compile     │  │ /generate-   │  │  /chat       │  │ /cv-versions │    │
+│  │              │  │  latex       │  │  /match-     │  │              │    │
+│  └──────────────┘  └──────────────┘  │  analysis    │  └──────────────┘    │
+│         │                │           └──────────────┘         │            │
+│         ▼                ▼                   ▼                 ▼            │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
+│  │LaTeX Compiler│  │Jinja2 Engine │  │ AWS Bedrock  │  │  JSON Files  │    │
+│  │(pdflatex/    │  │(.tex.j2      │  │  (Claude)    │  │ user_data/   │    │
+│  │ xelatex)     │  │  templates)  │  │              │  │ versions/    │    │
+│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘    │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## Screen Flow
+
+```
+AppScreen = 'landing' | 'dashboard' | 'template-select' | 'form-builder' | 'editor'
+
+landing
+  ├── "Build my CV"    → template-select → form-builder → (Generate CV) → editor
+  ├── "Tune for a job" → editor (Professional CV pre-loaded, left job panel visible)
+  └── "My Saved CVs"   → dashboard  [only shown when saved versions exist]
+
+dashboard
+  ├── click version card → editor (version content loaded)
+  └── back → landing
+
+editor
+  ├── VersionSwitcher (header) → save current / switch to saved version
+  └── nav link → dashboard
+```
+
+---
 
 ## Frontend Architecture
 
@@ -32,30 +66,40 @@ CV Maker follows a client-server architecture with a React frontend and FastAPI 
 
 | Component | Purpose |
 |-----------|---------|
-| `App.tsx` | Main application container, state management, screen routing |
-| `TemplateSelector.tsx` | CV template selection screen with previews |
-| `LatexEditor.tsx` | CodeMirror-based LaTeX editor |
-| `PdfPreview.tsx` | PDF rendering and display |
-| `ChatPanel.tsx` | AI conversation interface with edit suggestions |
-| `MatchAnalysis.tsx` | CV-job match scoring display |
-| `JobInput.tsx` | Job description input form |
+| `App.tsx` | Main container, 5-screen router, all cross-screen state |
+| `LandingScreen.tsx` | Intent-based entry screen (Build / Tune / My CVs) |
+| `TemplateSelector.tsx` | Template selection (Build path only) |
+| `CVFormBuilder.tsx` | Structured form with 6 sections + live PDF preview + DnD reordering |
+| `Dashboard.tsx` | Saved versions grid (load, delete) |
+| `VersionSwitcher.tsx` | In-editor save / switch between saved versions |
+| `LatexEditor.tsx` | CodeMirror-based LaTeX editor (Tune path / fine-tuning) |
+| `PdfPreview.tsx` | PDF rendering via `<iframe>` with base64 source |
+| `ChatPanel.tsx` | AI conversation + inline edit suggestions with undo |
+| `MatchAnalysis.tsx` | CV-job match score display |
+| `JobInput.tsx` | Job description input |
+| `ErrorBoundary.tsx` | Graceful error handling |
 
-### State Management
+### Custom Hooks
 
-State is managed at the `App` component level using React hooks:
+| Hook | Owns |
+|------|------|
+| `useFormBuilder` | All CVFormData state, section/entry CRUD, reorder helpers, isDirty tracking, export/import |
+| `useTemplates` | Selected template, content fetch, `setTemplateId` (set without fetch) |
+| `useCompiler` | Compile request, PDF state, markChanged |
+| `useChat` | AI messages, analyzeJob, applyEdit, undo |
 
-- `currentScreen` - Current app screen ('template-select' | 'editor')
-- `selectedTemplateId` - Selected CV template ID
-- `templates` - Available template list
-- `texContent` - Current LaTeX source
-- `pdfBase64` - Compiled PDF as base64
-- `messages` - Chat history
-- `matchAnalysis` - Analysis results
-- `editHistory` - For undo functionality
+### State (App.tsx)
 
-### Key Hooks
+| State | Type | Purpose |
+|-------|------|---------|
+| `currentScreen` | `AppScreen` | Active screen |
+| `selectedTemplateForBuild` | `string \| null` | Template chosen in Build path |
+| `activeVersion` | `CVVersion \| null` | Currently loaded saved version |
+| `savedVersions` | `CVVersionMeta[]` | Metadata for version switcher and dashboard |
+| `formData` | `CVFormData \| null` | Form data from Build path (passed to editor for saving) |
+| `isSavingVersion` | `boolean` | Loading state for save |
 
-- `useApi` - Centralized API communication hook
+---
 
 ## Backend Architecture
 
@@ -63,46 +107,134 @@ State is managed at the `App` component level using React hooks:
 
 | Route | Method | Purpose |
 |-------|--------|---------|
-| `/api/compile` | POST | Compile LaTeX to PDF (accepts template_id for engine selection) |
-| `/api/chat` | POST | Stream AI responses |
-| `/api/chat/match-analysis` | POST | Get CV-job match score |
+| `/api/compile` | POST | Compile LaTeX to PDF (engine selected per templateId) |
+| `/api/generate-latex` | POST | Generate LaTeX from `CVFormData` via Jinja2 |
+| `/api/chat` | POST | Stream AI responses (SSE) |
+| `/api/chat/match-analysis` | POST | CV-job match score |
 | `/api/templates` | GET | List available templates |
-| `/api/templates/{id}/preview` | GET | Get template preview image |
-| `/api/templates/{id}/content` | GET | Get template LaTeX content |
+| `/api/templates/{id}/preview` | GET | Template preview image |
+| `/api/templates/{id}/content` | GET | Raw LaTeX template content |
 | `/api/user-data` | GET/POST | User profile CRUD |
+| `/api/cv-versions` | GET/POST | List / create saved CV versions |
+| `/api/cv-versions/{id}` | GET/DELETE | Load / delete a saved version |
 | `/api/health` | GET | Health check |
 
-### Services
+### Services & Routes
 
-| Service | Purpose |
-|---------|---------|
-| `latex_compiler.py` | Handles LaTeX compilation (pdflatex/xelatex based on template) |
-| `cv_analyzer.py` | CV analysis and match scoring |
-| `bedrock.py` | AWS Bedrock client wrapper |
+| File | Purpose |
+|------|---------|
+| `routes/compile.py` | LaTeX → PDF compilation (pdflatex / xelatex) |
+| `routes/generate_latex.py` | CVFormData → LaTeX via Jinja2, `latex_escape` filter (single-pass regex), `_build_personal_items` |
+| `routes/cv_versions.py` | Version CRUD + all shared Pydantic models (PersonalInfo, WorkEntry, CVFormData, …) |
+| `routes/chat.py` | AI chat streaming |
+| `routes/templates.py` | Template listing and file serving |
+| `routes/user_data.py` | JSON-file user profile |
+| `services/bedrock.py` | AWS Bedrock client wrapper |
+| `services/cv_analyzer.py` | CV analysis and match scoring |
+| `services/latex_compiler.py` | pdflatex / xelatex subprocess wrapper |
+| `prompts/cv_agent.py` | AI prompt templates |
 
-### AI Integration
+### LaTeX Templates
 
-The application uses AWS Bedrock with Claude models for:
-1. **CV Analysis** - Analyzing CV content against job requirements
-2. **Suggestions** - Generating improvement suggestions with inline edits
-3. **Match Scoring** - Calculating CV-job compatibility scores
+Templates live in `backend/latex_templates/` and use Jinja2 with custom delimiters
+(`(( ))` for variables, `(% %)` for blocks) to avoid clashing with LaTeX `{}` syntax.
+
+| Template file | Engine | Class |
+|--------------|--------|-------|
+| `med-length-proff-cv.tex.j2` | pdflatex | `resume` (`rSection` / `rSubsection`) |
+| `mcdowell-cv.tex.j2` | xelatex | `mcdowellcv` (`cvsection` / `cvsubsection`) |
+| `deedy-resume.tex.j2` | xelatex | `deedy-resume` (two-column, fixed layout) |
+
+All templates receive the following context variables from `generate_latex.py`:
+
+| Variable | Source |
+|----------|--------|
+| `personal` | `form_data.personalInfo` (Pydantic model) |
+| `personal_items` | Pre-built ordered list from `_build_personal_items()`, respects `personalOrder` |
+| `work` | `form_data.workExperience` |
+| `education` | `form_data.education` |
+| `skills` | `form_data.skills` |
+| `projects` | `form_data.projects` |
+| `awards` | `form_data.awards` |
+| `section_order` | `form_data.sectionOrder` (default: work, education, skills, projects, awards) |
+
+---
+
+## Data Models
+
+### `CVFormData` (canonical form — `types/index.ts` + `cv_versions.py`)
+
+```typescript
+PersonalInfo {
+  fullName, email, phone, location
+  links: Array<{ label: string; url: string }>  // label auto-derived from URL
+  summary?: string                               // intro paragraph
+  personalOrder?: string[]                       // header line field order
+}
+
+WorkEntry      { company, title, startDate, endDate, location, bullets[] }
+EducationEntry { school, degree, startDate, endDate, location, gpa?, details[] }
+SkillCategory  { category, skills[] }
+Project        { name, year, description, technologies? }
+Award          { year, title, description? }
+
+CVFormData {
+  templateId: string
+  sectionOrder?: string[]    // section display order
+  personalInfo: PersonalInfo
+  workExperience: WorkEntry[]
+  education: EducationEntry[]
+  skills: SkillCategory[]
+  projects?: Project[]
+  awards?: Award[]
+}
+```
+
+### `CVVersion` (storage — `user_data/versions/{uuid}.json`)
+
+```typescript
+CVVersion {
+  id, name, templateId, texContent
+  formData?: CVFormData   // populated on Build path; null on Tune path
+  jobDescription?, companyName?, matchScore?
+  createdAt: string       // ISO-8601
+}
+CVVersionMeta = Omit<CVVersion, 'texContent' | 'formData'>
+```
+
+---
 
 ## Data Flow
 
-### CV Edit Flow
+### Build Path (form → PDF)
 
 ```
-User edits LaTeX → Frontend state updates → Compile request →
-Backend compiles → PDF returned → Frontend displays
+User fills form → CVFormBuilder
+  → POST /api/generate-latex → Jinja2 renders .tex.j2 → LaTeX string
+  → POST /api/compile         → pdflatex/xelatex      → PDF base64
+  → inline preview in CVFormBuilder
+  → "Open in Editor" → editor screen (auto-compile, PDF tab shown)
 ```
 
-### AI Analysis Flow
+### Tune Path (raw LaTeX → AI → PDF)
 
 ```
-User submits job description → Backend streams AI response →
-Frontend displays streaming content → AI suggests edits →
-User clicks apply → LaTeX updated → Previous state saved for undo
+"Tune for a job" → med-length-proff-cv pre-loaded in editor
+User pastes job description → POST /api/chat/match-analysis → match score
+User sends chat message     → POST /api/chat (streaming)    → AI suggestions
+User applies edit           → LaTeX updated → POST /api/compile → PDF
 ```
+
+### Version Save / Load
+
+```
+Save: POST /api/cv-versions → { name, templateId, texContent, formData?, … }
+      → user_data/versions/{uuid}.json
+List: GET  /api/cv-versions → sorted newest-first, metadata only
+Load: GET  /api/cv-versions/{id} → full version → populate editor / form
+```
+
+---
 
 ## File Structure
 
@@ -111,21 +243,37 @@ User clicks apply → LaTeX updated → Previous state saved for undo
 ```
 src/
 ├── components/
-│   ├── ChatPanel.tsx          # AI conversation UI
-│   ├── JobInput.tsx           # Job description input
-│   ├── LatexEditor.tsx        # Code editor
-│   ├── MatchAnalysis.tsx      # Match score display
-│   ├── PdfPreview.tsx         # PDF viewer
-│   ├── TemplateSelector.tsx   # Template selection screen
-│   ├── TemplateSelector.css   # Template selector styles
-│   └── index.ts               # Component exports
+│   ├── CVFormBuilder.tsx       # Build-path form with inline PDF preview
+│   ├── CVFormBuilder.module.css
+│   ├── Dashboard.tsx           # Saved versions grid
+│   ├── Dashboard.module.css
+│   ├── LandingScreen.tsx       # Entry screen
+│   ├── LandingScreen.module.css
+│   ├── VersionSwitcher.tsx     # In-editor save/switch widget
+│   ├── VersionSwitcher.module.css
+│   ├── TemplateSelector.tsx    # Template cards (Build path)
+│   ├── TemplateSelector.css
+│   ├── LatexEditor.tsx         # CodeMirror LaTeX editor
+│   ├── PdfPreview.tsx          # iframe PDF viewer
+│   ├── ChatPanel.tsx           # AI chat + edit suggestions
+│   ├── MatchAnalysis.tsx       # Match score UI
+│   ├── JobInput.tsx            # Job description input
+│   ├── ErrorBoundary.tsx       # Error boundary
+│   └── index.ts
 ├── hooks/
-│   └── useApi.ts              # API communication
+│   ├── useFormBuilder.ts       # CVFormData state + CRUD
+│   ├── useTemplates.ts         # Template selection + content
+│   ├── useCompiler.ts          # LaTeX compilation
+│   └── useChat.ts              # AI chat
+├── services/
+│   └── api.ts                  # All API calls (13 endpoints)
+├── styles/
+│   └── variables.css           # CSS design tokens
 ├── types/
-│   └── index.ts               # TypeScript definitions
-├── App.tsx                    # Main app component
-├── App.css                    # App styles
-└── main.tsx                   # Entry point
+│   └── index.ts                # All TypeScript types
+├── App.tsx                     # 5-screen router + cross-screen state
+├── App.module.css
+└── main.tsx
 ```
 
 ### Backend (`/backend`)
@@ -133,64 +281,75 @@ src/
 ```
 backend/
 ├── routes/
-│   ├── chat.py            # Chat/AI endpoints
-│   ├── compile.py         # LaTeX compilation
-│   ├── templates.py       # Template listing and retrieval
-│   └── user_data.py       # User data management
+│   ├── compile.py              # POST /compile
+│   ├── generate_latex.py       # POST /generate-latex
+│   ├── cv_versions.py          # CRUD /cv-versions + shared Pydantic models
+│   ├── chat.py                 # POST /chat, /match-analysis
+│   ├── templates.py            # GET /templates
+│   └── user_data.py            # GET/POST /user-data
+├── latex_templates/
+│   ├── med-length-proff-cv.tex.j2
+│   ├── mcdowell-cv.tex.j2
+│   └── deedy-resume.tex.j2
 ├── services/
-│   ├── bedrock.py         # AWS Bedrock client
-│   ├── cv_analyzer.py     # CV analysis logic
-│   └── latex_compiler.py  # LaTeX compilation (pdflatex/xelatex)
+│   ├── bedrock.py
+│   ├── cv_analyzer.py
+│   └── latex_compiler.py
 ├── prompts/
-│   └── cv_agent.py        # AI prompt templates
-└── main.py                # FastAPI app entry
+│   └── cv_agent.py
+├── config/
+│   └── templates.py            # TemplateConfig entries (3 templates)
+├── user_data/
+│   ├── profile.json            # User profile
+│   └── versions/               # Saved CV versions ({uuid}.json)
+└── main.py                     # FastAPI app + router registration
 ```
+
+---
 
 ## Design System
 
-CV Maker uses a Zed-inspired light theme with a clean, professional aesthetic.
+CV Maker uses a Zed-inspired light theme — soft, professional, minimal.
 
-### Color Palette
+### Color Tokens (`variables.css`)
 
 | Variable | Value | Usage |
 |----------|-------|-------|
-| `--bg-primary` | `#F8FAFC` | Main background |
+| `--bg-primary` | `#F8FAFC` | App background |
 | `--bg-secondary` | `#FFFFFF` | Cards, panels |
-| `--bg-tertiary` | `#F1F5F9` | Section backgrounds |
-| `--accent` | `#3B82F6` | Primary actions, links |
-| `--accent-hover` | `#2563EB` | Hover states |
-| `--accent-light` | `#DBEAFE` | Accent backgrounds |
+| `--bg-tertiary` | `#F1F5F9` | Section backgrounds, chips |
+| `--bg-hover` | `#E2E8F0` | Hover state backgrounds |
+| `--accent` | `#3B82F6` | Primary actions, focus rings, active nav |
+| `--accent-hover` | `#2563EB` | Hover on accent elements |
+| `--accent-light` | `#DBEAFE` | Accent background tints |
 | `--text-primary` | `#1E293B` | Main text |
-| `--text-secondary` | `#64748B` | Secondary text |
-| `--text-muted` | `#94A3B8` | Placeholder, hints |
-| `--border-color` | `#E2E8F0` | Standard borders |
-| `--success` | `#10B981` | Success states |
-| `--warning` | `#F59E0B` | Warning states |
-| `--error` | `#EF4444` | Error states |
+| `--text-secondary` | `#64748B` | Labels, secondary |
+| `--text-muted` | `#94A3B8` | Placeholders, hints |
+| `--border-color` | `#E2E8F0` | Default borders |
+| `--border-strong` | `#CBD5E1` | Hover / emphasis borders |
+| `--warning` | `#F59E0B` | Dirty-state indicator on Regenerate button |
+| `--error` | `#EF4444` | Error text and borders |
+| `--error-light` | `#FEF2F2` | Error background tints |
 
 ### Typography
 
-- **Primary font**: IBM Plex Sans (400, 500, 600 weights)
-- **Monospace font**: IBM Plex Mono (code blocks, LaTeX editor)
+- **Primary**: IBM Plex Sans (400, 500, 600)
+- **Monospace**: IBM Plex Mono (LaTeX editor, error output)
 
-### Design Principles
+### Key Patterns
 
-1. **Light and airy** - Soft gray-blue backgrounds, white cards
-2. **Subtle borders** - 1px borders with muted colors, no harsh outlines
-3. **Minimal shadows** - Light, subtle shadows for depth
-4. **Blue accent** - Consistent use of `#3B82F6` for interactive elements
-5. **Professional tone** - Clean, formal aesthetic suitable for CV editing
+- **CSS Modules** for all new components — scoped class names, no global leakage
+- **Design tokens** (`var(--xxx)`) everywhere — never hardcoded hex in component CSS
+- **Cards**: `bg-secondary`, 1px `border-color` border, `--radius` (8px), `--shadow-sm`
+- **Inputs**: `bg-secondary`, blue focus ring via `border-color: var(--accent)`
+- **Labels**: 0.75rem, 600 weight, uppercase, `0.04em` letter-spacing
 
-### Component Styling
-
-- **Cards**: White background, 1px border, 8px border-radius, subtle shadow
-- **Buttons**: Blue accent for primary, gray for secondary
-- **Inputs**: White background, blue focus ring
-- **Tabs**: Pill-style with blue active state
+---
 
 ## Security Considerations
 
-- CORS configured for local development only
-- No authentication currently implemented
-- User data stored locally in JSON files
-- AWS credentials managed via environment/IAM
+- CORS restricted to `localhost` origins; exact methods (`GET POST PUT DELETE`) specified
+- LaTeX input sanitised before compilation: `\write18`, `\openin`, `\catcode` and shell-escape patterns blocked
+- AWS credentials via environment / IAM (never in source)
+- No authentication — single-user local tool; multi-user requires auth + per-user data isolation
+- User data stored as local JSON files — not suitable for production multi-user deployment

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { CompileResponse, ChatRequest, UserProfile, MatchAnalysis } from '../types';
+import type { CompileResponse, ChatRequest, UserProfile, MatchAnalysis, CVFormData, CVVersion, CVVersionMeta } from '../types';
 import type { Template } from '../components';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
@@ -171,6 +171,70 @@ export const api = {
       await axios.post(`${API_BASE}/user-data`, profile);
     } catch (err) {
       console.error('Failed to save user data:', err);
+    }
+  },
+
+  async generateLatex(formData: CVFormData): Promise<{ texContent: string; error?: string }> {
+    try {
+      const response = await axios.post<{ tex_content: string }>(`${API_BASE}/generate-latex`, formData);
+      return { texContent: response.data.tex_content };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'LaTeX generation failed';
+      return { texContent: '', error: message };
+    }
+  },
+
+  async listVersions(): Promise<CVVersionMeta[]> {
+    try {
+      const response = await axios.get<{ versions: CVVersionMeta[] }>(`${API_BASE}/cv-versions`);
+      return response.data.versions;
+    } catch {
+      return [];
+    }
+  },
+
+  async saveVersion(data: {
+    name: string;
+    templateId: string;
+    texContent: string;
+    formData?: CVFormData;
+    jobDescription?: string;
+    companyName?: string;
+    matchScore?: number;
+  }): Promise<CVVersion | null> {
+    try {
+      const payload = {
+        name: data.name,
+        template_id: data.templateId,
+        tex_content: data.texContent,
+        form_data: data.formData,
+        job_description: data.jobDescription,
+        company_name: data.companyName,
+        match_score: data.matchScore,
+      };
+      const response = await axios.post<CVVersion>(`${API_BASE}/cv-versions`, payload);
+      return response.data;
+    } catch (err) {
+      console.error('Failed to save version:', err);
+      return null;
+    }
+  },
+
+  async getVersion(id: string): Promise<CVVersion | null> {
+    try {
+      const response = await axios.get<CVVersion>(`${API_BASE}/cv-versions/${id}`);
+      return response.data;
+    } catch {
+      return null;
+    }
+  },
+
+  async deleteVersion(id: string): Promise<boolean> {
+    try {
+      await axios.delete(`${API_BASE}/cv-versions/${id}`);
+      return true;
+    } catch {
+      return false;
     }
   },
 };

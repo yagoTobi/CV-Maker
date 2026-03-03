@@ -9,6 +9,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Build flow**: New "Build my CV" path — template-select → form-builder → editor (auto-compile)
+- **Form builder** (`CVFormBuilder.tsx`): structured form with 6 sections (Personal Info, Work Experience, Education, Skills, Projects, Awards)
+- **In-form PDF preview**: compiled CV shown alongside the form; drag-to-resize panel (300–760px)
+- **Drag-and-drop section ordering**: reorder CV sections in sidebar nav; order reflected in compiled LaTeX output via `sectionOrder` field in `CVFormData`
+- **Drag-and-drop entry ordering**: reorder individual entries within Work, Education, Skills, Projects, Awards sections
+- **Dirty indicator**: Regenerate button turns amber with "●" suffix when form has changed since last compile
+- **JSON export/import**: export form data as `cv-data.json`; re-import to restore all fields
+- **Version management**: "Save Version" button in editor, saved versions dashboard accessible from landing
+- **Version switcher**: in-editor dropdown to switch between saved versions
+- **Landing screen**: intent-based entry — "Build my CV", "Tune for a job", "My Saved CVs"
+- **LaTeX generation**: Jinja2-powered backend endpoint (`POST /api/generate-latex`) producing valid LaTeX from form data
+- **Dynamic section ordering in LaTeX templates**: `med-length-proff-cv` and `mcdowell-cv` templates now loop over `section_order` context variable
+- Backend CRUD for CV versions (`GET/POST/DELETE /api/cv-versions`, `GET /api/cv-versions/{id}`)
+
+### Fixed
+- `latex_escape` sequential-replacement bug: backslash was replaced first, causing subsequent `{`/`}` passes to re-escape `\textbackslash{}`. Rewrote as single-pass regex.
+
+### Changed
+- App initial screen changed from `template-select` to `landing`
+- `AppScreen` type expanded to `'landing' | 'dashboard' | 'template-select' | 'form-builder' | 'editor'`
+- CORS `allow_methods` expanded to include `DELETE`
+- Template selection screen now has a Back button (returns to landing)
+
+---
+
+## [0.0.5] - 2026-02-28
+
+### Added
 - Template selection screen with 3 CV templates (Professional CV, Deedy Resume, McDowell CV)
 - Template preview images on selection screen
 - Support for multiple LaTeX engines (pdflatex and xelatex)

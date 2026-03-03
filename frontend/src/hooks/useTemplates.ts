@@ -43,6 +43,11 @@ export function useTemplates() {
     setContent(newContent);
   }, []);
 
+  // Set only the template ID (no content fetch) — used when content is provided externally
+  const setTemplateId = useCallback((templateId: string) => {
+    setSelectedId(templateId);
+  }, []);
+
   // Reset template selection
   const reset = useCallback(() => {
     setSelectedId(null);
@@ -55,6 +60,7 @@ export function useTemplates() {
     selectedId,
     content,
     selectTemplate,
+    setTemplateId,
     updateContent,
     reset,
   };

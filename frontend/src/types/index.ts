@@ -98,6 +98,82 @@ function findActualMatch(cvContent: string, searchText: string): string | null {
   return null;
 }
 
+// --- CV Form Data Types ---
+
+export interface PersonalInfo {
+  fullName: string;
+  email: string;
+  phone: string;
+  location: string;
+  links: Array<{ label: string; url: string }>;
+  summary?: string;
+  /** Ordered list of header fields: 'phone' | 'email' | 'location' | 'links' */
+  personalOrder?: string[];
+}
+
+export interface WorkEntry {
+  company: string;
+  title: string;
+  startDate: string;
+  endDate: string;
+  location: string;
+  bullets: string[];
+}
+
+export interface EducationEntry {
+  school: string;
+  degree: string;
+  startDate: string;
+  endDate: string;
+  location: string;
+  gpa?: string;
+  details: string[];
+}
+
+export interface SkillCategory {
+  category: string;
+  skills: string[];
+}
+
+export interface Project {
+  name: string;
+  year: string;
+  description: string;
+  technologies?: string;
+}
+
+export interface Award {
+  year: string;
+  title: string;
+  description?: string;
+}
+
+export interface CVFormData {
+  templateId: string;
+  /** Ordered list of section ids: 'work' | 'education' | 'skills' | 'projects' | 'awards' */
+  sectionOrder?: string[];
+  personalInfo: PersonalInfo;
+  workExperience: WorkEntry[];
+  education: EducationEntry[];
+  skills: SkillCategory[];
+  projects?: Project[];
+  awards?: Award[];
+}
+
+export interface CVVersion {
+  id: string;
+  name: string;
+  templateId: string;
+  texContent: string;
+  formData?: CVFormData;
+  jobDescription?: string;
+  companyName?: string;
+  matchScore?: number;
+  createdAt: string;
+}
+
+export type CVVersionMeta = Omit<CVVersion, 'texContent' | 'formData'>;
+
 // Apply edits to CV content
 export function applyEdit(cvContent: string, edit: CVEdit): string | null {
   // Try exact match first

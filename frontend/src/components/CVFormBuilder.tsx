@@ -1,0 +1,757 @@
+import { useState, useRef, useCallback } from 'react';
+import { useFormBuilder, type FormSection, DEFAULT_PERSONAL_ORDER } from '../hooks/useFormBuilder';
+import { api } from '../services/api';
+import type { CVFormData } from '../types';
+import styles from './CVFormBuilder.module.css';
+
+// Auto-derive a display label from a URL
+function deriveLinkLabel(url: string): string {
+  const PLATFORMS: Array<[RegExp, string]> = [
+    [/github\.com/i, 'GitHub'],
+    [/linkedin\.com/i, 'LinkedIn'],
+    [/twitter\.com|x\.com/i, 'Twitter'],
+    [/gitlab\.com/i, 'GitLab'],
+    [/kaggle\.com/i, 'Kaggle'],
+    [/medium\.com/i, 'Medium'],
+    [/stackoverflow\.com/i, 'Stack Overflow'],
+    [/scholar\.google/i, 'Google Scholar'],
+    [/researchgate\.net/i, 'ResearchGate'],
+    [/orcid\.org/i, 'ORCID'],
+  ];
+  for (const [pattern, label] of PLATFORMS) {
+    if (pattern.test(url)) return label;
+  }
+  try {
+    const normalized = url.startsWith('http') ? url : `https://${url}`;
+    return new URL(normalized).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+
+interface CVFormBuilderProps {
+  templateId: string;
+  onGenerated: (texContent: string, templateId: string, formData: CVFormData) => void;
+  onBack: () => void;
+}
+
+const SECTION_LABELS: Record<FormSection, string> = {
+  personal: 'Personal Info',
+  work: 'Work Experience',
+  education: 'Education',
+  skills: 'Skills',
+  projects: 'Projects',
+  awards: 'Awards',
+};
+
+// Grip icon for drag handles
+function GripIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className={styles.gripIcon}>
+      <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>
+      <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+      <circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
+    </svg>
+  );
+}
+
+export default function CVFormBuilder({ templateId, onGenerated, onBack }: CVFormBuilderProps) {
+  // All hooks at top — never after a conditional return (key learning #3)
+  const fb = useFormBuilder(templateId);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // PDF preview state
+  const [pdfBase64, setPdfBase64] = useState<string | null>(null);
+  const [isCompiling, setIsCompiling] = useState(false);
+  const [generatedTex, setGeneratedTex] = useState<string | null>(null);
+  const [compileError, setCompileError] = useState<string | null>(null);
+
+  // Resizable preview panel
+  const [previewWidth, setPreviewWidth] = useState(520);
+  const previewWidthRef = useRef(520);
+  const resizingRef = useRef(false);
+  const resizeStartXRef = useRef(0);
+  const resizeStartWidthRef = useRef(0);
+
+  // Sidebar section drag state
+  const [navDragFrom, setNavDragFrom] = useState<number | null>(null);
+  const [navDragOver, setNavDragOver] = useState<number | null>(null);
+
+  const startResize = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    resizingRef.current = true;
+    resizeStartXRef.current = e.clientX;
+    resizeStartWidthRef.current = previewWidthRef.current;
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!resizingRef.current) return;
+      const delta = resizeStartXRef.current - e.clientX;
+      const newW = Math.max(300, Math.min(760, resizeStartWidthRef.current + delta));
+      setPreviewWidth(newW);
+      previewWidthRef.current = newW;
+    };
+    const onMouseUp = () => {
+      resizingRef.current = false;
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }, []);
+
+  // Nav drag handlers (only for non-personal sections; index 0 = first reorderable)
+  const reorderableNavItems = fb.navSectionOrder.filter(s => s !== 'personal');
+
+  const handleNavDragStart = (rIdx: number) => { setNavDragFrom(rIdx); };
+  const handleNavDragEnter = (rIdx: number) => {
+    if (navDragFrom !== null && navDragFrom !== rIdx) setNavDragOver(rIdx);
+  };
+  const handleNavDrop = (rIdx: number) => {
+    if (navDragFrom !== null && navDragFrom !== rIdx) fb.reorderSections(navDragFrom, rIdx);
+    setNavDragFrom(null);
+    setNavDragOver(null);
+  };
+  const handleNavDragEnd = (e: React.DragEvent) => {
+    (e.currentTarget as HTMLElement).draggable = false;
+    setNavDragFrom(null);
+    setNavDragOver(null);
+  };
+
+  const handleGenerate = async () => {
+    setCompileError(null);
+    const { texContent, error } = await fb.generateCV();
+    if (error || !texContent) return;
+
+    setGeneratedTex(texContent);
+    setIsCompiling(true);
+    setPdfBase64(null);
+
+    const result = await api.compileLatex(texContent, templateId);
+    setIsCompiling(false);
+
+    if (result.success && result.pdf_base64) {
+      setPdfBase64(result.pdf_base64);
+    } else {
+      setCompileError(result.error || 'Compilation failed');
+    }
+  };
+
+  const handleRegenerate = async () => {
+    if (!generatedTex) return;
+    setIsCompiling(true);
+    setCompileError(null);
+    const result = await api.compileLatex(generatedTex, templateId);
+    setIsCompiling(false);
+    if (result.success && result.pdf_base64) setPdfBase64(result.pdf_base64);
+    else setCompileError(result.error || 'Compilation failed');
+  };
+
+  const handleOpenInEditor = () => {
+    if (generatedTex) onGenerated(generatedTex, templateId, fb.formData);
+  };
+
+  const isGenerateDisabled = fb.isGenerating || isCompiling;
+  const showDirty = pdfBase64 !== null && fb.isDirty;
+
+  return (
+    <div className={styles.container}>
+      {/* ── Sidebar ── */}
+      <aside className={styles.sidebar}>
+        <div className={styles.sidebarHeader}>
+          <button className={styles.backBtn} onClick={onBack}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m15 18-6-6 6-6"/>
+            </svg>
+            Back
+          </button>
+          <div className={styles.sidebarTitle}>
+            <span className={styles.eyebrow}>Step 2 of 2</span>
+            <h2>Fill in your CV</h2>
+          </div>
+        </div>
+
+        <nav className={styles.sectionNav}>
+          {/* Personal — fixed, not draggable */}
+          <button
+            className={`${styles.navItem} ${fb.activeSection === 'personal' ? styles.navActive : ''}`}
+            onClick={() => fb.setActiveSection('personal')}
+          >
+            {SECTION_LABELS['personal']}
+          </button>
+
+          {/* Reorderable sections */}
+          {reorderableNavItems.map((section, rIdx) => (
+            <div
+              key={section}
+              data-drag-nav
+              className={`${styles.navDraggable} ${navDragOver === rIdx && navDragFrom !== rIdx ? styles.navDragOver : ''} ${navDragFrom === rIdx ? styles.navDragging : ''}`}
+              onDragStart={() => handleNavDragStart(rIdx)}
+              onDragEnter={() => handleNavDragEnter(rIdx)}
+              onDragOver={e => e.preventDefault()}
+              onDrop={() => handleNavDrop(rIdx)}
+              onDragEnd={handleNavDragEnd}
+            >
+              <span
+                className={styles.navGrip}
+                onMouseDown={e => {
+                  const nav = (e.currentTarget as HTMLElement).closest('[data-drag-nav]') as HTMLElement | null;
+                  if (nav) nav.draggable = true;
+                }}
+              ><GripIcon /></span>
+              <button
+                className={`${styles.navItem} ${fb.activeSection === section ? styles.navActive : ''}`}
+                onClick={() => fb.setActiveSection(section)}
+              >
+                {SECTION_LABELS[section]}
+              </button>
+            </div>
+          ))}
+        </nav>
+
+        <div className={styles.sidebarFooter}>
+          <div className={styles.importExport}>
+            <button className={styles.iconBtn} onClick={fb.exportFormData} title="Export CV data as JSON">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Export
+            </button>
+            <button className={styles.iconBtn} onClick={() => fileInputRef.current?.click()} title="Import CV data from JSON">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              Import
+            </button>
+            <input ref={fileInputRef} type="file" accept=".json" className={styles.hiddenInput}
+              onChange={e => { if (e.target.files?.[0]) fb.importFormData(e.target.files[0]); }} />
+          </div>
+
+          {fb.generateError && <p className={styles.errorMsg}>{fb.generateError}</p>}
+
+          <button
+            className={`${styles.generateBtn} ${showDirty ? styles.generateBtnDirty : ''}`}
+            onClick={handleGenerate}
+            disabled={isGenerateDisabled}
+          >
+            {fb.isGenerating ? (
+              <><span className={styles.spinner} /> Generating...</>
+            ) : isCompiling ? (
+              <><span className={styles.spinner} /> Compiling...</>
+            ) : pdfBase64 ? (
+              <>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 2v6h-6"/><path d="M21 13a9 9 0 1 1-3-7.7L21 8"/>
+                </svg>
+                Regenerate{showDirty ? ' ●' : ''}
+              </>
+            ) : (
+              <>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+                </svg>
+                Generate CV
+              </>
+            )}
+          </button>
+        </div>
+      </aside>
+
+      {/* ── Form area ── */}
+      <main className={styles.formArea}>
+        {fb.activeSection === 'personal'  && <PersonalSection  fb={fb} />}
+        {fb.activeSection === 'work'      && <WorkSection      fb={fb} />}
+        {fb.activeSection === 'education' && <EducationSection fb={fb} />}
+        {fb.activeSection === 'skills'    && <SkillsSection    fb={fb} />}
+        {fb.activeSection === 'projects'  && <ProjectsSection  fb={fb} />}
+        {fb.activeSection === 'awards'    && <AwardsSection    fb={fb} />}
+      </main>
+
+      {/* ── Resize handle ── */}
+      <div className={styles.resizeHandle} onMouseDown={startResize} title="Drag to resize" />
+
+      {/* ── Preview panel ── */}
+      <aside className={styles.previewPanel} style={{ width: previewWidth }}>
+        <div className={styles.previewHeader}>
+          <h3>CV Preview</h3>
+          {pdfBase64 && (
+            <button className={styles.openEditorBtn} onClick={handleOpenInEditor}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Open in Editor
+            </button>
+          )}
+        </div>
+
+        <div className={styles.previewContent}>
+          {isCompiling ? (
+            <div className={styles.previewLoading}>
+              <div className={styles.previewSpinner} />
+              <p>Compiling PDF...</p>
+            </div>
+          ) : compileError ? (
+            <div className={styles.previewError}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <p>Compilation error</p>
+              <pre className={styles.compileErrorPre}>{compileError}</pre>
+              <button className={styles.retryBtn} onClick={handleRegenerate}>Try again</button>
+            </div>
+          ) : pdfBase64 ? (
+            <iframe
+              src={`data:application/pdf;base64,${pdfBase64}`}
+              title="CV Preview"
+              className={styles.pdfFrame}
+            />
+          ) : (
+            <div className={styles.previewPlaceholder}>
+              <div className={styles.placeholderIcon}>
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+                  <polyline points="10 9 9 9 8 9"/>
+                </svg>
+              </div>
+              <p>Fill in your details,<br />then click <strong>Generate CV</strong></p>
+            </div>
+          )}
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+// ─── Section components ─────────────────────────────────────────────────────
+// Pure render components — drag state is local to each (key learning #3: hooks only inside component bodies, never after conditionals)
+
+type FB = ReturnType<typeof useFormBuilder>;
+
+function useDrag(onReorder: (from: number, to: number) => void) {
+  const dragFromRef = useRef<number | null>(null);
+  const [dragOver, setDragOver] = useState<number | null>(null);
+
+  // Sets draggable=true on the nearest [data-drag-card] ancestor.
+  // Cards have NO draggable attribute in JSX — it's only toggled here.
+  // This prevents draggable from interfering with text cursor positioning
+  // inside child inputs when not actively dragging (key learning #21).
+  const onHandleMouseDown = (e: React.MouseEvent) => {
+    const card = (e.currentTarget as HTMLElement).closest('[data-drag-card]') as HTMLElement | null;
+    if (card) card.draggable = true;
+  };
+
+  const onDragStart = (i: number) => { dragFromRef.current = i; };
+  const onDragEnter = (i: number) => { if (dragFromRef.current !== null && dragFromRef.current !== i) setDragOver(i); };
+  const onDragOver  = (e: React.DragEvent) => e.preventDefault();
+  const onDrop      = (i: number) => {
+    if (dragFromRef.current !== null && dragFromRef.current !== i) onReorder(dragFromRef.current, i);
+    dragFromRef.current = null;
+    setDragOver(null);
+  };
+  // Resets draggable=false on the card after drag completes
+  const onDragEnd   = (e: React.DragEvent) => {
+    (e.currentTarget as HTMLElement).draggable = false;
+    dragFromRef.current = null;
+    setDragOver(null);
+  };
+
+  return { dragOver, onHandleMouseDown, onDragStart, onDragEnter, onDragOver, onDrop, onDragEnd };
+}
+
+const PERSONAL_FIELD_META: Record<string, { label: string }> = {
+  phone:    { label: 'Phone' },
+  email:    { label: 'Email' },
+  location: { label: 'Location' },
+  links:    { label: 'Links' },
+};
+
+function PersonalSection({ fb }: { fb: FB }) {
+  const p = fb.formData.personalInfo;
+  const personalOrder = (p.personalOrder ?? DEFAULT_PERSONAL_ORDER) as string[];
+  const headerDrag = useDrag(fb.reorderPersonalFields);
+
+  return (
+    <section className={styles.section}>
+      <h3 className={styles.sectionTitle}>Personal Information</h3>
+      <div className={styles.formGrid}>
+        <Field label="Full Name" required>
+          <input className={styles.input} value={p.fullName} onChange={e => fb.updatePersonalInfo({ fullName: e.target.value })} placeholder="Jane Smith" />
+        </Field>
+        <Field label="Email" required>
+          <input className={styles.input} type="email" value={p.email} onChange={e => fb.updatePersonalInfo({ email: e.target.value })} placeholder="jane@example.com" />
+        </Field>
+        <Field label="Phone">
+          <input className={styles.input} value={p.phone} onChange={e => fb.updatePersonalInfo({ phone: e.target.value })} placeholder="+44 7700 000000" />
+        </Field>
+        <Field label="Location">
+          <input className={styles.input} value={p.location} onChange={e => fb.updatePersonalInfo({ location: e.target.value })} placeholder="London, UK" />
+        </Field>
+      </div>
+
+      {/* Summary / intro paragraph */}
+      <div className={styles.summaryField}>
+        <Field label="Summary">
+          <textarea
+            className={`${styles.input} ${styles.textarea}`}
+            value={p.summary || ''}
+            onChange={e => fb.updatePersonalInfo({ summary: e.target.value })}
+            placeholder="Motivated software engineer with 5+ years of experience..."
+            rows={3}
+          />
+        </Field>
+      </div>
+
+      {/* Header line order */}
+      <div className={styles.headerOrderSection}>
+        <div className={styles.subSectionHeader}>
+          <h4>Header Line Order</h4>
+        </div>
+        <p className={styles.hint}>Drag to reorder how items appear on your CV header.</p>
+        <div className={styles.headerOrderChips}>
+          {personalOrder.map((fieldKey, i) => {
+            const meta = PERSONAL_FIELD_META[fieldKey];
+            if (!meta) return null;
+            const hasValue =
+              fieldKey === 'links' ? p.links.length > 0
+              : fieldKey === 'phone' ? !!p.phone
+              : fieldKey === 'email' ? !!p.email
+              : !!p.location;
+            return (
+              <div
+                key={fieldKey}
+                className={`${styles.headerChip} ${!hasValue ? styles.headerChipEmpty : ''} ${headerDrag.dragOver === i ? styles.headerChipDragOver : ''}`}
+                data-drag-card
+                onMouseDown={headerDrag.onHandleMouseDown}
+                onDragStart={() => headerDrag.onDragStart(i)}
+                onDragEnter={() => headerDrag.onDragEnter(i)}
+                onDragOver={headerDrag.onDragOver}
+                onDrop={() => headerDrag.onDrop(i)}
+                onDragEnd={headerDrag.onDragEnd}
+              >
+                <GripIcon />
+                <span>{meta.label}</span>
+                {fieldKey === 'links' && p.links.length > 0 && (
+                  <span className={styles.chipCount}>{p.links.length}</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Links — URL only, label auto-derived */}
+      <div className={styles.subSection}>
+        <div className={styles.subSectionHeader}>
+          <h4>Links</h4>
+          <button className={styles.addBtn} onClick={fb.addLink}>+ Add Link</button>
+        </div>
+        {p.links.map((link, i) => (
+          <div key={i} className={styles.linkItem}>
+            <input
+              className={styles.input}
+              value={link.url}
+              onChange={e => {
+                const url = e.target.value;
+                fb.updateLink(i, 'url', url);
+                fb.updateLink(i, 'label', deriveLinkLabel(url));
+              }}
+              placeholder="https://github.com/username"
+            />
+            <span className={styles.linkLabelBadge}>{link.label || deriveLinkLabel(link.url)}</span>
+            <button className={styles.removeBtn} onClick={() => fb.removeLink(i)} title="Remove link">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function WorkSection({ fb }: { fb: FB }) {
+  const drag = useDrag(fb.reorderWorkEntries);
+  return (
+    <section className={styles.section}>
+      <div className={styles.sectionHeader}>
+        <h3 className={styles.sectionTitle}>Work Experience</h3>
+        <button className={styles.addBtn} onClick={fb.addWorkEntry}>+ Add Position</button>
+      </div>
+      {fb.formData.workExperience.map((job, i) => (
+        <div
+          key={i}
+          className={`${styles.card} ${drag.dragOver === i ? styles.cardDragOver : ''}`}
+          data-drag-card
+          onDragStart={() => drag.onDragStart(i)}
+          onDragEnter={() => drag.onDragEnter(i)}
+          onDragOver={drag.onDragOver}
+          onDrop={() => drag.onDrop(i)}
+          onDragEnd={drag.onDragEnd}
+        >
+          <div className={styles.cardHeader}>
+            <span className={styles.cardDragHandle} onMouseDown={drag.onHandleMouseDown}><GripIcon /></span>
+            <span className={styles.cardLabel}>{job.company || `Position ${i + 1}`}</span>
+            {fb.formData.workExperience.length > 1 && (
+              <button className={styles.removeBtn} onClick={() => fb.removeWorkEntry(i)}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            )}
+          </div>
+          <div className={styles.formGrid}>
+            <Field label="Company" required>
+              <input className={styles.input} value={job.company} onChange={e => fb.updateWorkEntry(i, { company: e.target.value })} placeholder="Acme Corp" />
+            </Field>
+            <Field label="Title" required>
+              <input className={styles.input} value={job.title} onChange={e => fb.updateWorkEntry(i, { title: e.target.value })} placeholder="Software Engineer" />
+            </Field>
+            <Field label="Start Date">
+              <input className={styles.input} value={job.startDate} onChange={e => fb.updateWorkEntry(i, { startDate: e.target.value })} placeholder="Jan 2022" />
+            </Field>
+            <Field label="End Date">
+              <input className={styles.input} value={job.endDate} onChange={e => fb.updateWorkEntry(i, { endDate: e.target.value })} placeholder="Present" />
+            </Field>
+            <Field label="Location">
+              <input className={styles.input} value={job.location} onChange={e => fb.updateWorkEntry(i, { location: e.target.value })} placeholder="London, UK" />
+            </Field>
+          </div>
+          <div className={styles.bulletsSection}>
+            <div className={styles.subSectionHeader}>
+              <h4>Bullet Points</h4>
+              <button className={styles.addBtn} onClick={() => fb.addBullet(i)}>+ Add</button>
+            </div>
+            {job.bullets.map((bullet, bi) => (
+              <div key={bi} className={styles.bulletRow}>
+                <textarea className={`${styles.input} ${styles.bulletInput}`} value={bullet}
+                  onChange={e => fb.updateBullet(i, bi, e.target.value)}
+                  placeholder="Describe an achievement or responsibility..." rows={2} />
+                {job.bullets.length > 1 && (
+                  <button className={styles.removeBtn} onClick={() => fb.removeBullet(i, bi)}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function EducationSection({ fb }: { fb: FB }) {
+  const drag = useDrag(fb.reorderEducationEntries);
+  return (
+    <section className={styles.section}>
+      <div className={styles.sectionHeader}>
+        <h3 className={styles.sectionTitle}>Education</h3>
+        <button className={styles.addBtn} onClick={fb.addEducationEntry}>+ Add Entry</button>
+      </div>
+      {fb.formData.education.map((edu, i) => (
+        <div
+          key={i}
+          className={`${styles.card} ${drag.dragOver === i ? styles.cardDragOver : ''}`}
+          data-drag-card
+          onDragStart={() => drag.onDragStart(i)}
+          onDragEnter={() => drag.onDragEnter(i)}
+          onDragOver={drag.onDragOver}
+          onDrop={() => drag.onDrop(i)}
+          onDragEnd={drag.onDragEnd}
+        >
+          <div className={styles.cardHeader}>
+            <span className={styles.cardDragHandle} onMouseDown={drag.onHandleMouseDown}><GripIcon /></span>
+            <span className={styles.cardLabel}>{edu.school || `Institution ${i + 1}`}</span>
+            {fb.formData.education.length > 1 && (
+              <button className={styles.removeBtn} onClick={() => fb.removeEducationEntry(i)}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            )}
+          </div>
+          <div className={styles.formGrid}>
+            <Field label="School / University" required>
+              <input className={styles.input} value={edu.school} onChange={e => fb.updateEducationEntry(i, { school: e.target.value })} placeholder="University of Oxford" />
+            </Field>
+            <Field label="Degree" required>
+              <input className={styles.input} value={edu.degree} onChange={e => fb.updateEducationEntry(i, { degree: e.target.value })} placeholder="BSc Computer Science" />
+            </Field>
+            <Field label="Start Date">
+              <input className={styles.input} value={edu.startDate} onChange={e => fb.updateEducationEntry(i, { startDate: e.target.value })} placeholder="Sep 2019" />
+            </Field>
+            <Field label="End Date">
+              <input className={styles.input} value={edu.endDate} onChange={e => fb.updateEducationEntry(i, { endDate: e.target.value })} placeholder="Jun 2023" />
+            </Field>
+            <Field label="Location">
+              <input className={styles.input} value={edu.location} onChange={e => fb.updateEducationEntry(i, { location: e.target.value })} placeholder="Oxford, UK" />
+            </Field>
+            <Field label="GPA">
+              <input className={styles.input} value={edu.gpa || ''} onChange={e => fb.updateEducationEntry(i, { gpa: e.target.value })} placeholder="3.8 / 4.0" />
+            </Field>
+          </div>
+          <div className={styles.bulletsSection}>
+            <div className={styles.subSectionHeader}>
+              <h4>Notable Details</h4>
+              <button className={styles.addBtn} onClick={() => fb.addEduDetail(i)}>+ Add</button>
+            </div>
+            {edu.details.map((detail, di) => (
+              <div key={di} className={styles.bulletRow}>
+                <input className={styles.input} value={detail} onChange={e => fb.updateEduDetail(i, di, e.target.value)} placeholder="Thesis, honours, coursework..." />
+                <button className={styles.removeBtn} onClick={() => fb.removeEduDetail(i, di)}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function SkillsSection({ fb }: { fb: FB }) {
+  const drag = useDrag(fb.reorderSkillCategories);
+  return (
+    <section className={styles.section}>
+      <div className={styles.sectionHeader}>
+        <h3 className={styles.sectionTitle}>Skills</h3>
+        <button className={styles.addBtn} onClick={fb.addSkillCategory}>+ Add Category</button>
+      </div>
+      <p className={styles.hint}>Enter skills as a comma-separated list within each category.</p>
+      {fb.formData.skills.map((cat, i) => (
+        <div
+          key={i}
+          className={`${styles.card} ${drag.dragOver === i ? styles.cardDragOver : ''}`}
+          data-drag-card
+          onDragStart={() => drag.onDragStart(i)}
+          onDragEnter={() => drag.onDragEnter(i)}
+          onDragOver={drag.onDragOver}
+          onDrop={() => drag.onDrop(i)}
+          onDragEnd={drag.onDragEnd}
+        >
+          <div className={styles.cardHeader}>
+            <span className={styles.cardDragHandle} onMouseDown={drag.onHandleMouseDown}><GripIcon /></span>
+            <span className={styles.cardLabel}>{cat.category || `Category ${i + 1}`}</span>
+            {fb.formData.skills.length > 1 && (
+              <button className={styles.removeBtn} onClick={() => fb.removeSkillCategory(i)}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            )}
+          </div>
+          <div className={styles.formGrid}>
+            <Field label="Category Name">
+              <input className={styles.input} value={cat.category} onChange={e => fb.updateSkillCategory(i, { category: e.target.value })} placeholder="Programming Languages" />
+            </Field>
+            <Field label="Skills (comma-separated)">
+              <input className={styles.input} value={cat.skills.join(', ')} onChange={e => fb.updateSkillsText(i, e.target.value)} placeholder="Python, TypeScript, Go" />
+            </Field>
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function ProjectsSection({ fb }: { fb: FB }) {
+  const drag = useDrag(fb.reorderProjects);
+  return (
+    <section className={styles.section}>
+      <div className={styles.sectionHeader}>
+        <h3 className={styles.sectionTitle}>Projects</h3>
+        <button className={styles.addBtn} onClick={fb.addProject}>+ Add Project</button>
+      </div>
+      {(fb.formData.projects || []).length === 0 && (
+        <p className={styles.emptyState}>No projects added yet. Click "Add Project" to get started.</p>
+      )}
+      {(fb.formData.projects || []).map((proj, i) => (
+        <div
+          key={i}
+          className={`${styles.card} ${drag.dragOver === i ? styles.cardDragOver : ''}`}
+          data-drag-card
+          onDragStart={() => drag.onDragStart(i)}
+          onDragEnter={() => drag.onDragEnter(i)}
+          onDragOver={drag.onDragOver}
+          onDrop={() => drag.onDrop(i)}
+          onDragEnd={drag.onDragEnd}
+        >
+          <div className={styles.cardHeader}>
+            <span className={styles.cardDragHandle} onMouseDown={drag.onHandleMouseDown}><GripIcon /></span>
+            <span className={styles.cardLabel}>{proj.name || `Project ${i + 1}`}</span>
+            <button className={styles.removeBtn} onClick={() => fb.removeProject(i)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <div className={styles.formGrid}>
+            <Field label="Project Name">
+              <input className={styles.input} value={proj.name} onChange={e => fb.updateProject(i, { name: e.target.value })} placeholder="My Awesome App" />
+            </Field>
+            <Field label="Year">
+              <input className={styles.input} value={proj.year} onChange={e => fb.updateProject(i, { year: e.target.value })} placeholder="2024" />
+            </Field>
+            <Field label="Technologies">
+              <input className={styles.input} value={proj.technologies || ''} onChange={e => fb.updateProject(i, { technologies: e.target.value })} placeholder="React, Python, PostgreSQL" />
+            </Field>
+          </div>
+          <Field label="Description">
+            <textarea className={`${styles.input} ${styles.textarea}`} value={proj.description} onChange={e => fb.updateProject(i, { description: e.target.value })} placeholder="Describe what you built and its impact..." rows={3} />
+          </Field>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function AwardsSection({ fb }: { fb: FB }) {
+  const drag = useDrag(fb.reorderAwards);
+  return (
+    <section className={styles.section}>
+      <div className={styles.sectionHeader}>
+        <h3 className={styles.sectionTitle}>Awards & Achievements</h3>
+        <button className={styles.addBtn} onClick={fb.addAward}>+ Add Award</button>
+      </div>
+      {(fb.formData.awards || []).length === 0 && (
+        <p className={styles.emptyState}>No awards added yet.</p>
+      )}
+      {(fb.formData.awards || []).map((award, i) => (
+        <div
+          key={i}
+          className={`${styles.card} ${drag.dragOver === i ? styles.cardDragOver : ''}`}
+          data-drag-card
+          onDragStart={() => drag.onDragStart(i)}
+          onDragEnter={() => drag.onDragEnter(i)}
+          onDragOver={drag.onDragOver}
+          onDrop={() => drag.onDrop(i)}
+          onDragEnd={drag.onDragEnd}
+        >
+          <div className={styles.cardHeader}>
+            <span className={styles.cardDragHandle} onMouseDown={drag.onHandleMouseDown}><GripIcon /></span>
+            <span className={styles.cardLabel}>{award.title || `Award ${i + 1}`}</span>
+            <button className={styles.removeBtn} onClick={() => fb.removeAward(i)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <div className={styles.formGrid}>
+            <Field label="Year">
+              <input className={styles.input} value={award.year} onChange={e => fb.updateAward(i, { year: e.target.value })} placeholder="2023" />
+            </Field>
+            <Field label="Title" required>
+              <input className={styles.input} value={award.title} onChange={e => fb.updateAward(i, { title: e.target.value })} placeholder="Best Paper Award" />
+            </Field>
+            <Field label="Description">
+              <input className={styles.input} value={award.description || ''} onChange={e => fb.updateAward(i, { description: e.target.value })} placeholder="Brief description (optional)" />
+            </Field>
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <div className={styles.field}>
+      <label className={styles.label}>
+        {label}{required && <span className={styles.required}>*</span>}
+      </label>
+      {children}
+    </div>
+  );
+}

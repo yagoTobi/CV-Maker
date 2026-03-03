@@ -183,6 +183,123 @@ Use structured JSON blocks within AI responses with `find` and `replace` fields.
 
 ---
 
+## ADR-008: Form Builder as Separate Path from Raw LaTeX Editor
+
+**Date:** 2026-03-02
+
+**Status:** Accepted
+
+**Context:**
+Two user types emerged: those who want to build a CV from scratch (no LaTeX knowledge) and those who want to tune an existing CV for a specific job posting.
+
+**Decision:**
+Implement two distinct entry paths — "Build my CV" (structured form → generated LaTeX → editor) and "Tune for a job" (raw editor + AI chat). The form is the source of truth on the Build path; LaTeX is generated output.
+
+**Rationale:**
+- Structured form removes the LaTeX barrier for most users
+- Power users who want to tweak LaTeX still have the editor
+- Keeping paths separate avoids a complex "sync" problem between form state and hand-edited LaTeX
+- Form data enables richer version storage (structured diffs, field-level info)
+
+**Consequences:**
+- Once user opens editor and edits LaTeX manually, the form data is no longer in sync
+- Template customisation from the form is deferred (form only controls content, not layout)
+
+---
+
+## ADR-009: Jinja2 with Custom Delimiters for LaTeX Templates
+
+**Date:** 2026-03-02
+
+**Status:** Accepted
+
+**Context:**
+LaTeX uses `{}` extensively. Jinja2's default `{{ }}` / `{% %}` delimiters clash with LaTeX braces, making templates unreadable and error-prone.
+
+**Decision:**
+Configure Jinja2 with custom delimiters: `(( ))` for variables, `(% %)` for blocks.
+
+**Rationale:**
+- LaTeX and template syntax no longer overlap — templates are readable
+- Parentheses don't have special meaning in LaTeX
+- Zero changes needed to the LaTeX template class macros
+
+**Consequences:**
+- Non-standard delimiters may confuse developers unfamiliar with the project
+- Documented in ARCHITECTURE.md and key-learnings.md
+
+---
+
+## ADR-010: Single-Pass Regex for LaTeX Character Escaping
+
+**Date:** 2026-03-02
+
+**Status:** Accepted
+
+**Context:**
+LaTeX special characters (`& % $ # _ { } ~ ^ \`) must be escaped. Sequential `str.replace()` calls have a fatal flaw: replacing `\` first produces `\textbackslash{}`, then the `{` and `}` in that replacement get escaped in a later pass, corrupting the output.
+
+**Decision:**
+Use a single compiled regex with a dict lookup (`re.sub` + lambda) to escape all characters in one pass.
+
+**Rationale:**
+- Eliminates the double-escaping bug entirely
+- Single compiled regex is also faster than N sequential string passes
+- Pattern is a recognised idiom for multi-character substitution in Python
+
+**Consequences:**
+- All characters must be listed upfront in the escape map (easy to extend)
+
+---
+
+## ADR-011: Version Storage as JSON Files
+
+**Date:** 2026-03-02
+
+**Status:** Accepted (temporary)
+
+**Context:**
+Saved CV versions need persistent storage. Options: extend the existing `user_data/profile.json`, a new single JSON file, or one file per version.
+
+**Decision:**
+One JSON file per version in `user_data/versions/{uuid}.json`.
+
+**Rationale:**
+- Consistent with existing `user_data/profile.json` pattern — no new infrastructure
+- One file per version means reads/writes/deletes don't require loading all versions into memory
+- Easy to inspect and debug individual versions
+- UUIDs prevent name collisions
+
+**Consequences:**
+- Not suitable for concurrent multi-user access
+- Listing versions requires reading all files in the directory (acceptable at small scale)
+- Will need to migrate to a database for multi-user production use
+
+---
+
+## ADR-012: `draggable` Set Imperatively via DOM, Not in JSX
+
+**Date:** 2026-03-02
+
+**Status:** Accepted
+
+**Context:**
+Drag-and-drop reordering is needed for CV sections and entries. Cards contain text inputs. Setting `draggable={true}` in JSX on a card caused the browser to alter mouse event handling for all children, preventing text cursor repositioning in inputs inside draggable cards — even when the drag was cancelled in `onDragStart`.
+
+**Decision:**
+Cards have no `draggable` attribute in JSX. The grip handle's `onMouseDown` imperatively sets `cardElement.draggable = true` via the DOM. `onDragEnd` resets it to `false`. The `data-drag-card` attribute marks drag containers for `closest()` lookup.
+
+**Rationale:**
+- When `draggable` is absent from the DOM, the browser treats mouse events on child inputs normally
+- The draggable state is only active during the brief window between handle press and drag end
+- No state or re-render required — pure DOM mutation
+
+**Consequences:**
+- Slightly non-idiomatic React (direct DOM mutation)
+- The pattern is self-contained in `useDrag()` and clearly documented
+
+---
+
 ## Template for New Decisions
 
 ```markdown
