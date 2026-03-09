@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from dotenv import load_dotenv
 import os
+
+load_dotenv()
 
 # Load CORS origins from environment variable, with fallback for local dev
 CORS_ORIGINS = os.getenv(
