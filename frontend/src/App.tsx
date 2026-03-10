@@ -7,11 +7,12 @@ import LandingScreen from './components/LandingScreen';
 import Dashboard from './components/Dashboard';
 import CVFormBuilder from './components/CVFormBuilder';
 import VersionSwitcher from './components/VersionSwitcher';
+import CoverLetterScreen from './components/CoverLetterScreen';
 import styles from './App.module.css';
 
 type PreviewTab = 'latex' | 'pdf';
 type AiTab = 'chat' | 'match';
-type AppScreen = 'landing' | 'dashboard' | 'template-select' | 'form-builder' | 'editor';
+type AppScreen = 'landing' | 'dashboard' | 'template-select' | 'form-builder' | 'editor' | 'cover_letter';
 
 function App() {
   // Screen navigation
@@ -90,6 +91,10 @@ function App() {
       setCurrentScreen('editor');
     }
   }, [templates.selectTemplate]);
+
+  const handleGoToCoverLetter = useCallback(() => {
+      setCurrentScreen('cover_letter');
+  }, []);
 
   // Template selected from TemplateSelector (Build path) → go to form-builder
   const handleTemplateBuildSelect = useCallback((templateId: string) => {
@@ -184,6 +189,7 @@ function App() {
         onBuildCV={() => setCurrentScreen('template-select')}
         onTuneForJob={handleGoToTuneFlow}
         onMyCV={handleGoToDashboard}
+        onCoverLetter={handleGoToCoverLetter}
       />
     );
   }
@@ -207,6 +213,9 @@ function App() {
         onBack={handleGoToLanding}
       />
     );
+  }
+  if (currentScreen === 'cover_letter') {
+    return <CoverLetterScreen onBack={handleChangeTemplate} />;
   }
 
   if (currentScreen === 'form-builder') {
