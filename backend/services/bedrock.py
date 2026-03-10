@@ -13,7 +13,8 @@ class BedrockClient:
         self,
         messages: List[Dict[str, str]],
         system_prompt: str,
-        stream: bool = True
+        stream: bool = True,
+        max_tokens: int = 4096,
     ) -> Generator[str, None, None] | str:
         """
         Send a chat request to Bedrock Claude.
@@ -37,7 +38,7 @@ class BedrockClient:
 
         request_body = {
             "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 4096,
+            "max_tokens": max_tokens,
             "system": system_prompt,
             "messages": bedrock_messages
         }
@@ -72,6 +73,7 @@ class BedrockClient:
         document_media_type: str,
         text_prompt: str,
         system_prompt: str,
+        max_tokens: int = 4096,
     ) -> str:
         """
         Send a message with a document attachment to Claude.
@@ -101,7 +103,7 @@ class BedrockClient:
 
         request_body = {
             "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 4096,
+            "max_tokens": max_tokens,
             "system": system_prompt,
             "messages": messages,
         }

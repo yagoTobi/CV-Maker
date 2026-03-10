@@ -41,12 +41,14 @@ CRITICAL RULES:
 2. Leave fields as empty strings ("") rather than guessing or fabricating information.
 3. Normalize all dates to "MMM YYYY" format (e.g., "Jan 2021", "Dec 2023").
 4. For current/ongoing positions, use "Present" as the endDate.
-5. Extract bullet points / details as arrays of strings.
-6. Include a _confidence annotation block and a _warnings array.
+5. Extract bullet points / details as arrays of strings. Preserve the original bullet granularity from the source document. Each bullet point in the source should map to exactly one string in the bullets array. Do not split a single bullet into multiple entries, and do not merge multiple bullets into one.
+6. Preserve the order of entries within each section exactly as they appear in the source document. Work entries, education entries, skills categories, etc. should appear in the same sequence as the original.
+7. Include a _confidence annotation block and a _warnings array.
 
 Required JSON schema:
 
 {
+  "sectionOrder": ["work", "education", "skills", "projects", "awards"],
   "personalInfo": {
     "fullName": "",
     "email": "",
@@ -100,18 +102,20 @@ Required JSON schema:
   "_confidence": {
     "overall": "high|medium|low",
     "fields": {
-      "personalInfo.fullName": "high|medium|low",
-      "personalInfo.email": "high|medium|low",
-      "workExperience[0].company": "high|medium|low"
+      "personalInfo.email": "medium",
+      "workExperience[0].endDate": "low"
     }
   },
   "_warnings": []
 }
 
+Set sectionOrder to reflect the order that sections appear in the source document. Use these exact keys: work, education, skills, projects, awards. Only include sections that have data.
+
 Confidence guidelines:
 - "high": clearly stated and unambiguous
 - "medium": required some interpretation or inference
 - "low": unclear, incomplete, or uncertain
+In the _confidence.fields map, only include fields with "medium" or "low" confidence. Omit fields that are "high" confidence — high is the assumed default. This saves output space for actual CV content.
 
 Date examples:
 - "January 2021" → "Jan 2021"
@@ -139,9 +143,19 @@ def _parse_extraction_response(raw: str, source: str) -> CVImportResult:
     if text.endswith("```"):
         text = text[:-3].rstrip()
 
+    # Detect truncation — response likely hit max_tokens
+    truncated = not text.rstrip().endswith("}")
+
     try:
         data = json.loads(text)
     except json.JSONDecodeError as e:
+        if truncated:
+            logger.warning("Extraction response appears truncated (did not end with })")
+            return CVImportResult(
+                success=False,
+                source=source,
+                error="The extraction was cut short — your CV may be too long for a single pass. Try removing some content or uploading a shorter version.",
+            )
         logger.error("Failed to parse extraction JSON: %s — raw[:500]: %s", e, raw[:500])
         return CVImportResult(
             success=False,
@@ -152,7 +166,6 @@ def _parse_extraction_response(raw: str, source: str) -> CVImportResult:
     confidence = data.pop("_confidence", {"overall": "medium", "fields": {}})
     warnings: list[str] = data.pop("_warnings", [])
     data.pop("templateId", None)
-    data.pop("sectionOrder", None)
 
     summary = ImportSummary(
         workEntries=len(data.get("workExperience", [])),
@@ -187,6 +200,7 @@ async def extract_from_pdf(file_bytes: bytes) -> CVImportResult:
             document_media_type="application/pdf",
             text_prompt=EXTRACTION_USER_PROMPT,
             system_prompt=EXTRACTION_SYSTEM_PROMPT,
+            max_tokens=8192,
         )
         return _parse_extraction_response(response, source="pdf")
     except Exception as e:
@@ -202,28 +216,95 @@ async def extract_from_pdf(file_bytes: bytes) -> CVImportResult:
         )
 
 
+def _extract_docx_text(doc) -> str:
+    """Extract text from DOCX preserving structure as markdown-like format.
+
+    Detects headings, list items (via style name, XML numPr, or left indent),
+    bold-only paragraphs (treated as section headers), and tables. The output
+    is a markdown-ish string that gives Claude enough structural cues to
+    correctly identify bullets, section boundaries, and entry titles.
+    """
+    WML_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+    parts: list[str] = []
+
+    for para in doc.paragraphs:
+        text = para.text.strip()
+        if not text:
+            continue
+
+        style_name = para.style.name if para.style else ""
+
+        # ── Heading styles ────────────────────────────────────────────
+        if "Heading" in style_name:
+            level = 1
+            for char in style_name:
+                if char.isdigit():
+                    level = int(char)
+                    break
+            parts.append(f"\n{'#' * min(level + 1, 4)} {text}\n")
+            continue
+
+        # ── List detection ────────────────────────────────────────────
+        is_list = False
+        indent_level = 0
+
+        # Method 1: style name contains list-related keywords
+        list_keywords = ["list", "bullet", "numbered"]
+        if any(kw in style_name.lower() for kw in list_keywords):
+            is_list = True
+
+        # Method 2: XML numPr (numbering properties) — catches custom
+        # styled lists that don't use a "List …" style name.
+        pPr = para._p.pPr
+        if pPr is not None:
+            numPr = pPr.find(f".//{WML_NS}numPr")
+            if numPr is not None:
+                is_list = True
+                ilvl = numPr.find(f"{WML_NS}ilvl")
+                if ilvl is not None:
+                    val = ilvl.get(f"{WML_NS}val")
+                    if val is not None:
+                        indent_level = int(val)
+
+        # Method 3: left indent on non-list-styled but indented paragraphs
+        if not is_list and para.paragraph_format.left_indent:
+            emu_per_indent = 457200  # 0.5 inch in EMUs
+            indent_level = max(
+                0, int(para.paragraph_format.left_indent / emu_per_indent)
+            )
+            if indent_level > 0:
+                is_list = True
+
+        if is_list:
+            prefix = "  " * indent_level + "- "
+            parts.append(f"{prefix}{text}")
+            continue
+
+        # ── Bold-only paragraphs → likely section header / entry title ─
+        runs = para.runs
+        if runs and all(r.bold for r in runs if r.text.strip()):
+            parts.append(f"**{text}**")
+            continue
+
+        # ── Regular paragraph ─────────────────────────────────────────
+        parts.append(text)
+
+    # ── Tables ────────────────────────────────────────────────────────
+    for table in doc.tables:
+        parts.append("")  # blank line before table
+        for row in table.rows:
+            cells = " | ".join(c.text.strip() for c in row.cells if c.text.strip())
+            if cells:
+                parts.append(cells)
+
+    return "\n".join(parts)
+
+
 async def extract_from_docx(file_bytes: bytes) -> CVImportResult:
     """Extract text from DOCX via python-docx, then send to Claude for structuring."""
     try:
         doc = Document(BytesIO(file_bytes))
-        parts: list[str] = []
-
-        for para in doc.paragraphs:
-            text = para.text.strip()
-            if not text:
-                continue
-            if para.style and "Heading" in para.style.name:
-                parts.append(f"\n### {text}\n")
-            else:
-                parts.append(text)
-
-        for table in doc.tables:
-            for row in table.rows:
-                cells = " | ".join(c.text.strip() for c in row.cells if c.text.strip())
-                if cells:
-                    parts.append(cells)
-
-        full_text = "\n".join(parts)
+        full_text = _extract_docx_text(doc)
         if not full_text.strip():
             return CVImportResult(
                 success=False,
@@ -239,6 +320,7 @@ async def extract_from_docx(file_bytes: bytes) -> CVImportResult:
             messages=[{"role": "user", "content": user_prompt}],
             system_prompt=EXTRACTION_SYSTEM_PROMPT,
             stream=False,
+            max_tokens=8192,
         )
         return _parse_extraction_response(response, source="docx")
     except Exception as e:
@@ -262,7 +344,6 @@ async def extract_from_json(file_bytes: bytes) -> CVImportResult:
         )
 
     data.pop("templateId", None)
-    data.pop("sectionOrder", None)
 
     # Ensure minimum required keys
     data.setdefault("personalInfo", {})
