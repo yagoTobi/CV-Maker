@@ -174,6 +174,31 @@ export interface CVVersion {
 
 export type CVVersionMeta = Omit<CVVersion, 'texContent' | 'formData'>;
 
+// --- CV Import Types ---
+
+export interface ImportConfidence {
+  overall: 'high' | 'medium' | 'low';
+  fields: Record<string, 'high' | 'medium' | 'low'>;
+}
+
+export interface ImportSummary {
+  workEntries: number;
+  educationEntries: number;
+  skillCategories: number;
+  projects: number;
+  awards: number;
+}
+
+export interface CVImportResponse {
+  success: boolean;
+  formData: CVFormData | null;
+  source: 'pdf' | 'docx' | 'json';
+  confidence: ImportConfidence | null;
+  summary: ImportSummary | null;
+  warnings: string[] | null;
+  error: string | null;
+}
+
 // Apply edits to CV content
 export function applyEdit(cvContent: string, edit: CVEdit): string | null {
   // Try exact match first

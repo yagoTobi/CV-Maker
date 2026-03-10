@@ -243,5 +243,11 @@ sketch
 .history
 .ionide
 
-# End of https://www.toptal.com/developers/gitignore/api/macos,visualstudiocode,python,react__pycache__/
-*.pyc
+# End of https://www.toptal.com/developers/gitignore/api/macos,visualstudiocode,python,react
+
+# Project-specific
+# Claude Code configuration (user-specific)
+.claude/
+
+# User data (runtime-generated saved CV versions)
+user_data/versions/*.json

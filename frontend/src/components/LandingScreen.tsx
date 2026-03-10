@@ -5,9 +5,10 @@ interface LandingScreenProps {
   onBuildCV: () => void;
   onTuneForJob: () => void;
   onMyCV: () => void;
+  onImportCV: () => void;
 }
 
-export default function LandingScreen({ hasSavedVersions, onBuildCV, onTuneForJob, onMyCV }: LandingScreenProps) {
+export default function LandingScreen({ hasSavedVersions, onBuildCV, onTuneForJob, onMyCV, onImportCV }: LandingScreenProps) {
   return (
     <div className={styles.container}>
       <div className={styles.background} />
@@ -58,6 +59,26 @@ export default function LandingScreen({ hasSavedVersions, onBuildCV, onTuneForJo
               <div className={styles.cardBody}>
                 <h2>Tune for a job</h2>
                 <p>Already have a CV? Paste a job description and let AI help you tailor your application.</p>
+              </div>
+              <div className={styles.cardArrow}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14"/>
+                  <path d="m12 5 7 7-7 7"/>
+                </svg>
+              </div>
+            </button>
+
+            <button className={`${styles.card} ${styles.cardSecondary}`} onClick={onImportCV}>
+              <div className={styles.cardIcon}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+              </div>
+              <div className={styles.cardBody}>
+                <h2>Import existing CV</h2>
+                <p>Upload a PDF, Word doc, or JSON export and we'll extract your details automatically.</p>
               </div>
               <div className={styles.cardArrow}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

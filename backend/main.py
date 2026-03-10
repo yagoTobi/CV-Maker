@@ -18,6 +18,7 @@ from routes.user_data import router as user_data_router
 from routes.templates import router as templates_router
 from routes.cv_versions import router as cv_versions_router
 from routes.generate_latex import router as generate_latex_router
+from routes.cv_import import router as cv_import_router
 
 app = FastAPI(title="CV Maker API")
 
@@ -37,6 +38,7 @@ app.include_router(user_data_router, prefix="/api", tags=["user-data"])
 app.include_router(templates_router, prefix="/api", tags=["templates"])
 app.include_router(cv_versions_router, prefix="/api", tags=["cv-versions"])
 app.include_router(generate_latex_router, prefix="/api", tags=["generate-latex"])
+app.include_router(cv_import_router, prefix="/api", tags=["cv-import"])
 
 
 @app.get("/api/health")

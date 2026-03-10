@@ -65,8 +65,12 @@ function initialFormData(templateId: string): CVFormData {
   };
 }
 
-export function useFormBuilder(templateId: string) {
-  const [formData, setFormData] = useState<CVFormData>(() => initialFormData(templateId));
+export function useFormBuilder(templateId: string, importedData?: CVFormData) {
+  const [formData, setFormData] = useState<CVFormData>(() =>
+    importedData
+      ? { ...importedData, templateId }
+      : initialFormData(templateId)
+  );
   const [activeSection, setActiveSection] = useState<FormSection>('personal');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);

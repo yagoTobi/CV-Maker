@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { CompileResponse, ChatRequest, UserProfile, MatchAnalysis, CVFormData, CVVersion, CVVersionMeta } from '../types';
+import type { CompileResponse, ChatRequest, UserProfile, MatchAnalysis, CVFormData, CVVersion, CVVersionMeta, CVImportResponse } from '../types';
 import type { Template } from '../components';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
@@ -235,6 +235,40 @@ export const api = {
       return true;
     } catch {
       return false;
+    }
+  },
+
+  async importCV(file: File): Promise<CVImportResponse> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await axios.post<CVImportResponse>(`${API_BASE}/cv-import`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60000, // 60s — extraction can be slow for large PDFs
+      });
+      return response.data;
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.data?.detail) {
+        return {
+          success: false,
+          formData: null,
+          source: 'pdf',
+          confidence: null,
+          summary: null,
+          warnings: null,
+          error: err.response.data.detail,
+        };
+      }
+      const message = err instanceof Error ? err.message : 'CV import failed';
+      return {
+        success: false,
+        formData: null,
+        source: 'pdf',
+        confidence: null,
+        summary: null,
+        warnings: null,
+        error: message,
+      };
     }
   },
 };

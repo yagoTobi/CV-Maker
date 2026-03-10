@@ -66,4 +66,52 @@ class BedrockClient:
                     yield delta.get("text", "")
 
 
+    def chat_with_document(
+        self,
+        document_bytes: bytes,
+        document_media_type: str,
+        text_prompt: str,
+        system_prompt: str,
+    ) -> str:
+        """
+        Send a message with a document attachment to Claude.
+        Uses invoke_model (non-streaming) since we need the complete response.
+        """
+        import base64
+
+        document_base64 = base64.b64encode(document_bytes).decode("utf-8")
+
+        messages = [{
+            "role": "user",
+            "content": [
+                {
+                    "type": "document",
+                    "source": {
+                        "type": "base64",
+                        "media_type": document_media_type,
+                        "data": document_base64,
+                    },
+                },
+                {
+                    "type": "text",
+                    "text": text_prompt,
+                },
+            ],
+        }]
+
+        request_body = {
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 4096,
+            "system": system_prompt,
+            "messages": messages,
+        }
+
+        response = self.client.invoke_model(
+            modelId=self.model_id,
+            body=json.dumps(request_body),
+        )
+        response_body = json.loads(response["body"].read())
+        return response_body["content"][0]["text"]
+
+
 bedrock_client = BedrockClient()

@@ -1,17 +1,20 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { LatexEditor, JobInput, ChatPanel, PdfPreview, MatchAnalysis, TemplateSelector } from './components';
 import { useTemplates, useCompiler, useChat } from './hooks';
+import { useImport } from './hooks/useImport';
 import { api } from './services/api';
 import type { UserProfile, CVFormData, CVVersion, CVVersionMeta } from './types';
 import LandingScreen from './components/LandingScreen';
 import Dashboard from './components/Dashboard';
 import CVFormBuilder from './components/CVFormBuilder';
 import VersionSwitcher from './components/VersionSwitcher';
+import CVImportUpload from './components/CVImportUpload';
+import CVImportReview from './components/CVImportReview';
 import styles from './App.module.css';
 
 type PreviewTab = 'latex' | 'pdf';
 type AiTab = 'chat' | 'match';
-type AppScreen = 'landing' | 'dashboard' | 'template-select' | 'form-builder' | 'editor';
+type AppScreen = 'landing' | 'dashboard' | 'template-select' | 'form-builder' | 'editor' | 'import-upload' | 'import-review';
 
 function App() {
   // Screen navigation
@@ -39,6 +42,7 @@ function App() {
 
   // Hooks
   const templates = useTemplates();
+  const cvImport = useImport();
   const compiler = useCompiler();
 
   const chatOptions = useMemo(() => ({
@@ -90,6 +94,25 @@ function App() {
       setCurrentScreen('editor');
     }
   }, [templates.selectTemplate]);
+
+  // --- Import flow handlers ---
+
+  const handleImportFileSelected = useCallback(async (file: File) => {
+    await cvImport.handleFileSelected(file);
+    // Navigate to review if extraction succeeded (importResult will be set)
+  }, [cvImport.handleFileSelected]);
+
+  // Effect: navigate to review screen when import completes successfully
+  useEffect(() => {
+    if (cvImport.importResult?.success && currentScreen === 'import-upload') {
+      setCurrentScreen('import-review');
+    }
+  }, [cvImport.importResult, currentScreen]);
+
+  const handleImportConfirm = useCallback((editedFormData: CVFormData) => {
+    setFormData(editedFormData);
+    setCurrentScreen('template-select');
+  }, []);
 
   // Template selected from TemplateSelector (Build path) → go to form-builder
   const handleTemplateBuildSelect = useCallback((templateId: string) => {
@@ -184,6 +207,36 @@ function App() {
         onBuildCV={() => setCurrentScreen('template-select')}
         onTuneForJob={handleGoToTuneFlow}
         onMyCV={handleGoToDashboard}
+        onImportCV={() => {
+          cvImport.reset();
+          setCurrentScreen('import-upload');
+        }}
+      />
+    );
+  }
+
+  if (currentScreen === 'import-upload') {
+    return (
+      <CVImportUpload
+        onFileSelected={handleImportFileSelected}
+        isUploading={cvImport.isImporting}
+        uploadProgress={cvImport.importProgress}
+        error={cvImport.importError}
+        onBack={handleGoToLanding}
+      />
+    );
+  }
+
+  if (currentScreen === 'import-review' && cvImport.importResult?.formData) {
+    return (
+      <CVImportReview
+        formData={cvImport.importResult.formData}
+        confidence={cvImport.importResult.confidence || { overall: 'medium', fields: {} }}
+        summary={cvImport.importResult.summary || { workEntries: 0, educationEntries: 0, skillCategories: 0, projects: 0, awards: 0 }}
+        warnings={cvImport.importResult.warnings}
+        source={cvImport.importResult.source}
+        onConfirm={handleImportConfirm}
+        onBack={() => setCurrentScreen('import-upload')}
       />
     );
   }
@@ -215,6 +268,7 @@ function App() {
         templateId={selectedTemplateForBuild || 'med-length-proff-cv'}
         onGenerated={handleFormGenerated}
         onBack={() => setCurrentScreen('template-select')}
+        initialFormData={formData || undefined}
       />
     );
   }
