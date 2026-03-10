@@ -33,6 +33,7 @@ interface CVFormBuilderProps {
   templateId: string;
   onGenerated: (texContent: string, templateId: string, formData: CVFormData) => void;
   onBack: () => void;
+  initialFormData?: CVFormData;
 }
 
 const SECTION_LABELS: Record<FormSection, string> = {
@@ -55,9 +56,9 @@ function GripIcon() {
   );
 }
 
-export default function CVFormBuilder({ templateId, onGenerated, onBack }: CVFormBuilderProps) {
+export default function CVFormBuilder({ templateId, onGenerated, onBack, initialFormData }: CVFormBuilderProps) {
   // All hooks at top — never after a conditional return (key learning #3)
-  const fb = useFormBuilder(templateId);
+  const fb = useFormBuilder(templateId, initialFormData);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // PDF preview state
@@ -101,6 +102,9 @@ export default function CVFormBuilder({ templateId, onGenerated, onBack }: CVFor
 
   // Nav drag handlers (only for non-personal sections; index 0 = first reorderable)
   const reorderableNavItems = fb.navSectionOrder.filter(s => s !== 'personal');
+
+  // Deedy template uses a fixed two-column layout — section reordering doesn't apply
+  const isDeedyTemplate = templateId === 'deedy-resume';
 
   const handleNavDragStart = (rIdx: number) => { setNavDragFrom(rIdx); };
   const handleNavDragEnter = (rIdx: number) => {
@@ -180,32 +184,48 @@ export default function CVFormBuilder({ templateId, onGenerated, onBack }: CVFor
           </button>
 
           {/* Reorderable sections */}
-          {reorderableNavItems.map((section, rIdx) => (
-            <div
-              key={section}
-              data-drag-nav
-              className={`${styles.navDraggable} ${navDragOver === rIdx && navDragFrom !== rIdx ? styles.navDragOver : ''} ${navDragFrom === rIdx ? styles.navDragging : ''}`}
-              onDragStart={() => handleNavDragStart(rIdx)}
-              onDragEnter={() => handleNavDragEnter(rIdx)}
-              onDragOver={e => e.preventDefault()}
-              onDrop={() => handleNavDrop(rIdx)}
-              onDragEnd={handleNavDragEnd}
-            >
-              <span
-                className={styles.navGrip}
-                onMouseDown={e => {
-                  const nav = (e.currentTarget as HTMLElement).closest('[data-drag-nav]') as HTMLElement | null;
-                  if (nav) nav.draggable = true;
-                }}
-              ><GripIcon /></span>
-              <button
-                className={`${styles.navItem} ${fb.activeSection === section ? styles.navActive : ''}`}
-                onClick={() => fb.setActiveSection(section)}
+          {reorderableNavItems.map((section, rIdx) => {
+            // For Deedy template, render plain nav buttons (no drag-and-drop)
+            if (isDeedyTemplate) {
+              return (
+                <button
+                  key={section}
+                  className={`${styles.navItem} ${fb.activeSection === section ? styles.navActive : ''}`}
+                  onClick={() => fb.setActiveSection(section)}
+                >
+                  {SECTION_LABELS[section]}
+                </button>
+              );
+            }
+
+            // For other templates, render draggable nav items
+            return (
+              <div
+                key={section}
+                data-drag-nav
+                className={`${styles.navDraggable} ${navDragOver === rIdx && navDragFrom !== rIdx ? styles.navDragOver : ''} ${navDragFrom === rIdx ? styles.navDragging : ''}`}
+                onDragStart={() => handleNavDragStart(rIdx)}
+                onDragEnter={() => handleNavDragEnter(rIdx)}
+                onDragOver={e => e.preventDefault()}
+                onDrop={() => handleNavDrop(rIdx)}
+                onDragEnd={handleNavDragEnd}
               >
-                {SECTION_LABELS[section]}
-              </button>
-            </div>
-          ))}
+                <span
+                  className={styles.navGrip}
+                  onMouseDown={e => {
+                    const nav = (e.currentTarget as HTMLElement).closest('[data-drag-nav]') as HTMLElement | null;
+                    if (nav) nav.draggable = true;
+                  }}
+                ><GripIcon /></span>
+                <button
+                  className={`${styles.navItem} ${fb.activeSection === section ? styles.navActive : ''}`}
+                  onClick={() => fb.setActiveSection(section)}
+                >
+                  {SECTION_LABELS[section]}
+                </button>
+              </div>
+            );
+          })}
         </nav>
 
         <div className={styles.sidebarFooter}>

@@ -54,6 +54,8 @@
 (% elif _sec == 'education' and education %)
 \begin{rSection}{Education}
 (% for edu in education %)
+(% set has_items = edu.gpa or edu.details %)
+(% if has_items %)
     \begin{rSubsection}{(( edu.school | latex_escape ))}{\textbf{(( edu.startDate | latex_escape ))(% if edu.endDate %)\,--\,(( edu.endDate | latex_escape ))(% endif %)}}{(( edu.degree | latex_escape ))}{(( edu.location | latex_escape ))}
 (% if edu.gpa %)
     \item GPA: (( edu.gpa | latex_escape ))
@@ -62,6 +64,11 @@
     \item (( detail | latex_escape ))
 (% endfor %)
     \end{rSubsection}
+(% else %)
+    \textbf{(( edu.school | latex_escape ))} \hfill \textbf{(( edu.startDate | latex_escape ))(% if edu.endDate %)\,--\,(( edu.endDate | latex_escape ))(% endif %)}\\
+    \textit{(( edu.degree | latex_escape ))} \hfill \textit{(( edu.location | latex_escape ))}
+    \vspace{0.5em}
+(% endif %)
 (% endfor %)
 \end{rSection}
 

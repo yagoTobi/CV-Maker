@@ -300,6 +300,54 @@ Cards have no `draggable` attribute in JSX. The grip handle's `onMouseDown` impe
 
 ---
 
+## ADR-013: Separate URL Escape Filter for LaTeX `\href`
+
+**Date:** 2026-03-10
+
+**Status:** Accepted
+
+**Context:**
+URLs in `\href{}` commands were not being escaped. Characters like `%` and `#` (common in GitHub links, URL-encoded parameters) would break LaTeX compilation. The full `latex_escape` filter is too aggressive for URLs — hyperref handles most characters natively.
+
+**Decision:**
+Created a separate `latex_url_escape` filter that only escapes `%` → `\%` and `#` → `\#`. Applied to all `\href{}` first arguments across templates.
+
+**Rationale:**
+- Minimal escaping avoids breaking valid URL characters that hyperref handles
+- Keeps URL escaping separate from text escaping concerns
+- Hyperref's URL handling is robust for most special characters
+
+**Consequences:**
+- Two escape filters to maintain (`latex_escape` for text, `latex_url_escape` for URLs)
+- Any new templates must use the correct filter in the right context
+- Developers must remember which filter applies to which context
+
+---
+
+## ADR-014: Deedy Template Excluded from Section Reordering
+
+**Date:** 2026-03-10
+
+**Status:** Accepted
+
+**Context:**
+The Deedy resume uses a fixed two-column `minipage` layout — education/skills/awards are hardcoded in the left column, work/projects in the right. The `section_order` Jinja2 variable is not used. Allowing users to drag-reorder sections in the form builder when Deedy is selected has no effect on the PDF output, which is misleading.
+
+**Decision:**
+Disable section drag-and-drop in the form builder sidebar nav when `templateId === 'deedy-resume'`. Sections remain clickable for navigation, just not reorderable. Other templates retain full reordering.
+
+**Rationale:**
+- Honest UI — don't expose controls that have no effect
+- Avoids user confusion when reordering doesn't change the output
+- Template-specific behavior is clearly communicated through disabled drag handles
+
+**Consequences:**
+- Template-specific UI behavior — the form builder now needs to know which template is selected to decide whether to show drag handles
+- If Deedy is later refactored to support dynamic ordering, this guard should be removed
+- May need similar guards if more fixed-layout templates are added
+
+---
+
 ## Template for New Decisions
 
 ```markdown
