@@ -23,8 +23,10 @@
 \definecolor{darkblue}{RGB}{21, 88, 176}
 
 \name{(( personal.fullName | latex_escape ))}
+(% if personal_items %)
 \address{%
-(% for item in personal_items -%)(% if item.url -%)\href{(( item.url ))}{(( item.value | latex_escape ))}(% else -%)(( item.value | latex_escape ))(% endif -%)(% if not loop.last %)\enspace{}|\enspace{}(% endif -%)(% endfor %)}
+(% for item in personal_items -%)(% if item.url -%)\href{(( item.url | latex_url_escape ))}{(( item.value | latex_escape ))}(% else -%)(( item.value | latex_escape ))(% endif -%)(% if not loop.last %)\enspace{}|\enspace{}(% endif -%)(% endfor %)}
+(% endif %)
 
 \begin{document}
 
@@ -40,9 +42,11 @@
 \begin{rSection}{Experience}
 (% for job in work %)
     \begin{rSubsection}{(( job.company | latex_escape ))}{\textbf{(( job.startDate | latex_escape ))(% if job.endDate %)\,--\,(( job.endDate | latex_escape ))(% endif %)}}{(( job.title | latex_escape ))}{(( job.location | latex_escape ))}
+(% if job.bullets %)
 (% for bullet in job.bullets %)
     \item (( bullet | latex_escape ))
 (% endfor %)
+(% endif %)
     \end{rSubsection}
 (% endfor %)
 \end{rSection}

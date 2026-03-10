@@ -10,11 +10,14 @@
 
 \begin{document}
 
-\lastupdated
-
 (% set name_parts = personal.fullName.split(' ', 1) %)
 \namesection{(( name_parts[0] | latex_escape ))}{(% if name_parts | length > 1 %)(( name_parts[1] | latex_escape ))(% endif %)}{%
-(% if personal.email %)\href{mailto:(( personal.email ))}{(( personal.email | latex_escape ))}(% endif -%)(% if personal.phone %)\,|\,(( personal.phone | latex_escape ))(% endif -%)(% for link in personal.links %)\,|\,\href{(( link.url ))}{(( link.label | latex_escape ))}(% endfor %)(% if personal.location %)\,|\,(( personal.location | latex_escape ))(% endif %)}
+(% set contact_parts = [] -%)
+(% if personal.email -%)(% set _ = contact_parts.append('\href{mailto:' + (personal.email | latex_url_escape) + '}{' + (personal.email | latex_escape) + '}') -%)(% endif -%)
+(% if personal.phone -%)(% set _ = contact_parts.append(personal.phone | latex_escape) -%)(% endif -%)
+(% for link in personal.links -%)(% set _ = contact_parts.append('\href{' + (link.url | latex_url_escape) + '}{' + (link.label | latex_escape) + '}') -%)(% endfor -%)
+(% if personal.location -%)(% set _ = contact_parts.append(personal.location | latex_escape) -%)(% endif -%)
+(( contact_parts | join('\,|\,') ))}
 
 \begin{minipage}[t]{0.33\textwidth}
 
@@ -33,7 +36,7 @@
 \section{Skills}
 (% for cat in skills %)
 \subsection{(( cat.category | latex_escape ))}
-(( cat.skills | join(' \\textbullet{} ') | latex_escape ))
+(( cat.skills | map('latex_escape') | join(' \\textbullet{} ') ))
 \sectionsep
 (% endfor %)
 (% endif %)

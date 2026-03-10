@@ -6,9 +6,14 @@
 \usepackage{amsmath}
 
 \name{(( personal.fullName | latex_escape ))}
-\address{(% if personal.location %)(( personal.location | latex_escape ))(% endif %)}
+(% if personal.location %)
+\address{(( personal.location | latex_escape ))}
+(% endif %)
+(% set contact_items = personal_items | selectattr('field', 'ne', 'location') | list %)
+(% if contact_items %)
 \contacts{%
-(% set contact_items = personal_items | selectattr('field', 'ne', 'location') | list -%)(% for item in contact_items -%)(( item.value | latex_escape ))(% if not loop.last %)\linebreak (% endif -%)(% endfor %)}
+(% for item in contact_items -%)(( item.value | latex_escape ))(% if not loop.last %)\linebreak (% endif -%)(% endfor %)}
+(% endif %)
 
 \begin{document}
 
