@@ -1,5 +1,12 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { LatexEditor, JobInput, ChatPanel, PdfPreview, MatchAnalysis, TemplateSelector } from './components';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import {
+  LatexEditor,
+  JobInput,
+  ChatPanel,
+  PdfPreview,
+  MatchAnalysis,
+  TemplateSelector,
+} from './components';
 import { useTemplates, useCompiler, useChat } from './hooks';
 import { useImport } from './hooks/useImport';
 import { api } from './services/api';
@@ -8,49 +15,58 @@ import LandingScreen from './components/LandingScreen';
 import Dashboard from './components/Dashboard';
 import CVFormBuilder from './components/CVFormBuilder';
 import VersionSwitcher from './components/VersionSwitcher';
+import CoverLetterScreen from './components/CoverLetterScreen';
 import CVImportUpload from './components/CVImportUpload';
 import CVImportReview from './components/CVImportReview';
 import styles from './App.module.css';
 
 type PreviewTab = 'latex' | 'pdf';
 type AiTab = 'chat' | 'match';
-type AppScreen = 'landing' | 'dashboard' | 'template-select' | 'form-builder' | 'editor' | 'import-upload' | 'import-review';
+type AppScreen =
+  | 'landing'
+  | 'dashboard'
+  | 'template-select'
+  | 'form-builder'
+  | 'editor'
+  | 'import-upload'
+  | 'import-review'
+  | 'cover_letter';
 
 function App() {
-  // Screen navigation
-  const [currentScreen, setCurrentScreen] = useState<AppScreen>('landing');
+  const unsavedDraftRef = useRef<{
+    texContent: string;
+    formData: CVFormData | null;
+    jobDescription: string;
+    companyName: string;
+  } | null>(null);
 
-  // UI tabs
+  const [currentScreen, setCurrentScreen] = useState<AppScreen>('landing');
   const [activeTab, setActiveTab] = useState<PreviewTab>('latex');
   const [aiTab, setAiTab] = useState<AiTab>('match');
-
-  // Job input state
   const [companyName, setCompanyName] = useState('');
   const [jobDescription, setJobDescription] = useState('');
-
-  // User profile
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-
-  // Version state
   const [activeVersion, setActiveVersion] = useState<CVVersion | null>(null);
   const [formData, setFormData] = useState<CVFormData | null>(null);
   const [savedVersions, setSavedVersions] = useState<CVVersionMeta[]>([]);
   const [isSavingVersion, setIsSavingVersion] = useState(false);
+  const [selectedTemplateForBuild, setSelectedTemplateForBuild] = useState<
+    string | null
+  >(null);
 
-  // Track which template was selected in template-select step (for build flow)
-  const [selectedTemplateForBuild, setSelectedTemplateForBuild] = useState<string | null>(null);
-
-  // Hooks
   const templates = useTemplates();
   const cvImport = useImport();
   const compiler = useCompiler();
 
-  const chatOptions = useMemo(() => ({
-    onContentChanged: (newContent: string) => {
-      templates.updateContent(newContent);
-      compiler.clearPdf();
-    },
-  }), [templates.updateContent, compiler.clearPdf]);
+  const chatOptions = useMemo(
+    () => ({
+      onContentChanged: (newContent: string) => {
+        templates.updateContent(newContent);
+        compiler.clearPdf();
+      },
+    }),
+    [templates.updateContent, compiler.clearPdf]
+  );
 
   const chat = useChat(
     templates.content,
@@ -60,23 +76,29 @@ function App() {
     chatOptions
   );
 
-  // Load user profile and saved versions on mount
   useEffect(() => {
     let mounted = true;
 
-    Promise.all([
-      api.loadUserData(),
-      api.listVersions(),
-    ]).then(([profile, versions]) => {
-      if (!mounted) return;
-      if (profile) setUserProfile(profile);
-      setSavedVersions(versions);
-    });
+    Promise.all([api.loadUserData(), api.listVersions()]).then(
+      ([profile, versions]) => {
+        if (!mounted) return;
+        if (profile) {
+          setUserProfile(profile);
+        }
+        setSavedVersions(versions);
+      }
+    );
 
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  // --- Navigation handlers ---
+  useEffect(() => {
+    if (cvImport.importResult?.success && currentScreen === 'import-upload') {
+      setCurrentScreen('import-review');
+    }
+  }, [cvImport.importResult, currentScreen]);
 
   const handleGoToLanding = useCallback(() => {
     setCurrentScreen('landing');
@@ -95,98 +117,186 @@ function App() {
     }
   }, [templates.selectTemplate]);
 
-  // --- Import flow handlers ---
+  const handleGoToCoverLetter = useCallback(() => {
+    setCurrentScreen('cover_letter');
+  }, []);
 
-  const handleImportFileSelected = useCallback(async (file: File) => {
-    await cvImport.handleFileSelected(file);
-    // Navigate to review if extraction succeeded (importResult will be set)
-  }, [cvImport.handleFileSelected]);
-
-  // Effect: navigate to review screen when import completes successfully
-  useEffect(() => {
-    if (cvImport.importResult?.success && currentScreen === 'import-upload') {
-      setCurrentScreen('import-review');
-    }
-  }, [cvImport.importResult, currentScreen]);
+  const handleImportFileSelected = useCallback(
+    async (file: File) => {
+      await cvImport.handleFileSelected(file);
+    },
+    [cvImport.handleFileSelected]
+  );
 
   const handleImportConfirm = useCallback((editedFormData: CVFormData) => {
     setFormData(editedFormData);
     setCurrentScreen('template-select');
   }, []);
 
-  // Template selected from TemplateSelector (Build path) → go to form-builder
   const handleTemplateBuildSelect = useCallback((templateId: string) => {
     setSelectedTemplateForBuild(templateId);
     setCurrentScreen('form-builder');
   }, []);
 
-  // Form builder generated LaTeX — load into editor (no content fetch needed, we already have it)
-  const handleFormGenerated = useCallback((texContent: string, templateId: string, fd: CVFormData) => {
-    setFormData(fd);
-    templates.setTemplateId(templateId);
-    templates.updateContent(texContent);
-    setCurrentScreen('editor');
-    compiler.compile(texContent, templateId);
-    setActiveTab('pdf');
-  }, [templates.setTemplateId, templates.updateContent, compiler.compile]);
+  const handleFormGenerated = useCallback(
+    (texContent: string, templateId: string, nextFormData: CVFormData) => {
+      setFormData(nextFormData);
+      templates.setTemplateId(templateId);
+      templates.updateContent(texContent);
+      setCurrentScreen('editor');
+      compiler.compile(texContent, templateId);
+      setActiveTab('pdf');
+    },
+    [templates.setTemplateId, templates.updateContent, compiler.compile]
+  );
 
-  // Version loaded from dashboard or switcher
-  const handleVersionLoad = useCallback((version: CVVersion) => {
-    templates.updateContent(version.texContent);
-    if (version.formData) setFormData(version.formData);
-    if (version.jobDescription) setJobDescription(version.jobDescription);
-    if (version.companyName) setCompanyName(version.companyName);
-    setActiveVersion(version);
-    setCurrentScreen('editor');
-  }, [templates.updateContent]);
+  const handleVersionLoad = useCallback(
+    (version: CVVersion) => {
+      templates.updateContent(version.texContent);
+      if (version.formData) setFormData(version.formData);
+      if (version.jobDescription) setJobDescription(version.jobDescription);
+      if (version.companyName) setCompanyName(version.companyName);
+      setActiveVersion(version);
+      setCurrentScreen('editor');
+    },
+    [templates.updateContent]
+  );
 
-  const handleSaveVersion = useCallback(async (name: string) => {
-    setIsSavingVersion(true);
-    const saved = await api.saveVersion({
-      name,
-      templateId: templates.selectedId || 'med-length-proff-cv',
-      texContent: templates.content,
-      formData: formData || undefined,
-      jobDescription: jobDescription || undefined,
-      companyName: companyName || undefined,
-      matchScore: chat.matchAnalysis?.match_score,
-    });
-    if (saved) {
-      setActiveVersion(saved);
-      const meta: CVVersionMeta = {
-        id: saved.id,
-        name: saved.name,
-        templateId: saved.templateId,
-        jobDescription: saved.jobDescription,
-        companyName: saved.companyName,
-        matchScore: saved.matchScore,
-        createdAt: saved.createdAt,
-      };
-      setSavedVersions(prev => [meta, ...prev]);
-    }
-    setIsSavingVersion(false);
-  }, [templates.selectedId, templates.content, formData, jobDescription, companyName, chat.matchAnalysis]);
+  const handleSaveVersion = useCallback(
+    async (name: string) => {
+      setIsSavingVersion(true);
+      const saved = await api.saveVersion({
+        name,
+        templateId: templates.selectedId || 'med-length-proff-cv',
+        texContent: templates.content,
+        formData: formData || undefined,
+        jobDescription: jobDescription || undefined,
+        companyName: companyName || undefined,
+        matchScore: chat.matchAnalysis?.match_score,
+      });
 
-  const handleSwitchVersion = useCallback(async (id: string) => {
-    const version = await api.getVersion(id);
-    if (version) handleVersionLoad(version);
-  }, [handleVersionLoad]);
+      if (saved) {
+        setActiveVersion(saved);
+        const meta: CVVersionMeta = {
+          id: saved.id,
+          name: saved.name,
+          templateId: saved.templateId,
+          jobDescription: saved.jobDescription,
+          companyName: saved.companyName,
+          matchScore: saved.matchScore,
+          createdAt: saved.createdAt,
+        };
+        setSavedVersions((prev) => [meta, ...prev]);
+      }
 
-  // Compile LaTeX to PDF
+      setIsSavingVersion(false);
+    },
+    [
+      templates.selectedId,
+      templates.content,
+      formData,
+      jobDescription,
+      companyName,
+      chat.matchAnalysis,
+    ]
+  );
+
+  const handleSwitchVersion = useCallback(
+    async (id: string) => {
+      if (!id) {
+        if (unsavedDraftRef.current) {
+          templates.updateContent(unsavedDraftRef.current.texContent);
+          setFormData(unsavedDraftRef.current.formData);
+          setJobDescription(unsavedDraftRef.current.jobDescription);
+          setCompanyName(unsavedDraftRef.current.companyName);
+        }
+        setActiveVersion(null);
+        return;
+      }
+
+      if (!activeVersion) {
+        unsavedDraftRef.current = {
+          texContent: templates.content,
+          formData,
+          jobDescription,
+          companyName,
+        };
+      }
+
+      const version = await api.getVersion(id);
+      if (version) {
+        handleVersionLoad(version);
+      }
+    },
+    [
+      activeVersion,
+      companyName,
+      formData,
+      handleVersionLoad,
+      jobDescription,
+      templates.content,
+      templates.updateContent,
+    ]
+  );
+
+  const handleSwitchVersionForCoverLetter = useCallback(
+    async (id: string) => {
+      if (!id) {
+        if (unsavedDraftRef.current) {
+          templates.updateContent(unsavedDraftRef.current.texContent);
+          setFormData(unsavedDraftRef.current.formData);
+          setJobDescription(unsavedDraftRef.current.jobDescription);
+          setCompanyName(unsavedDraftRef.current.companyName);
+        }
+        setActiveVersion(null);
+        return;
+      }
+
+      if (!activeVersion) {
+        unsavedDraftRef.current = {
+          texContent: templates.content,
+          formData,
+          jobDescription,
+          companyName,
+        };
+      }
+
+      const version = await api.getVersion(id);
+      if (!version) {
+        return;
+      }
+
+      templates.updateContent(version.texContent);
+      if (version.formData) setFormData(version.formData);
+      if (version.jobDescription) setJobDescription(version.jobDescription);
+      if (version.companyName) setCompanyName(version.companyName);
+      setActiveVersion(version);
+    },
+    [
+      activeVersion,
+      companyName,
+      formData,
+      jobDescription,
+      templates.content,
+      templates.updateContent,
+    ]
+  );
+
   const handleCompile = useCallback(async () => {
-    const success = await compiler.compile(templates.content, templates.selectedId || undefined);
+    const success = await compiler.compile(
+      templates.content,
+      templates.selectedId || undefined
+    );
     if (success) {
       setActiveTab('pdf');
     }
   }, [compiler.compile, templates.content, templates.selectedId]);
 
-  // Analyze job description
   const handleAnalyze = useCallback(async () => {
     setAiTab('chat');
     await chat.analyzeJob();
   }, [chat.analyzeJob]);
 
-  // Go back to landing, resetting editor state
   const handleChangeTemplate = useCallback(() => {
     setCurrentScreen('landing');
     templates.reset();
@@ -198,8 +308,6 @@ function App() {
     setJobDescription('');
   }, [templates.reset, compiler.reset, chat.reset]);
 
-  // --- Screen renders ---
-
   if (currentScreen === 'landing') {
     return (
       <LandingScreen
@@ -207,6 +315,7 @@ function App() {
         onBuildCV={() => setCurrentScreen('template-select')}
         onTuneForJob={handleGoToTuneFlow}
         onMyCV={handleGoToDashboard}
+        onCoverLetter={handleGoToCoverLetter}
         onImportCV={() => {
           cvImport.reset();
           setCurrentScreen('import-upload');
@@ -231,8 +340,18 @@ function App() {
     return (
       <CVImportReview
         formData={cvImport.importResult.formData}
-        confidence={cvImport.importResult.confidence || { overall: 'medium', fields: {} }}
-        summary={cvImport.importResult.summary || { workEntries: 0, educationEntries: 0, skillCategories: 0, projects: 0, awards: 0 }}
+        confidence={
+          cvImport.importResult.confidence || { overall: 'medium', fields: {} }
+        }
+        summary={
+          cvImport.importResult.summary || {
+            workEntries: 0,
+            educationEntries: 0,
+            skillCategories: 0,
+            projects: 0,
+            awards: 0,
+          }
+        }
         warnings={cvImport.importResult.warnings}
         source={cvImport.importResult.source}
         onConfirm={handleImportConfirm}
@@ -262,6 +381,24 @@ function App() {
     );
   }
 
+  if (currentScreen === 'cover_letter') {
+    return (
+      <CoverLetterScreen
+        onBack={handleChangeTemplate}
+        activeVersion={activeVersion}
+        savedVersions={savedVersions}
+        onSaveVersion={handleSaveVersion}
+        onSwitchVersion={handleSwitchVersionForCoverLetter}
+        isSavingVersion={isSavingVersion}
+        onDashboard={handleGoToDashboard}
+        previewTexContent={templates.content}
+        jobDescription={jobDescription}
+        onJobDescriptionChange={setJobDescription}
+        companyName={companyName}
+      />
+    );
+  }
+
   if (currentScreen === 'form-builder') {
     return (
       <CVFormBuilder
@@ -273,13 +410,24 @@ function App() {
     );
   }
 
-  // Editor screen
   return (
     <div className={styles.app}>
       <header className={styles.header}>
-        <button className={styles.changeTemplateBtn} onClick={handleChangeTemplate}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m15 18-6-6 6-6"/>
+        <button
+          className={styles.changeTemplateBtn}
+          onClick={handleChangeTemplate}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="m15 18-6-6 6-6" />
           </svg>
           Home
         </button>
@@ -315,13 +463,17 @@ function App() {
             <div className={styles.aiSectionHeader}>
               <div className={styles.aiTabs}>
                 <button
-                  className={`${styles.aiTabBtn} ${aiTab === 'match' ? styles.active : ''}`}
+                  className={`${styles.aiTabBtn} ${
+                    aiTab === 'match' ? styles.active : ''
+                  }`}
                   onClick={() => setAiTab('match')}
                 >
                   Match Analysis
                 </button>
                 <button
-                  className={`${styles.aiTabBtn} ${aiTab === 'chat' ? styles.active : ''}`}
+                  className={`${styles.aiTabBtn} ${
+                    aiTab === 'chat' ? styles.active : ''
+                  }`}
                   onClick={() => setAiTab('chat')}
                 >
                   AI Conversation
@@ -358,23 +510,38 @@ function App() {
               <div className={styles.previewTitle}>
                 <h2>CV Preview</h2>
                 {compiler.pageCount > 0 && (
-                  <span className={`${styles.pageCount} ${compiler.pageCount > 1 ? styles.warning : styles.good}`}>
-                    {compiler.pageCount} {compiler.pageCount === 1 ? 'page' : 'pages'}
+                  <span
+                    className={`${styles.pageCount} ${
+                      compiler.pageCount > 1 ? styles.warning : styles.good
+                    }`}
+                  >
+                    {compiler.pageCount}{' '}
+                    {compiler.pageCount === 1 ? 'page' : 'pages'}
                     {compiler.pageCount > 1 && (
-                      <span className={styles.pageWarningIcon} title="CV should fit on one page">⚠️</span>
+                      <span
+                        className={styles.pageWarningIcon}
+                        title="CV should fit on one page"
+                      >
+                        Warning
+                      </span>
                     )}
                   </span>
                 )}
               </div>
+
               <div className={styles.previewTabs}>
                 <button
-                  className={`${styles.tabBtn} ${activeTab === 'latex' ? styles.active : ''}`}
+                  className={`${styles.tabBtn} ${
+                    activeTab === 'latex' ? styles.active : ''
+                  }`}
                   onClick={() => setActiveTab('latex')}
                 >
                   LaTeX Code
                 </button>
                 <button
-                  className={`${styles.tabBtn} ${activeTab === 'pdf' ? styles.active : ''}`}
+                  className={`${styles.tabBtn} ${
+                    activeTab === 'pdf' ? styles.active : ''
+                  }`}
                   onClick={() => setActiveTab('pdf')}
                 >
                   PDF
@@ -384,12 +551,20 @@ function App() {
 
             {compiler.pageCount > 1 && (
               <div className={styles.pageCountWarning}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <circle cx="12" cy="12" r="10" />
                   <line x1="12" y1="8" x2="12" y2="12" />
                   <line x1="12" y1="16" x2="12.01" y2="16" />
                 </svg>
-                Your CV is {compiler.pageCount} pages. Most recruiters expect a 1-page CV. Consider removing less relevant content.
+                Your CV is {compiler.pageCount} pages. Most recruiters expect a
+                1-page CV. Consider removing less relevant content.
               </div>
             )}
 

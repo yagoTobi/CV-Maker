@@ -93,6 +93,14 @@
   margin-bottom: 0.75rem;
 }
 
+.cvUploadSection {
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  padding: 1rem;
+  flex-shrink: 0;
+  border: 1px solid var(--border-color);
+}
+
 /* AI Section */
 .aiSection {
   flex: 1;

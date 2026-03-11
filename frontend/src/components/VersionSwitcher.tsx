@@ -41,7 +41,7 @@ export default function VersionSwitcher({
         <select
           className={styles.versionSelect}
           value={activeVersion?.id || ''}
-          onChange={e => { if (e.target.value) onSwitch(e.target.value); }}
+          onChange={e => onSwitch(e.target.value)}
         >
           <option value="">Unsaved / New</option>
           {versions.map(v => (

@@ -19,6 +19,7 @@ from routes.templates import router as templates_router
 from routes.cv_versions import router as cv_versions_router
 from routes.generate_latex import router as generate_latex_router
 from routes.cv_import import router as cv_import_router
+from routes.cover_letter import router as cover_letter_router
 
 app = FastAPI(title="CV Maker API")
 
@@ -39,6 +40,7 @@ app.include_router(templates_router, prefix="/api", tags=["templates"])
 app.include_router(cv_versions_router, prefix="/api", tags=["cv-versions"])
 app.include_router(generate_latex_router, prefix="/api", tags=["generate-latex"])
 app.include_router(cv_import_router, prefix="/api", tags=["cv-import"])
+app.include_router(cover_letter_router, prefix="/api", tags=["cover-letter"])
 
 
 @app.get("/api/health")

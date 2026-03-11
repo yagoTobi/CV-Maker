@@ -14,6 +14,7 @@ CV Maker is a web application that combines a LaTeX-based CV editor with AI assi
 - **Live PDF Preview**: Real-time compilation and preview of your CV as a PDF
 - **AI Chat Assistant**: Interactive AI that analyzes your CV against job postings and suggests improvements
 - **Match Analysis**: Quantitative analysis showing how well your CV matches a job description
+- **Cover Letter Generator**: Generate a tailored cover letter from a saved CV version plus job description
 - **Edit Suggestions**: AI-generated inline edits that can be applied with one click
 - **Version Management**: Save and switch between multiple CV versions
 - **JSON Export/Import**: Export your CV data as JSON and re-import to restore
@@ -29,7 +30,7 @@ CV Maker is a web application that combines a LaTeX-based CV editor with AI assi
 
 ### Backend
 - Python 3.10+ with FastAPI
-- AWS Bedrock for AI (Claude 3.5 Sonnet v2)
+- Provider-based AI integration for cover letters (`mock`, AWS Bedrock, Gemini)
 - LaTeX compilation service (pdflatex + xelatex)
 - Jinja2 for LaTeX template generation
 
@@ -39,7 +40,9 @@ CV Maker is a web application that combines a LaTeX-based CV editor with AI assi
 - Node.js 18+
 - Python 3.10+
 - LaTeX distribution (TeX Live or MacTeX) with both pdflatex and xelatex
-- AWS credentials configured for Bedrock access
+- One AI provider configured for live cover letter generation:
+  - `GEMINI_API_KEY`, or
+  - AWS credentials for Bedrock access
 
 ### LaTeX Package Requirements
 
@@ -57,7 +60,7 @@ cd backend
 python -m venv venv
 source venv/bin/activate  # or `venv\Scripts\activate` on Windows
 pip install -r requirements.txt
-cp .env.example .env  # Configure AWS credentials
+cp .env.example .env  # Configure Gemini or Bedrock provider
 uvicorn main:app --reload --port 8000
 ```
 
@@ -69,6 +72,18 @@ npm run dev
 ```
 
 The application will be available at `http://localhost:5173`.
+
+### AI Provider Configuration
+
+The backend supports provider selection through `backend/.env`:
+
+```env
+LLM_PROVIDER=gemini   # mock | bedrock | gemini
+GEMINI_API_KEY=...
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+Use `LLM_PROVIDER=mock` if you want to develop the cover letter flow without live credentials.
 
 ## Available Templates
 

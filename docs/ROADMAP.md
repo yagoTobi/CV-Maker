@@ -20,6 +20,7 @@ CV-Maker is in **Phase 1: Nail the Creation Loop** (see [PRODUCT_STRATEGY.md](PR
 - [x] One-click edit suggestions from AI
 - [x] Undo functionality for applied edits
 - [x] Streaming responses via SSE
+- [x] Provider-based cover letter backend (`mock`, `bedrock`, `gemini`)
 
 **Templates**
 - [x] 3 CV templates: Professional CV (med-length-proff-cv), Deedy Resume, McDowell CV
@@ -39,6 +40,7 @@ CV-Maker is in **Phase 1: Nail the Creation Loop** (see [PRODUCT_STRATEGY.md](PR
 
 **Screen Flow & Navigation**
 - [x] Landing screen with intent-based entry: "Build my CV", "Tune for a job", "My Saved CVs"
+- [x] Cover letter screen with CV version loading, job description input, and right-panel generation area
 - [x] Template selection screen (Build path only)
 - [x] Dashboard for saved versions (grid view, load, delete)
 - [x] In-editor version switcher (save / switch between saved versions)
@@ -48,6 +50,15 @@ CV-Maker is in **Phase 1: Nail the Creation Loop** (see [PRODUCT_STRATEGY.md](PR
 - [x] Load saved versions into editor
 - [x] Delete versions
 - [x] Version storage as JSON files in `user_data/versions/`
+- [x] Switch between saved version and `Unsaved / New` draft in cover letter flow
+
+**Cover Letter (In Progress)**
+- [x] Backend route for cover letter generation (`POST /api/cover-letter/generate`)
+- [x] Dedicated cover letter prompt with structured JSON output
+- [x] Gemini-backed live generation path for local development
+- [x] Frontend generation panel with editable output, key matches, weaker points, and tone notes
+- [ ] End-to-end UX polish and output quality tuning across real CV/job pairs
+- [ ] Save/export generated cover letters
 
 **CV Import (In Progress)**
 - [x] Backend: Upload endpoint (`POST /api/cv-import`) accepting PDF, DOCX, JSON (10MB limit)
@@ -91,7 +102,7 @@ See [PRODUCT_STRATEGY.md § Phase 2](PRODUCT_STRATEGY.md#phase-2--sharpen-the-ai
 - [ ] One-click tailored version generation (AI generates role-specific CV automatically)
 - [ ] Skills gap analysis (flag missing skills from JD with suggestions)
 - [ ] Section-by-section feedback (ranked feedback per section with reasoning)
-- [ ] Cover letter generation tied to specific CV version and JD
+- [ ] Cover letter version history and export workflow
 - [ ] Industry-specific coaching (suggestions calibrated to role's industry norms)
 
 ---
