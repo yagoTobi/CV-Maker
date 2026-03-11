@@ -2,106 +2,149 @@
 
 ## Current Status
 
-The application is in early development with core features functional.
+CV-Maker is in **Phase 1: Nail the Creation Loop** (see [PRODUCT_STRATEGY.md](PRODUCT_STRATEGY.md) for full phased plan). The core Build and Tune flows are functional. CV Import feature is actively being built — backend extraction endpoint is complete, frontend review screen is wired up and in progress.
 
 ---
 
 ## Completed Features
 
-- [x] LaTeX CV editor with syntax highlighting
+**Core Editor & Compilation**
+- [x] LaTeX CV editor with syntax highlighting (CodeMirror)
 - [x] Live PDF compilation and preview
-- [x] AI chat assistant for CV analysis
-- [x] Match analysis scoring
+- [x] Support for 3 LaTeX engines: pdflatex (Professional CV) and xelatex (Deedy, McDowell)
+- [x] Template-aware compiler with bundled fonts and packages
+
+**AI Assistant**
+- [x] AI chat assistant for CV refinement (AWS Bedrock / Claude 3.5 Sonnet v2)
+- [x] Match analysis scoring (CV vs. job description)
 - [x] One-click edit suggestions from AI
 - [x] Undo functionality for applied edits
-- [x] Unsaved changes indicator
+- [x] Streaming responses via SSE
+
+**Templates**
+- [x] 3 CV templates: Professional CV (med-length-proff-cv), Deedy Resume, McDowell CV
+- [x] Template preview images on selection screen
+- [x] LaTeX generation via Jinja2 templates with custom delimiters `(( ))` / `(% %)`
+- [x] Dynamic section ordering (Professional CV and McDowell CV)
+- [x] Template quality improvements: URL escaping, edge case guards, single-pass regex escape
+
+**Form Builder (Build Path)**
+- [x] Structured form with 6 standard sections: Personal Info, Work Experience, Education, Skills, Projects, Awards
+- [x] Generic `additionalSections` support for custom sections (Leadership, Certifications, etc.)
+- [x] Live PDF preview alongside form with drag-to-resize panel (300-760px)
+- [x] Drag-and-drop section ordering in sidebar nav (reflected in compiled LaTeX via `sectionOrder`)
+- [x] Drag-and-drop entry ordering within sections
+- [x] Dirty indicator on Regenerate button (amber + "●" when form changed since last compile)
+- [x] JSON export/import of form data (`cv-data.json` download/upload)
+
+**Screen Flow & Navigation**
+- [x] Landing screen with intent-based entry: "Build my CV", "Tune for a job", "My Saved CVs"
+- [x] Template selection screen (Build path only)
+- [x] Dashboard for saved versions (grid view, load, delete)
+- [x] In-editor version switcher (save / switch between saved versions)
+
+**Version Management**
+- [x] Save versions with metadata (name, template, job description, company, match score)
+- [x] Load saved versions into editor
+- [x] Delete versions
+- [x] Version storage as JSON files in `user_data/versions/`
+
+**CV Import (In Progress)**
+- [x] Backend: Upload endpoint (`POST /api/cv-import`) accepting PDF, DOCX, JSON (10MB limit)
+- [x] Backend: AI extraction service for structured data extraction via Claude
+- [x] Frontend: Upload screen (`CVImportUpload.tsx`)
+- [x] Frontend: Review screen (`CVImportReview.tsx`) — wired up, polish in progress
+- [ ] End-to-end testing and accuracy tuning across real CV formats
+- [ ] Image-based PDF detection and graceful fallback messaging
+
+**Testing**
+- [x] Backend template rendering test suite (21 tests covering minimal, maximal, special chars, empty sections, section ordering, filters)
+- [x] Backend template compilation test suite (18 tests with pdflatex/xelatex, unicode, PDF size validation)
+
+**UI/UX**
+- [x] Zed-inspired light design system (soft gray-blue backgrounds, clean typography)
+- [x] Unsaved changes indicator in PDF preview
 - [x] Page count warning (>1 page)
 
 ---
 
-## Short-term Goals
+## Phase 1 Remaining (Current Focus)
 
-### UI/UX Improvements
-- [ ] Dark mode support
-- [ ] Responsive design for tablet/mobile
-- [ ] Keyboard shortcuts for common actions
-- [ ] Loading states and skeleton screens
+See [PRODUCT_STRATEGY.md § Phase 1](PRODUCT_STRATEGY.md#phase-1--nail-the-creation-loop-current-focus) for full context.
 
-### Editor Enhancements
-- [ ] Auto-save functionality
-- [ ] Multiple CV template support
-- [ ] Template switching
-- [ ] Export to Word/PDF formats
+**High Priority**
+- [ ] CV Import end-to-end polish (review screen UX, confidence flagging, edge case handling)
+- [ ] Auto-save functionality (localStorage or backend persistence)
+- [ ] ATS optimization feedback built into match analysis (keyword gaps, formatting advice)
+- [ ] Onboarding clarity / first-run experience (tooltips, guided flow, example data)
 
-### AI Features
-- [ ] Section-by-section analysis
-- [ ] Industry-specific suggestions
-- [ ] ATS optimization tips
-- [ ] Cover letter generation
+**Template Quality (Ongoing)**
+- [ ] Additional template polish (consistent spacing, edge cases, date formatting)
+- [ ] Template preview images accuracy (ensure previews match actual output)
 
 ---
 
-## Medium-term Goals
+## Phase 2: AI Sharpening (2–4 months out)
 
-### User Management
-- [ ] User authentication
-- [ ] Cloud storage for CVs
-- [ ] Multiple CV versions per user
-- [ ] CV version history
+See [PRODUCT_STRATEGY.md § Phase 2](PRODUCT_STRATEGY.md#phase-2--sharpen-the-ai-layer-24-months-out).
 
-### Enhanced Analysis
-- [ ] Keyword extraction from job postings
-- [ ] Skills gap analysis
-- [ ] Salary range insights (based on role)
-- [ ] Company culture matching
-
-### Collaboration
-- [ ] Share CV for review
-- [ ] Comments and feedback system
-- [ ] Export shareable links
+- [ ] One-click tailored version generation (AI generates role-specific CV automatically)
+- [ ] Skills gap analysis (flag missing skills from JD with suggestions)
+- [ ] Section-by-section feedback (ranked feedback per section with reasoning)
+- [ ] Cover letter generation tied to specific CV version and JD
+- [ ] Industry-specific coaching (suggestions calibrated to role's industry norms)
 
 ---
 
-## Long-term Vision
+## Phase 3: Version Intelligence (4–6 months out)
 
-### Platform Features
-- [ ] Job board integration
-- [ ] Application tracking
-- [ ] Interview preparation assistant
-- [ ] LinkedIn profile sync
+See [PRODUCT_STRATEGY.md § Phase 3](PRODUCT_STRATEGY.md#phase-3--version-intelligence-46-months-out).
 
-### Enterprise Features
-- [ ] Team/organization accounts
-- [ ] Custom branding for templates
-- [ ] Analytics dashboard
-- [ ] API for third-party integration
+- [ ] Version comparison (side-by-side diff of two CV versions)
+- [ ] Version tagging (attach role, company, or JD to a saved version)
+- [ ] Lightweight application log (note on version: "sent to Spotify, 14 Mar" — no status tracking)
+
+---
+
+## Phase 4: Platform & Growth (6+ months)
+
+See [PRODUCT_STRATEGY.md § Phase 4](PRODUCT_STRATEGY.md#phase-4--platform--growth-6-months).
+
+- [ ] User authentication and cloud storage
+- [ ] LinkedIn profile import (OAuth-based)
+- [ ] Import from previously exported CV-Maker PDF (high-fidelity round-trip)
+- [ ] Shareable review links (send CV for feedback within tool)
+- [ ] Application tracking (revisit based on user demand)
+- [ ] Enterprise / team accounts (custom branding, API access)
 
 ---
 
 ## Technical Debt
 
-- [ ] Add comprehensive test suite (frontend + backend)
-- [ ] Implement proper error handling throughout
-- [ ] Add request validation
-- [ ] Set up CI/CD pipeline
-- [ ] Add logging and monitoring
-- [ ] Containerize with Docker
+**Frontend**
+- [ ] Test suite (none yet — only backend has tests)
+- [ ] Error handling improvements (more graceful failure modes, user-facing error messages)
+- [ ] Accessibility audit (keyboard navigation, screen reader support, ARIA labels)
+
+**Backend**
+- [ ] Request validation and sanitization improvements
+- [ ] Logging and monitoring (structured logs, error tracking)
+
+**DevOps**
+- [ ] CI/CD pipeline (automated tests on PR, deployment automation)
+- [ ] Docker containerization (for simplified deployment and dev environment setup)
+
+**Performance**
+- [ ] LaTeX compilation caching (reduce redundant compiles for unchanged content)
+- [ ] Frontend bundle size optimization (code splitting, lazy loading)
 
 ---
 
-## Contributing Ideas
+## Out of Scope (Explicitly Deferred)
 
-Have a feature suggestion? Consider:
-1. Does it help users create better CVs?
-2. Does it streamline the job application process?
-3. Is it feasible with current architecture?
+The following are valuable but explicitly not part of the current roadmap. See [PRODUCT_STRATEGY.md § What We're Not Building (Right Now)](PRODUCT_STRATEGY.md#what-were-not-building-right-now) for reasoning.
 
----
-
-## Priority Legend
-
-When prioritizing work:
-- **P0**: Critical - blocking users
-- **P1**: High - significant user value
-- **P2**: Medium - nice to have
-- **P3**: Low - future consideration
+- Application tracking (unless passive automation is viable)
+- Job board integration
+- Email client / LinkedIn messaging integration
+- Multi-user collaboration features (until enterprise phase)

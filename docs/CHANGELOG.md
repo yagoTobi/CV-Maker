@@ -22,15 +22,46 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **LaTeX generation**: Jinja2-powered backend endpoint (`POST /api/generate-latex`) producing valid LaTeX from form data
 - **Dynamic section ordering in LaTeX templates**: `med-length-proff-cv` and `mcdowell-cv` templates now loop over `section_order` context variable
 - Backend CRUD for CV versions (`GET/POST/DELETE /api/cv-versions`, `GET /api/cv-versions/{id}`)
+- `latex_url_escape` Jinja2 filter for safe URL escaping in `\href{}` commands (only escapes `%` and `#`, lighter than full `latex_escape`)
+- Template rendering test suite (`backend/tests/test_template_rendering.py`) — 21 tests covering minimal, maximal, special characters, empty sections, empty bullets, no contact info, section ordering, and filter functions
+- Template compilation test suite (`backend/tests/test_template_compilation.py`) — 18 tests that render templates then compile through pdflatex/xelatex, covering unicode, PDF size validation; marked `@pytest.mark.slow`
+- `backend/pytest.ini` with `slow` marker registration
+- Deedy template: section drag-and-drop disabled in form builder sidebar (fixed two-column layout ignores `sectionOrder`)
+- Generic `additionalSections` schema — supports any CV section type (Leadership, Certifications, Volunteer Work, etc.) without per-section schema changes
+- `AdditionalEntry` and `AdditionalSection` types (frontend + backend)
+- `Project.bullets` field for detailed project achievements
+- Additional sections rendering in all 3 Jinja2 templates (Professional + McDowell via `section_order`, Deedy in right column)
+- Form builder UI for additional sections (add/remove sections, editable titles, full entry CRUD)
+- "Add Section" button in form builder sidebar nav
+- CV Import upload endpoint (`POST /api/cv-import`) accepting PDF, DOCX, JSON
+- CV Import AI extraction via AWS Bedrock (`cv_extractor.py`) with structured prompt
+- CV Import review screen (`CVImportReview.tsx`) with per-field confidence indicators and inline editing
+- CV Import upload screen (`CVImportUpload.tsx`) with drag-and-drop file upload
+- "Import existing CV" card on landing screen
+- DOCX extraction preserves list markers, bold text, heading levels, and indentation
+- Extraction prompt includes bullet granularity preservation, entry order preservation, section order detection
+- `max_tokens` configurable on Bedrock client (8192 for extraction, 4096 default for chat)
+- Truncation detection in extraction response parsing
 
 ### Fixed
 - `latex_escape` sequential-replacement bug: backslash was replaced first, causing subsequent `{`/`}` passes to re-escape `\textbackslash{}`. Rewrote as single-pass regex.
+- Deedy template: skills `\textbullet{}` separator was being mangled by `latex_escape` — fixed with `map('latex_escape')` before `join`
+- Deedy template: contact header line could have leading/trailing `\,|\,` separators when fields were missing — rebuilt with `contact_parts` array + `join`
+- Professional CV: `\href{}` URLs now escaped with `latex_url_escape` to handle `%` and `#` in URLs
+- Deedy template: `\href{}` URLs now escaped with `latex_url_escape`
+- Professional CV: empty bullets array no longer renders inside `rSubsection` (was valid but inconsistent with other templates)
+- Professional CV: empty `\address{}` no longer rendered when no contact info exists
+- Professional CV: education entries with no GPA and no details no longer produce empty `\begin{list}` (invalid LaTeX) — renders header directly instead
+- McDowell CV: empty `\address{}` and `\contacts{}` blocks guarded with conditionals
+- Deedy template: removed `\lastupdated` command (was printing misleading compilation date)
 
 ### Changed
 - App initial screen changed from `template-select` to `landing`
 - `AppScreen` type expanded to `'landing' | 'dashboard' | 'template-select' | 'form-builder' | 'editor'`
 - CORS `allow_methods` expanded to include `DELETE`
 - Template selection screen now has a Back button (returns to landing)
+- Landing page layout: two-column (branding left, actions right), responsive collapse on mobile
+- `sectionOrder` now supports `additional-{index}` keys for dynamic additional sections
 
 ---
 

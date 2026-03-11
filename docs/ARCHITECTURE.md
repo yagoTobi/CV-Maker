@@ -28,12 +28,17 @@ CV Maker follows a client-server architecture with a React frontend and FastAPI 
 │  │              │  │  latex       │  │  /match-     │  │              │    │
 │  └──────────────┘  └──────────────┘  │  analysis    │  └──────────────┘    │
 │         │                │           └──────────────┘         │            │
-│         ▼                ▼                   ▼                 ▼            │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
-│  │LaTeX Compiler│  │Jinja2 Engine │  │ AWS Bedrock  │  │  JSON Files  │    │
-│  │(pdflatex/    │  │(.tex.j2      │  │  (Claude)    │  │ user_data/   │    │
-│  │ xelatex)     │  │  templates)  │  │              │  │ versions/    │    │
-│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘    │
+│  ┌──────────────┐        │                   ▼                 ▼            │
+│  │  Import API  │        ▼            ┌──────────────┐  ┌──────────────┐    │
+│  │  /cv-import  │  ┌──────────────┐  │ AWS Bedrock  │  │  JSON Files  │    │
+│  └──────────────┘  │Jinja2 Engine │  │  (Claude)    │  │ user_data/   │    │
+│         │          │(.tex.j2      │  │              │  │ versions/    │    │
+│         ▼          │  templates)  │  └──────────────┘  └──────────────┘    │
+│  ┌──────────────┐  └──────────────┘                                        │
+│  │LaTeX Compiler│                                                           │
+│  │(pdflatex/    │                                                           │
+│  │ xelatex)     │                                                           │
+│  └──────────────┘                                                           │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -42,12 +47,13 @@ CV Maker follows a client-server architecture with a React frontend and FastAPI 
 ## Screen Flow
 
 ```
-AppScreen = 'landing' | 'dashboard' | 'template-select' | 'form-builder' | 'editor'
+AppScreen = 'landing' | 'dashboard' | 'template-select' | 'form-builder' | 'editor' | 'import-upload' | 'import-review'
 
 landing
-  ├── "Build my CV"    → template-select → form-builder → (Generate CV) → editor
-  ├── "Tune for a job" → editor (Professional CV pre-loaded, left job panel visible)
-  └── "My Saved CVs"   → dashboard  [only shown when saved versions exist]
+  ├── "Build my CV"       → template-select → form-builder → (Generate CV) → editor
+  ├── "Import existing CV" → import-upload → import-review → template-select → form-builder
+  ├── "Tune for a job"    → editor (Professional CV pre-loaded, left job panel visible)
+  └── "My Saved CVs"      → dashboard  [only shown when saved versions exist]
 
 dashboard
   ├── click version card → editor (version content loaded)
@@ -117,6 +123,7 @@ editor
 | `/api/user-data` | GET/POST | User profile CRUD |
 | `/api/cv-versions` | GET/POST | List / create saved CV versions |
 | `/api/cv-versions/{id}` | GET/DELETE | Load / delete a saved version |
+| `/api/cv-import` | POST | Upload PDF/DOCX/JSON for AI extraction |
 | `/api/health` | GET | Health check |
 
 ### Services & Routes
@@ -124,13 +131,15 @@ editor
 | File | Purpose |
 |------|---------|
 | `routes/compile.py` | LaTeX → PDF compilation (pdflatex / xelatex) |
-| `routes/generate_latex.py` | CVFormData → LaTeX via Jinja2, `latex_escape` filter (single-pass regex), `_build_personal_items` |
+| `routes/generate_latex.py` | CVFormData → LaTeX via Jinja2, `latex_escape` filter (all special chars), `latex_url_escape` filter (URLs: `%` and `#` only), `_build_personal_items` |
 | `routes/cv_versions.py` | Version CRUD + all shared Pydantic models (PersonalInfo, WorkEntry, CVFormData, …) |
+| `routes/cv_import.py` | CV import upload endpoint (PDF/DOCX/JSON) |
 | `routes/chat.py` | AI chat streaming |
 | `routes/templates.py` | Template listing and file serving |
 | `routes/user_data.py` | JSON-file user profile |
 | `services/bedrock.py` | AWS Bedrock client wrapper |
 | `services/cv_analyzer.py` | CV analysis and match scoring |
+| `services/cv_extractor.py` | AI-powered CV extraction via Bedrock (PDF multimodal, DOCX text, JSON direct) |
 | `services/latex_compiler.py` | pdflatex / xelatex subprocess wrapper |
 | `prompts/cv_agent.py` | AI prompt templates |
 
@@ -139,11 +148,11 @@ editor
 Templates live in `backend/latex_templates/` and use Jinja2 with custom delimiters
 (`(( ))` for variables, `(% %)` for blocks) to avoid clashing with LaTeX `{}` syntax.
 
-| Template file | Engine | Class |
-|--------------|--------|-------|
-| `med-length-proff-cv.tex.j2` | pdflatex | `resume` (`rSection` / `rSubsection`) |
-| `mcdowell-cv.tex.j2` | xelatex | `mcdowellcv` (`cvsection` / `cvsubsection`) |
-| `deedy-resume.tex.j2` | xelatex | `deedy-resume` (two-column, fixed layout) |
+| Template file | Engine | Class | Notes |
+|--------------|--------|-------|-------|
+| `med-length-proff-cv.tex.j2` | pdflatex | `resume` (`rSection` / `rSubsection`) | Supports dynamic `section_order` |
+| `mcdowell-cv.tex.j2` | xelatex | `mcdowellcv` (`cvsection` / `cvsubsection`) | Supports dynamic `section_order` |
+| `deedy-resume.tex.j2` | xelatex | `deedy-resume` (two-column) | Fixed layout, does NOT use `section_order` |
 
 All templates receive the following context variables from `generate_latex.py`:
 
@@ -156,7 +165,12 @@ All templates receive the following context variables from `generate_latex.py`:
 | `skills` | `form_data.skills` |
 | `projects` | `form_data.projects` |
 | `awards` | `form_data.awards` |
+| `additional_sections` | `form_data.additionalSections` |
 | `section_order` | `form_data.sectionOrder` (default: work, education, skills, projects, awards) |
+
+**Jinja2 Filters:**
+- `latex_escape` — Escapes all LaTeX special characters: `& % $ # _ { } ~ ^ \`
+- `latex_url_escape` — Escapes only `%` and `#` (for use in `\href{}` URLs; other chars like `&` and `_` are valid in URLs)
 
 ---
 
@@ -175,8 +189,10 @@ PersonalInfo {
 WorkEntry      { company, title, startDate, endDate, location, bullets[] }
 EducationEntry { school, degree, startDate, endDate, location, gpa?, details[] }
 SkillCategory  { category, skills[] }
-Project        { name, year, description, technologies? }
+Project        { name, year, description, technologies?, bullets?: string[] }
 Award          { year, title, description? }
+AdditionalEntry { title, subtitle?, startDate?, endDate?, location?, description?, bullets: string[] }
+AdditionalSection { title, entries: AdditionalEntry[] }
 
 CVFormData {
   templateId: string
@@ -187,6 +203,7 @@ CVFormData {
   skills: SkillCategory[]
   projects?: Project[]
   awards?: Award[]
+  additionalSections?: AdditionalSection[]
 }
 ```
 
@@ -284,6 +301,7 @@ backend/
 │   ├── compile.py              # POST /compile
 │   ├── generate_latex.py       # POST /generate-latex
 │   ├── cv_versions.py          # CRUD /cv-versions + shared Pydantic models
+│   ├── cv_import.py            # POST /cv-import (upload + extraction)
 │   ├── chat.py                 # POST /chat, /match-analysis
 │   ├── templates.py            # GET /templates
 │   └── user_data.py            # GET/POST /user-data
@@ -294,14 +312,20 @@ backend/
 ├── services/
 │   ├── bedrock.py
 │   ├── cv_analyzer.py
+│   ├── cv_extractor.py         # AI extraction (PDF/DOCX/JSON)
 │   └── latex_compiler.py
 ├── prompts/
 │   └── cv_agent.py
 ├── config/
 │   └── templates.py            # TemplateConfig entries (3 templates)
+├── tests/
+│   ├── __init__.py
+│   ├── test_template_rendering.py    # Jinja2 rendering tests (21 tests, fast)
+│   └── test_template_compilation.py  # pdflatex/xelatex compilation tests (18 tests, ~28s)
 ├── user_data/
 │   ├── profile.json            # User profile
 │   └── versions/               # Saved CV versions ({uuid}.json)
+├── pytest.ini                  # pytest config (slow marker)
 └── main.py                     # FastAPI app + router registration
 ```
 
@@ -353,3 +377,58 @@ CV Maker uses a Zed-inspired light theme — soft, professional, minimal.
 - AWS credentials via environment / IAM (never in source)
 - No authentication — single-user local tool; multi-user requires auth + per-user data isolation
 - User data stored as local JSON files — not suitable for production multi-user deployment
+
+---
+
+## Testing
+
+The backend includes comprehensive test coverage for LaTeX template rendering and compilation.
+
+### Test Suites
+
+| Test File | Purpose | Count | Speed |
+|-----------|---------|-------|-------|
+| `test_template_rendering.py` | Jinja2 rendering tests (no TeX required) | 21 tests | Fast (~2s) |
+| `test_template_compilation.py` | Full pdflatex/xelatex compilation | 18 tests | Slow (~28s) |
+
+### Test Coverage
+
+**Rendering Tests** (`test_template_rendering.py`):
+- All 3 templates (med-length-proff-cv, deedy-resume, mcdowell-cv)
+- Minimal data (name + 1 work entry)
+- Maximal data (all sections filled)
+- Special LaTeX character escaping (`& % $ # _ { } ~ ^ \`)
+- Empty optional sections (no projects/awards/summary)
+- Work entries with empty bullet arrays
+- CV with only name (no contact info)
+- Section ordering (`sectionOrder` field respected)
+- Direct filter testing (`latex_escape`, `latex_url_escape`)
+
+**Compilation Tests** (`test_template_compilation.py`):
+- Minimal, maximal, special chars, and empty sections for all 3 templates
+- Unicode characters (accented names, international symbols)
+- PDF size validation (10KB–500KB range)
+- Marked `@pytest.mark.slow` (2–5 seconds per test)
+- Auto-skip if pdflatex/xelatex not installed
+
+### Running Tests
+
+```bash
+cd backend
+
+# Run all tests
+python3 -m pytest tests/ -v
+
+# Run only fast tests (skip compilation)
+pytest -m "not slow"
+
+# Run specific test file
+pytest tests/test_template_rendering.py -v
+
+# Run with coverage
+pytest --cov=routes --cov=services tests/
+```
+
+### Configuration
+
+`pytest.ini` defines the `slow` marker for compilation tests. Use `-m "not slow"` to skip slow tests during development.

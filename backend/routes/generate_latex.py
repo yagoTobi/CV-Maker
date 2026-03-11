@@ -47,7 +47,22 @@ def latex_escape(value: str) -> str:
     return _LATEX_ESCAPE_RE.sub(lambda m: _LATEX_ESCAPE_MAP[m.group(0)], value)
 
 
+def latex_url_escape(value: str) -> str:
+    """Escape special characters in URLs for LaTeX \href{}.
+
+    This is lighter than latex_escape because hyperref handles most characters.
+    We only need to escape % (starts a comment) and # (parameter character).
+    """
+    if not isinstance(value, str):
+        value = str(value)
+    # Only escape % and # for URLs
+    value = value.replace("%", r"\%")
+    value = value.replace("#", r"\#")
+    return value
+
+
 _jinja_env.filters["latex_escape"] = latex_escape
+_jinja_env.filters["latex_url_escape"] = latex_url_escape
 
 _DEFAULT_PERSONAL_ORDER = ["phone", "email", "location", "links"]
 
@@ -106,6 +121,7 @@ async def generate_latex(form_data: CVFormData):
         "skills": form_data.skills,
         "projects": form_data.projects or [],
         "awards": form_data.awards or [],
+        "additional_sections": form_data.additionalSections or [],
         "section_order": form_data.sectionOrder or ["work", "education", "skills", "projects", "awards"],
     }
 

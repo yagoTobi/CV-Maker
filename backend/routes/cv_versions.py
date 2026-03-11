@@ -52,12 +52,28 @@ class Project(BaseModel):
     year: str = ""
     description: str = ""
     technologies: Optional[str] = None
+    bullets: Optional[list[str]] = None
 
 
 class Award(BaseModel):
     year: str = ""
     title: str = ""
     description: Optional[str] = None
+
+
+class AdditionalEntry(BaseModel):
+    title: str = ""
+    subtitle: Optional[str] = None
+    startDate: Optional[str] = None
+    endDate: Optional[str] = None
+    location: Optional[str] = None
+    description: Optional[str] = None
+    bullets: list[str] = []
+
+
+class AdditionalSection(BaseModel):
+    title: str = ""
+    entries: list[AdditionalEntry] = []
 
 
 class CVFormData(BaseModel):
@@ -69,6 +85,7 @@ class CVFormData(BaseModel):
     skills: List[SkillCategory] = []
     projects: Optional[List[Project]] = None
     awards: Optional[List[Award]] = None
+    additionalSections: Optional[List[AdditionalSection]] = None
 
 
 class CVVersionCreate(BaseModel):

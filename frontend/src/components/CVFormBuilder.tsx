@@ -33,6 +33,7 @@ interface CVFormBuilderProps {
   templateId: string;
   onGenerated: (texContent: string, templateId: string, formData: CVFormData) => void;
   onBack: () => void;
+  initialFormData?: CVFormData;
 }
 
 const SECTION_LABELS: Record<FormSection, string> = {
@@ -55,9 +56,9 @@ function GripIcon() {
   );
 }
 
-export default function CVFormBuilder({ templateId, onGenerated, onBack }: CVFormBuilderProps) {
+export default function CVFormBuilder({ templateId, onGenerated, onBack, initialFormData }: CVFormBuilderProps) {
   // All hooks at top — never after a conditional return (key learning #3)
-  const fb = useFormBuilder(templateId);
+  const fb = useFormBuilder(templateId, initialFormData);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // PDF preview state
@@ -101,6 +102,9 @@ export default function CVFormBuilder({ templateId, onGenerated, onBack }: CVFor
 
   // Nav drag handlers (only for non-personal sections; index 0 = first reorderable)
   const reorderableNavItems = fb.navSectionOrder.filter(s => s !== 'personal');
+
+  // Deedy template uses a fixed two-column layout — section reordering doesn't apply
+  const isDeedyTemplate = templateId === 'deedy-resume';
 
   const handleNavDragStart = (rIdx: number) => { setNavDragFrom(rIdx); };
   const handleNavDragEnter = (rIdx: number) => {
@@ -180,32 +184,58 @@ export default function CVFormBuilder({ templateId, onGenerated, onBack }: CVFor
           </button>
 
           {/* Reorderable sections */}
-          {reorderableNavItems.map((section, rIdx) => (
-            <div
-              key={section}
-              data-drag-nav
-              className={`${styles.navDraggable} ${navDragOver === rIdx && navDragFrom !== rIdx ? styles.navDragOver : ''} ${navDragFrom === rIdx ? styles.navDragging : ''}`}
-              onDragStart={() => handleNavDragStart(rIdx)}
-              onDragEnter={() => handleNavDragEnter(rIdx)}
-              onDragOver={e => e.preventDefault()}
-              onDrop={() => handleNavDrop(rIdx)}
-              onDragEnd={handleNavDragEnd}
-            >
-              <span
-                className={styles.navGrip}
-                onMouseDown={e => {
-                  const nav = (e.currentTarget as HTMLElement).closest('[data-drag-nav]') as HTMLElement | null;
-                  if (nav) nav.draggable = true;
-                }}
-              ><GripIcon /></span>
-              <button
-                className={`${styles.navItem} ${fb.activeSection === section ? styles.navActive : ''}`}
-                onClick={() => fb.setActiveSection(section)}
+          {reorderableNavItems.map((section, rIdx) => {
+            // Get label for section (dynamic for additional sections)
+            const sectionLabel = section.startsWith('additional-')
+              ? fb.formData.additionalSections?.[parseInt(section.replace('additional-', ''))]?.title || 'Additional Section'
+              : SECTION_LABELS[section as keyof typeof SECTION_LABELS] || section;
+
+            // For Deedy template, render plain nav buttons (no drag-and-drop)
+            if (isDeedyTemplate) {
+              return (
+                <button
+                  key={section}
+                  className={`${styles.navItem} ${fb.activeSection === section ? styles.navActive : ''}`}
+                  onClick={() => fb.setActiveSection(section)}
+                >
+                  {sectionLabel}
+                </button>
+              );
+            }
+
+            // For other templates, render draggable nav items
+            return (
+              <div
+                key={section}
+                data-drag-nav
+                className={`${styles.navDraggable} ${navDragOver === rIdx && navDragFrom !== rIdx ? styles.navDragOver : ''} ${navDragFrom === rIdx ? styles.navDragging : ''}`}
+                onDragStart={() => handleNavDragStart(rIdx)}
+                onDragEnter={() => handleNavDragEnter(rIdx)}
+                onDragOver={e => e.preventDefault()}
+                onDrop={() => handleNavDrop(rIdx)}
+                onDragEnd={handleNavDragEnd}
               >
-                {SECTION_LABELS[section]}
-              </button>
-            </div>
-          ))}
+                <span
+                  className={styles.navGrip}
+                  onMouseDown={e => {
+                    const nav = (e.currentTarget as HTMLElement).closest('[data-drag-nav]') as HTMLElement | null;
+                    if (nav) nav.draggable = true;
+                  }}
+                ><GripIcon /></span>
+                <button
+                  className={`${styles.navItem} ${fb.activeSection === section ? styles.navActive : ''}`}
+                  onClick={() => fb.setActiveSection(section)}
+                >
+                  {sectionLabel}
+                </button>
+              </div>
+            );
+          })}
+
+          {/* Add Section button */}
+          <button className={styles.addSectionBtn} onClick={fb.addAdditionalSection}>
+            + Add Section
+          </button>
         </nav>
 
         <div className={styles.sidebarFooter}>
@@ -264,6 +294,12 @@ export default function CVFormBuilder({ templateId, onGenerated, onBack }: CVFor
         {fb.activeSection === 'skills'    && <SkillsSection    fb={fb} />}
         {fb.activeSection === 'projects'  && <ProjectsSection  fb={fb} />}
         {fb.activeSection === 'awards'    && <AwardsSection    fb={fb} />}
+        {fb.activeSection.startsWith('additional-') && (
+          <AdditionalSectionView
+            fb={fb}
+            sectionIndex={parseInt(fb.activeSection.replace('additional-', ''))}
+          />
+        )}
       </main>
 
       {/* ── Resize handle ── */}
@@ -693,6 +729,37 @@ function ProjectsSection({ fb }: { fb: FB }) {
           <Field label="Description">
             <textarea className={`${styles.input} ${styles.textarea}`} value={proj.description} onChange={e => fb.updateProject(i, { description: e.target.value })} placeholder="Describe what you built and its impact..." rows={3} />
           </Field>
+
+          {/* Project bullets */}
+          {(proj.bullets && proj.bullets.length > 0) && (
+            <div className={styles.bulletsSection}>
+              <div className={styles.subSectionHeader}>
+                <h4>Bullet Points</h4>
+                <button className={styles.addBtn} onClick={() => fb.addProjectBullet(i)}>+ Add</button>
+              </div>
+              {proj.bullets.map((bullet, bi) => (
+                <div key={bi} className={styles.bulletRow}>
+                  <textarea
+                    className={`${styles.input} ${styles.bulletInput}`}
+                    value={bullet}
+                    onChange={e => fb.updateProjectBullet(i, bi, e.target.value)}
+                    placeholder="Describe an achievement or key feature..."
+                    rows={2}
+                  />
+                  {proj.bullets!.length > 1 && (
+                    <button className={styles.removeBtn} onClick={() => fb.removeProjectBullet(i, bi)}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {(!proj.bullets || proj.bullets.length === 0) && (
+            <button className={styles.addBtn} onClick={() => fb.addProjectBullet(i)} style={{ marginTop: '0.75rem' }}>
+              + Add Bullet Points
+            </button>
+          )}
         </div>
       ))}
     </section>
@@ -738,6 +805,131 @@ function AwardsSection({ fb }: { fb: FB }) {
             <Field label="Description">
               <input className={styles.input} value={award.description || ''} onChange={e => fb.updateAward(i, { description: e.target.value })} placeholder="Brief description (optional)" />
             </Field>
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function AdditionalSectionView({ fb, sectionIndex }: { fb: FB; sectionIndex: number }) {
+  const section = fb.formData.additionalSections?.[sectionIndex];
+
+  if (!section) return null;
+
+  const drag = useDrag((from, to) => {
+    // Reorder entries within this section (not implemented yet, but follows pattern)
+    // For now, entries are not draggable
+  });
+
+  return (
+    <section className={styles.section}>
+      <div className={styles.sectionHeader}>
+        <div className={styles.additionalSectionTitleWrapper}>
+          <input
+            className={`${styles.input} ${styles.additionalSectionTitleInput}`}
+            value={section.title}
+            onChange={e => fb.updateAdditionalSectionTitle(sectionIndex, e.target.value)}
+            placeholder="Section Title"
+          />
+        </div>
+        <button className={styles.removeSectionBtn} onClick={() => fb.removeAdditionalSection(sectionIndex)}>
+          Remove Section
+        </button>
+      </div>
+
+      <div className={styles.sectionHeader}>
+        <h3 className={styles.sectionTitle} style={{ marginBottom: 0 }}>Entries</h3>
+        <button className={styles.addBtn} onClick={() => fb.addAdditionalEntry(sectionIndex)}>+ Add Entry</button>
+      </div>
+
+      {section.entries.length === 0 && (
+        <p className={styles.emptyState}>No entries yet. Click "Add Entry" to get started.</p>
+      )}
+
+      {section.entries.map((entry, ei) => (
+        <div key={ei} className={styles.card}>
+          <div className={styles.cardHeader}>
+            <span className={styles.cardLabel}>{entry.title || `Entry ${ei + 1}`}</span>
+            <button className={styles.removeBtn} onClick={() => fb.removeAdditionalEntry(sectionIndex, ei)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <div className={styles.formGrid}>
+            <Field label="Title" required>
+              <input
+                className={styles.input}
+                value={entry.title}
+                onChange={e => fb.updateAdditionalEntry(sectionIndex, ei, { title: e.target.value })}
+                placeholder="Entry title"
+              />
+            </Field>
+            <Field label="Subtitle">
+              <input
+                className={styles.input}
+                value={entry.subtitle || ''}
+                onChange={e => fb.updateAdditionalEntry(sectionIndex, ei, { subtitle: e.target.value })}
+                placeholder="Subtitle (optional)"
+              />
+            </Field>
+            <Field label="Start Date">
+              <input
+                className={styles.input}
+                value={entry.startDate || ''}
+                onChange={e => fb.updateAdditionalEntry(sectionIndex, ei, { startDate: e.target.value })}
+                placeholder="Jan 2022"
+              />
+            </Field>
+            <Field label="End Date">
+              <input
+                className={styles.input}
+                value={entry.endDate || ''}
+                onChange={e => fb.updateAdditionalEntry(sectionIndex, ei, { endDate: e.target.value })}
+                placeholder="Dec 2023"
+              />
+            </Field>
+            <Field label="Location">
+              <input
+                className={styles.input}
+                value={entry.location || ''}
+                onChange={e => fb.updateAdditionalEntry(sectionIndex, ei, { location: e.target.value })}
+                placeholder="Location"
+              />
+            </Field>
+          </div>
+
+          <Field label="Description">
+            <textarea
+              className={`${styles.input} ${styles.textarea}`}
+              value={entry.description || ''}
+              onChange={e => fb.updateAdditionalEntry(sectionIndex, ei, { description: e.target.value })}
+              placeholder="Description (optional)"
+              rows={2}
+            />
+          </Field>
+
+          <div className={styles.bulletsSection}>
+            <div className={styles.subSectionHeader}>
+              <h4>Bullet Points</h4>
+              <button className={styles.addBtn} onClick={() => fb.addAdditionalEntryBullet(sectionIndex, ei)}>+ Add</button>
+            </div>
+            {entry.bullets.map((bullet, bi) => (
+              <div key={bi} className={styles.bulletRow}>
+                <textarea
+                  className={`${styles.input} ${styles.bulletInput}`}
+                  value={bullet}
+                  onChange={e => fb.updateAdditionalEntryBullet(sectionIndex, ei, bi, e.target.value)}
+                  placeholder="Describe an achievement or detail..."
+                  rows={2}
+                />
+                {entry.bullets.length > 1 && (
+                  <button className={styles.removeBtn} onClick={() => fb.removeAdditionalEntryBullet(sectionIndex, ei, bi)}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       ))}
