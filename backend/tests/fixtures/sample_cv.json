@@ -1,0 +1,79 @@
+{
+  "sectionOrder": ["work", "education", "skills", "projects", "awards"],
+  "personalInfo": {
+    "fullName": "Jane Smith",
+    "email": "jane@example.com",
+    "phone": "+1-555-0123",
+    "location": "San Francisco, CA",
+    "links": [
+      {"label": "GitHub", "url": "https://github.com/janesmith"},
+      {"label": "LinkedIn", "url": "https://linkedin.com/in/janesmith"}
+    ],
+    "summary": "Experienced software engineer with a passion for building scalable systems."
+  },
+  "workExperience": [
+    {
+      "company": "Tech Giant Inc",
+      "title": "Senior Software Engineer",
+      "startDate": "Jan 2021",
+      "endDate": "Present",
+      "location": "San Francisco, CA",
+      "bullets": [
+        "Led a team of 5 engineers to build microservices architecture",
+        "Improved system performance by 40% through optimization",
+        "Mentored junior developers and conducted code reviews"
+      ]
+    },
+    {
+      "company": "StartupXYZ",
+      "title": "Software Engineer",
+      "startDate": "Jun 2019",
+      "endDate": "Dec 2020",
+      "location": "Remote",
+      "bullets": [
+        "Built RESTful APIs using Python and FastAPI",
+        "Implemented CI/CD pipelines with GitHub Actions"
+      ]
+    }
+  ],
+  "education": [
+    {
+      "school": "University of California, Berkeley",
+      "degree": "B.S. in Computer Science",
+      "startDate": "Aug 2015",
+      "endDate": "May 2019",
+      "location": "Berkeley, CA",
+      "gpa": "3.8/4.0",
+      "details": [
+        "Dean's List all semesters",
+        "Relevant coursework: Data Structures, Algorithms, Machine Learning"
+      ]
+    }
+  ],
+  "skills": [
+    {
+      "category": "Languages",
+      "skills": ["Python", "JavaScript", "TypeScript", "Go"]
+    },
+    {
+      "category": "Frameworks",
+      "skills": ["React", "FastAPI", "Django"]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Open Source CLI Tool",
+      "year": "2023",
+      "description": "Built a command-line tool for managing cloud resources",
+      "technologies": "Go, AWS SDK",
+      "bullets": ["Published on Homebrew with 500+ downloads"]
+    }
+  ],
+  "awards": [
+    {
+      "year": "2023",
+      "title": "Best Innovation Award",
+      "description": "For developing an AI-powered code review system"
+    }
+  ]
+}

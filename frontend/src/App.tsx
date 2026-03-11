@@ -1,15 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { LatexEditor, JobInput, ChatPanel, PdfPreview, MatchAnalysis, TemplateSelector } from './components';
+import { LatexEditor, JobInput, ChatPanel, PdfPreview, MatchAnalysis } from './features/editor';
+import { TemplateSelector } from './features/template-selection';
+import { LandingScreen } from './features/landing';
+import { Dashboard, VersionSwitcher } from './features/dashboard';
+import { CVFormBuilder } from './features/form-builder';
+import { CVImportUpload, CVImportReview } from './features/cv-import';
 import { useTemplates, useCompiler, useChat } from './hooks';
 import { useImport } from './hooks/useImport';
 import { api } from './services/api';
 import type { UserProfile, CVFormData, CVVersion, CVVersionMeta } from './types';
-import LandingScreen from './components/LandingScreen';
-import Dashboard from './components/Dashboard';
-import CVFormBuilder from './components/CVFormBuilder';
-import VersionSwitcher from './components/VersionSwitcher';
-import CVImportUpload from './components/CVImportUpload';
-import CVImportReview from './components/CVImportReview';
 import styles from './App.module.css';
 
 type PreviewTab = 'latex' | 'pdf';

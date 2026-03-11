@@ -68,22 +68,82 @@ editor
 
 ## Frontend Architecture
 
+### Project Structure (Feature-Based)
+
+```
+frontend/src/
+├── features/
+│   ├── landing/              Landing screen
+│   │   ├── LandingScreen.tsx
+│   │   ├── LandingScreen.module.css
+│   │   └── index.ts
+│   ├── template-selection/   Template picker (Build path)
+│   │   ├── TemplateSelector.tsx
+│   │   ├── TemplateSelector.css
+│   │   └── index.ts
+│   ├── form-builder/         Structured form builder
+│   │   ├── CVFormBuilder.tsx
+│   │   ├── CVFormBuilder.module.css
+│   │   └── index.ts
+│   ├── cv-import/            CV import upload + review
+│   │   ├── CVImportUpload.tsx
+│   │   ├── CVImportUpload.module.css
+│   │   ├── CVImportReview.tsx
+│   │   ├── CVImportReview.module.css
+│   │   └── index.ts
+│   ├── editor/               All editor-related components
+│   │   ├── LatexEditor.tsx
+│   │   ├── LatexEditor.module.css
+│   │   ├── PdfPreview.tsx
+│   │   ├── PdfPreview.module.css
+│   │   ├── ChatPanel.tsx
+│   │   ├── ChatPanel.module.css
+│   │   ├── JobInput.tsx
+│   │   ├── JobInput.module.css
+│   │   ├── MatchAnalysis.tsx
+│   │   ├── MatchAnalysis.module.css
+│   │   └── index.ts
+│   ├── dashboard/            Saved versions management
+│   │   ├── Dashboard.tsx
+│   │   ├── Dashboard.module.css
+│   │   ├── VersionSwitcher.tsx
+│   │   ├── VersionSwitcher.module.css
+│   │   └── index.ts
+│   └── shared/               Reusable cross-feature components
+│       ├── ErrorBoundary.tsx
+│       └── index.ts
+├── hooks/                    Custom React hooks
+├── services/                 API client
+├── styles/                   Design tokens (variables.css)
+├── types/                    TypeScript type definitions
+├── App.tsx                   Main app router
+└── main.tsx                  React entry point
+```
+
+**Organization Rationale:**
+- Feature-based folders group related components, styles, and barrel exports
+- Each feature folder has an `index.ts` for clean imports (e.g., `import { Dashboard } from './features/dashboard'`)
+- `shared/` contains components used across multiple features
+- `hooks/`, `services/`, `types/`, and `styles/` remain top-level (cross-cutting concerns)
+
 ### Components
 
-| Component | Purpose |
-|-----------|---------|
-| `App.tsx` | Main container, 5-screen router, all cross-screen state |
-| `LandingScreen.tsx` | Intent-based entry screen (Build / Tune / My CVs) |
-| `TemplateSelector.tsx` | Template selection (Build path only) |
-| `CVFormBuilder.tsx` | Structured form with 6 sections + live PDF preview + DnD reordering |
-| `Dashboard.tsx` | Saved versions grid (load, delete) |
-| `VersionSwitcher.tsx` | In-editor save / switch between saved versions |
-| `LatexEditor.tsx` | CodeMirror-based LaTeX editor (Tune path / fine-tuning) |
-| `PdfPreview.tsx` | PDF rendering via `<iframe>` with base64 source |
-| `ChatPanel.tsx` | AI conversation + inline edit suggestions with undo |
-| `MatchAnalysis.tsx` | CV-job match score display |
-| `JobInput.tsx` | Job description input |
-| `ErrorBoundary.tsx` | Graceful error handling |
+| Component | Feature | Purpose |
+|-----------|---------|---------|
+| `App.tsx` | - | Main container, 5-screen router, all cross-screen state |
+| `LandingScreen.tsx` | landing | Intent-based entry screen (Build / Tune / My CVs) |
+| `TemplateSelector.tsx` | template-selection | Template selection (Build path only) |
+| `CVFormBuilder.tsx` | form-builder | Structured form with 6 sections + live PDF preview + DnD reordering |
+| `CVImportUpload.tsx` | cv-import | Drag-and-drop file upload for CV import |
+| `CVImportReview.tsx` | cv-import | Review and edit extracted CV data with confidence indicators |
+| `Dashboard.tsx` | dashboard | Saved versions grid (load, delete) |
+| `VersionSwitcher.tsx` | dashboard | In-editor save / switch between saved versions |
+| `LatexEditor.tsx` | editor | CodeMirror-based LaTeX editor (Tune path / fine-tuning) |
+| `PdfPreview.tsx` | editor | PDF rendering via `<iframe>` with base64 source |
+| `ChatPanel.tsx` | editor | AI conversation + inline edit suggestions with undo |
+| `MatchAnalysis.tsx` | editor | CV-job match score display |
+| `JobInput.tsx` | editor | Job description input |
+| `ErrorBoundary.tsx` | shared | Graceful error handling |
 
 ### Custom Hooks
 
@@ -93,6 +153,7 @@ editor
 | `useTemplates` | Selected template, content fetch, `setTemplateId` (set without fetch) |
 | `useCompiler` | Compile request, PDF state, markChanged |
 | `useChat` | AI messages, analyzeJob, applyEdit, undo |
+| `useImport` | CV import file upload, AI extraction, progress tracking, validation |
 
 ### State (App.tsx)
 

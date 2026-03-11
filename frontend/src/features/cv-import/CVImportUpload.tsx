@@ -1,10 +1,16 @@
 import { useState, useRef, useCallback } from 'react';
 import styles from './CVImportUpload.module.css';
 
+interface ImportProgress {
+  message: string;
+  step: number;
+  totalSteps: number;
+}
+
 interface CVImportUploadProps {
   onFileSelected: (file: File) => void;
   isUploading: boolean;
-  uploadProgress: string | null;
+  uploadProgress: ImportProgress | null;
   error: string | null;
   onBack: () => void;
 }
@@ -122,7 +128,22 @@ export default function CVImportUpload({
           {isUploading ? (
             <div className={styles.loadingState}>
               <div className={styles.spinner} />
-              <p className={styles.progressText}>{uploadProgress || 'Processing...'}</p>
+              <p className={styles.progressText}>
+                {uploadProgress?.message || 'Processing...'}
+              </p>
+              {uploadProgress && (
+                <div className={styles.progressIndicator}>
+                  <span className={styles.stepText}>
+                    Step {uploadProgress.step} of {uploadProgress.totalSteps}
+                  </span>
+                  <div className={styles.progressBar}>
+                    <div
+                      className={styles.progressFill}
+                      style={{ width: `${(uploadProgress.step / uploadProgress.totalSteps) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className={styles.defaultState}>

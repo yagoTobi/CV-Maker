@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { api } from '../services/api';
-import type { CVVersion, CVVersionMeta } from '../types';
+import { api } from '../../services/api';
+import type { CVVersion, CVVersionMeta } from '../../types';
 import styles from './Dashboard.module.css';
 
 interface DashboardProps {

@@ -1,4 +1,4 @@
-import type { MatchAnalysis as MatchAnalysisType } from '../types';
+import type { MatchAnalysis as MatchAnalysisType } from '../../types';
 import styles from './MatchAnalysis.module.css';
 
 interface MatchAnalysisProps {

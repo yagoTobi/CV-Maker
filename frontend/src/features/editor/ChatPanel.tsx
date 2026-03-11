@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import type { Message, CVEdit } from '../types';
-import { parseEditsFromResponse } from '../types';
+import type { Message, CVEdit } from '../../types';
+import { parseEditsFromResponse } from '../../types';
 import styles from './ChatPanel.module.css';
 
 interface ChatPanelProps {

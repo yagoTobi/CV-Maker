@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { CVVersion, CVVersionMeta } from '../types';
+import type { CVVersion, CVVersionMeta } from '../../types';
 import styles from './VersionSwitcher.module.css';
 
 interface VersionSwitcherProps {

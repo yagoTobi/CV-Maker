@@ -194,6 +194,15 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
     }));
   }, []);
 
+  const reorderBullets = useCallback((workIndex: number, from: number, to: number) => {
+    setFormData(prev => ({
+      ...prev,
+      workExperience: prev.workExperience.map((e, i) =>
+        i === workIndex ? { ...e, bullets: reorder(e.bullets, from, to) } : e
+      ),
+    }));
+  }, []);
+
   // --- Education ---
 
   const addEducationEntry = useCallback(() => {
@@ -240,6 +249,15 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
       ...prev,
       education: prev.education.map((e, i) =>
         i === eduIndex ? { ...e, details: e.details.filter((_, di) => di !== detailIndex) } : e
+      ),
+    }));
+  }, []);
+
+  const reorderEduDetails = useCallback((eduIndex: number, from: number, to: number) => {
+    setFormData(prev => ({
+      ...prev,
+      education: prev.education.map((e, i) =>
+        i === eduIndex ? { ...e, details: reorder(e.details, from, to) } : e
       ),
     }));
   }, []);
@@ -319,6 +337,15 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
       ...prev,
       projects: (prev.projects || []).map((p, i) =>
         i === projectIndex ? { ...p, bullets: (p.bullets || []).filter((_, bi) => bi !== bulletIndex) } : p
+      ),
+    }));
+  }, []);
+
+  const reorderProjectBullets = useCallback((projectIndex: number, from: number, to: number) => {
+    setFormData(prev => ({
+      ...prev,
+      projects: (prev.projects || []).map((p, i) =>
+        i === projectIndex ? { ...p, bullets: reorder(p.bullets || [], from, to) } : p
       ),
     }));
   }, []);
@@ -441,6 +468,17 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
     }));
   }, []);
 
+  const reorderAdditionalEntryBullets = useCallback((sectionIndex: number, entryIndex: number, from: number, to: number) => {
+    setFormData(prev => ({
+      ...prev,
+      additionalSections: (prev.additionalSections || []).map((s, i) =>
+        i === sectionIndex
+          ? { ...s, entries: s.entries.map((e, ei) => ei === entryIndex ? { ...e, bullets: reorder(e.bullets, from, to) } : e) }
+          : s
+      ),
+    }));
+  }, []);
+
   // --- Generate CV ---
 
   const generateCV = useCallback(async (): Promise<{ texContent: string; error?: string }> => {
@@ -519,6 +557,7 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
     addBullet,
     updateBullet,
     removeBullet,
+    reorderBullets,
     // Education
     addEducationEntry,
     updateEducationEntry,
@@ -527,6 +566,7 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
     addEduDetail,
     updateEduDetail,
     removeEduDetail,
+    reorderEduDetails,
     // Skills
     addSkillCategory,
     updateSkillCategory,
@@ -541,6 +581,7 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
     addProjectBullet,
     updateProjectBullet,
     removeProjectBullet,
+    reorderProjectBullets,
     // Awards
     addAward,
     updateAward,
@@ -556,6 +597,7 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
     addAdditionalEntryBullet,
     removeAdditionalEntryBullet,
     updateAdditionalEntryBullet,
+    reorderAdditionalEntryBullets,
     // Actions
     generateCV,
     exportFormData,

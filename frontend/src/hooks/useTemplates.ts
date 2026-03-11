@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
-import type { Template } from '../components';
+import type { Template } from '../features/template-selection';
 
 export function useTemplates() {
   const [templates, setTemplates] = useState<Template[]>([]);

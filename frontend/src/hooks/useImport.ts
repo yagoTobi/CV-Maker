@@ -2,9 +2,15 @@ import { useState, useCallback } from 'react';
 import { api } from '../services/api';
 import type { CVFormData, CVImportResponse, ImportConfidence, ImportSummary } from '../types';
 
+export interface ImportProgress {
+  message: string;
+  step: number;
+  totalSteps: number;
+}
+
 export interface UseImportReturn {
   isImporting: boolean;
-  importProgress: string | null;
+  importProgress: ImportProgress | null;
   importError: string | null;
   importResult: CVImportResponse | null;
   handleFileSelected: (file: File) => Promise<void>;
@@ -15,7 +21,7 @@ const REQUIRED_JSON_KEYS = ['personalInfo', 'workExperience', 'education', 'skil
 
 export function useImport(): UseImportReturn {
   const [isImporting, setIsImporting] = useState(false);
-  const [importProgress, setImportProgress] = useState<string | null>(null);
+  const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<CVImportResponse | null>(null);
 
@@ -33,9 +39,10 @@ export function useImport(): UseImportReturn {
     // JSON files are parsed client-side — no backend round trip needed
     if (file.name.toLowerCase().endsWith('.json')) {
       setIsImporting(true);
-      setImportProgress('Validating JSON file...');
+      setImportProgress({ message: 'Reading file...', step: 1, totalSteps: 2 });
       try {
         const text = await file.text();
+        setImportProgress({ message: 'Validating JSON...', step: 2, totalSteps: 2 });
         const parsed = JSON.parse(text);
 
         if (!REQUIRED_JSON_KEYS.every(k => k in parsed)) {
@@ -74,7 +81,18 @@ export function useImport(): UseImportReturn {
 
     // PDF / DOCX — send to backend for AI extraction
     setIsImporting(true);
-    setImportProgress('Extracting data from your CV...');
+    setImportProgress({ message: 'Reading file...', step: 1, totalSteps: 4 });
+
+    // Simulate progress states (backend extraction doesn't send progress yet)
+    setTimeout(() => {
+      if (isImporting) setImportProgress({ message: 'Analyzing structure...', step: 2, totalSteps: 4 });
+    }, 800);
+    setTimeout(() => {
+      if (isImporting) setImportProgress({ message: 'Extracting data...', step: 3, totalSteps: 4 });
+    }, 2000);
+    setTimeout(() => {
+      if (isImporting) setImportProgress({ message: 'Almost done...', step: 4, totalSteps: 4 });
+    }, 4000);
 
     const result = await api.importCV(file);
 

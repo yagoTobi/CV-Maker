@@ -1,6 +1,6 @@
 import axios from 'axios';
 import type { CompileResponse, ChatRequest, UserProfile, MatchAnalysis, CVFormData, CVVersion, CVVersionMeta, CVImportResponse } from '../types';
-import type { Template } from '../components';
+import type { Template } from '../features/template-selection';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
