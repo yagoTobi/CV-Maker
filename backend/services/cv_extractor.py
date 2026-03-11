@@ -22,6 +22,7 @@ class ImportSummary(BaseModel):
     skillCategories: int = 0
     projects: int = 0
     awards: int = 0
+    additionalSections: int = 0
 
 
 class CVImportResult(BaseModel):
@@ -48,7 +49,7 @@ CRITICAL RULES:
 Required JSON schema:
 
 {
-  "sectionOrder": ["work", "education", "skills", "projects", "awards"],
+  "sectionOrder": ["work", "education", "skills", "projects", "awards", "additional-0"],
   "personalInfo": {
     "fullName": "",
     "email": "",
@@ -89,7 +90,8 @@ Required JSON schema:
       "name": "",
       "year": "YYYY",
       "description": "",
-      "technologies": ""
+      "technologies": "",
+      "bullets": ["detailed achievement or responsibility"]
     }
   ],
   "awards": [
@@ -97,6 +99,22 @@ Required JSON schema:
       "year": "YYYY",
       "title": "",
       "description": ""
+    }
+  ],
+  "additionalSections": [
+    {
+      "title": "Section title from the document (e.g., Leadership, Certifications, Volunteer Work)",
+      "entries": [
+        {
+          "title": "",
+          "subtitle": "",
+          "startDate": "MMM YYYY",
+          "endDate": "MMM YYYY or Present",
+          "location": "",
+          "description": "",
+          "bullets": [""]
+        }
+      ]
     }
   ],
   "_confidence": {
@@ -109,7 +127,11 @@ Required JSON schema:
   "_warnings": []
 }
 
-Set sectionOrder to reflect the order that sections appear in the source document. Use these exact keys: work, education, skills, projects, awards. Only include sections that have data.
+Set sectionOrder to reflect the order that sections appear in the source document. Use these exact keys for standard sections: work, education, skills, projects, awards. For additional sections, use "additional-0", "additional-1", etc., corresponding to their index in the additionalSections array. Only include sections that have data.
+
+Map standard CV sections to their dedicated fields (workExperience, education, skills, projects, awards). For any section that does NOT fit these standard types — such as Leadership, Extra Curricular Activities, Certifications, Volunteer Work, Publications, Research, Languages, Hobbies, or any other custom section — place it in additionalSections with the original section title preserved. NEVER silently drop content that doesn't fit the standard sections.
+
+If a project has detailed bullet points or achievements, include them in the bullets array. Use the description field for a brief summary and bullets for detailed points. If there's only a description with no bullets, leave bullets as an empty array.
 
 Confidence guidelines:
 - "high": clearly stated and unambiguous
@@ -173,6 +195,7 @@ def _parse_extraction_response(raw: str, source: str) -> CVImportResult:
         skillCategories=len(data.get("skills", [])),
         projects=len(data.get("projects") or []),
         awards=len(data.get("awards") or []),
+        additionalSections=len(data.get("additionalSections") or []),
     )
 
     # Validate loosely — try building a CVFormData to catch shape issues
@@ -373,6 +396,7 @@ async def extract_from_json(file_bytes: bytes) -> CVImportResult:
         skillCategories=len(form_data.get("skills", [])),
         projects=len(form_data.get("projects") or []),
         awards=len(form_data.get("awards") or []),
+        additionalSections=len(form_data.get("additionalSections") or []),
     )
 
     return CVImportResult(

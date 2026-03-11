@@ -121,6 +121,7 @@ async def generate_latex(form_data: CVFormData):
         "skills": form_data.skills,
         "projects": form_data.projects or [],
         "awards": form_data.awards or [],
+        "additional_sections": form_data.additionalSections or [],
         "section_order": form_data.sectionOrder or ["work", "education", "skills", "projects", "awards"],
     }
 

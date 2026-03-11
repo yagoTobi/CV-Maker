@@ -75,6 +75,13 @@
         \begin{itemize}
 (% for proj in projects %)
             \item \textbf{(( proj.name | latex_escape ))} (% if proj.year %)(( proj.year | latex_escape ))(% endif %). (( proj.description | latex_escape ))(% if proj.technologies %)\,(( proj.technologies | latex_escape ))(% endif %)
+            (% if proj.bullets %)
+            \begin{itemize}
+            (% for bullet in proj.bullets %)
+                \item (( bullet | latex_escape ))
+            (% endfor %)
+            \end{itemize}
+            (% endif %)
 (% endfor %)
         \end{itemize}
     \end{cvsubsection}
@@ -90,6 +97,28 @@
         \end{itemize}
     \end{cvsubsection}
 \end{cvsection}
+
+(% elif _sec.startswith('additional-') %)
+(% set idx = _sec.split('-')[1] | int %)
+(% if idx < additional_sections | length %)
+(% set asec = additional_sections[idx] %)
+\begin{cvsection}{(( asec.title | latex_escape ))}
+(% for entry in asec.entries %)
+    \begin{cvsubsection}{(( entry.title | latex_escape ))}{(( entry.subtitle | default('') | latex_escape ))}{(% if entry.startDate %)(( entry.startDate | latex_escape ))(% if entry.endDate %)\,--\,(( entry.endDate | latex_escape ))(% endif %)(% if entry.location %)\,(( entry.location | latex_escape ))(% endif %)(% endif %)}
+        (% if entry.description or entry.bullets %)
+        \begin{itemize}
+            (% if entry.description %)
+            \item (( entry.description | latex_escape ))
+            (% endif %)
+            (% for bullet in entry.bullets %)
+            \item (( bullet | latex_escape ))
+            (% endfor %)
+        \end{itemize}
+        (% endif %)
+    \end{cvsubsection}
+(% endfor %)
+\end{cvsection}
+(% endif %)
 
 (% endif %)
 (% endfor %)

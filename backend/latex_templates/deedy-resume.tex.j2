@@ -74,13 +74,38 @@
 
 (% if projects %)
 \section{Projects}
-\begin{tightemize}
 (% for proj in projects %)
-\item \textbf{(( proj.name | latex_escape ))}(% if proj.year %)\,(( proj.year | latex_escape ))(% endif %): (( proj.description | latex_escape ))(% if proj.technologies %)\,\textit{(( proj.technologies | latex_escape ))}(% endif %)
+\textbf{(( proj.name | latex_escape ))}(% if proj.year %)\,(( proj.year | latex_escape ))(% endif %): (( proj.description | latex_escape ))(% if proj.technologies %)\,\textit{(( proj.technologies | latex_escape ))}(% endif %)
+(% if proj.bullets %)
+\begin{tightemize}
+(% for bullet in proj.bullets %)
+\item (( bullet | latex_escape ))
 (% endfor %)
 \end{tightemize}
+(% else %)
+\vspace{3pt}
+(% endif %)
+(% endfor %)
 \sectionsep
 (% endif %)
+
+(% for asec in additional_sections %)
+\section{(( asec.title | latex_escape ))}
+(% for entry in asec.entries %)
+\runsubsection{(( entry.title | latex_escape ))}
+(% if entry.subtitle %)\descript{|\,(( entry.subtitle | latex_escape ))}(% endif %)
+(% if entry.startDate %)\location{(( entry.startDate | latex_escape ))(% if entry.endDate %)\,--\,(( entry.endDate | latex_escape ))(% endif %)(% if entry.location %)\,|\,(( entry.location | latex_escape ))(% endif %)}(% endif %)
+(% if entry.description %)(( entry.description | latex_escape ))\\(% endif %)
+(% if entry.bullets %)
+\begin{tightemize}
+(% for bullet in entry.bullets %)
+\item (( bullet | latex_escape ))
+(% endfor %)
+\end{tightemize}
+(% endif %)
+\sectionsep
+(% endfor %)
+(% endfor %)
 
 \end{minipage}
 \end{document}

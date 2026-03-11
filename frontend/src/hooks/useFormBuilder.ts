@@ -8,9 +8,11 @@ import type {
   SkillCategory,
   Project,
   Award,
+  AdditionalSection,
+  AdditionalEntry,
 } from '../types';
 
-export type FormSection = 'personal' | 'work' | 'education' | 'skills' | 'projects' | 'awards';
+export type FormSection = 'personal' | 'work' | 'education' | 'skills' | 'projects' | 'awards' | string;
 
 export const DEFAULT_SECTION_ORDER: FormSection[] = [
   'work', 'education', 'skills', 'projects', 'awards',
@@ -38,11 +40,19 @@ function emptySkillCategory(): SkillCategory {
 }
 
 function emptyProject(): Project {
-  return { name: '', year: '', description: '', technologies: '' };
+  return { name: '', year: '', description: '', technologies: '', bullets: [] };
 }
 
 function emptyAward(): Award {
   return { year: '', title: '', description: '' };
+}
+
+function emptyAdditionalEntry(): AdditionalEntry {
+  return { title: '', subtitle: '', startDate: '', endDate: '', location: '', description: '', bullets: [''] };
+}
+
+function emptyAdditionalSection(index: number): AdditionalSection {
+  return { title: `Additional Section ${index + 1}`, entries: [emptyAdditionalEntry()] };
 }
 
 function reorder<T>(arr: T[], from: number, to: number): T[] {
@@ -62,6 +72,7 @@ function initialFormData(templateId: string): CVFormData {
     skills: [emptySkillCategory()],
     projects: [],
     awards: [],
+    additionalSections: [],
   };
 }
 
@@ -283,6 +294,35 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
     setFormData(prev => ({ ...prev, projects: reorder(prev.projects || [], from, to) }));
   }, []);
 
+  const addProjectBullet = useCallback((projectIndex: number) => {
+    setFormData(prev => ({
+      ...prev,
+      projects: (prev.projects || []).map((p, i) =>
+        i === projectIndex ? { ...p, bullets: [...(p.bullets || []), ''] } : p
+      ),
+    }));
+  }, []);
+
+  const updateProjectBullet = useCallback((projectIndex: number, bulletIndex: number, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      projects: (prev.projects || []).map((p, i) =>
+        i === projectIndex
+          ? { ...p, bullets: (p.bullets || []).map((b, bi) => bi === bulletIndex ? value : b) }
+          : p
+      ),
+    }));
+  }, []);
+
+  const removeProjectBullet = useCallback((projectIndex: number, bulletIndex: number) => {
+    setFormData(prev => ({
+      ...prev,
+      projects: (prev.projects || []).map((p, i) =>
+        i === projectIndex ? { ...p, bullets: (p.bullets || []).filter((_, bi) => bi !== bulletIndex) } : p
+      ),
+    }));
+  }, []);
+
   // --- Awards ---
 
   const addAward = useCallback(() => {
@@ -302,6 +342,103 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
 
   const reorderAwards = useCallback((from: number, to: number) => {
     setFormData(prev => ({ ...prev, awards: reorder(prev.awards || [], from, to) }));
+  }, []);
+
+  // --- Additional Sections ---
+
+  const addAdditionalSection = useCallback(() => {
+    setFormData(prev => {
+      const currentSections = prev.additionalSections || [];
+      const newSection = emptyAdditionalSection(currentSections.length);
+      const newSectionId = `additional-${currentSections.length}`;
+      return {
+        ...prev,
+        additionalSections: [...currentSections, newSection],
+        sectionOrder: [...(prev.sectionOrder || DEFAULT_SECTION_ORDER), newSectionId],
+      };
+    });
+  }, []);
+
+  const removeAdditionalSection = useCallback((sectionIndex: number) => {
+    setFormData(prev => {
+      const sectionId = `additional-${sectionIndex}`;
+      return {
+        ...prev,
+        additionalSections: (prev.additionalSections || []).filter((_, i) => i !== sectionIndex),
+        sectionOrder: (prev.sectionOrder || []).filter(id => id !== sectionId),
+      };
+    });
+  }, []);
+
+  const updateAdditionalSectionTitle = useCallback((sectionIndex: number, title: string) => {
+    setFormData(prev => ({
+      ...prev,
+      additionalSections: (prev.additionalSections || []).map((s, i) =>
+        i === sectionIndex ? { ...s, title } : s
+      ),
+    }));
+  }, []);
+
+  const addAdditionalEntry = useCallback((sectionIndex: number) => {
+    setFormData(prev => ({
+      ...prev,
+      additionalSections: (prev.additionalSections || []).map((s, i) =>
+        i === sectionIndex ? { ...s, entries: [...s.entries, emptyAdditionalEntry()] } : s
+      ),
+    }));
+  }, []);
+
+  const removeAdditionalEntry = useCallback((sectionIndex: number, entryIndex: number) => {
+    setFormData(prev => ({
+      ...prev,
+      additionalSections: (prev.additionalSections || []).map((s, i) =>
+        i === sectionIndex ? { ...s, entries: s.entries.filter((_, ei) => ei !== entryIndex) } : s
+      ),
+    }));
+  }, []);
+
+  const updateAdditionalEntry = useCallback((sectionIndex: number, entryIndex: number, updates: Partial<AdditionalEntry>) => {
+    setFormData(prev => ({
+      ...prev,
+      additionalSections: (prev.additionalSections || []).map((s, i) =>
+        i === sectionIndex
+          ? { ...s, entries: s.entries.map((e, ei) => ei === entryIndex ? { ...e, ...updates } : e) }
+          : s
+      ),
+    }));
+  }, []);
+
+  const addAdditionalEntryBullet = useCallback((sectionIndex: number, entryIndex: number) => {
+    setFormData(prev => ({
+      ...prev,
+      additionalSections: (prev.additionalSections || []).map((s, i) =>
+        i === sectionIndex
+          ? { ...s, entries: s.entries.map((e, ei) => ei === entryIndex ? { ...e, bullets: [...e.bullets, ''] } : e) }
+          : s
+      ),
+    }));
+  }, []);
+
+  const removeAdditionalEntryBullet = useCallback((sectionIndex: number, entryIndex: number, bulletIndex: number) => {
+    setFormData(prev => ({
+      ...prev,
+      additionalSections: (prev.additionalSections || []).map((s, i) =>
+        i === sectionIndex
+          ? { ...s, entries: s.entries.map((e, ei) => ei === entryIndex ? { ...e, bullets: e.bullets.filter((_, bi) => bi !== bulletIndex) } : e) }
+          : s
+      ),
+    }));
+  }, []);
+
+  const updateAdditionalEntryBullet = useCallback((sectionIndex: number, entryIndex: number, bulletIndex: number, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      additionalSections: (prev.additionalSections || []).map((s, i) =>
+        i === sectionIndex
+          ? { ...s, entries: s.entries.map((e, ei) => ei === entryIndex ? { ...e, bullets: e.bullets.map((b, bi) => bi === bulletIndex ? value : b) } : e) }
+          : s
+      ),
+    }));
   }, []);
 
   // --- Generate CV ---
@@ -401,11 +538,24 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
     updateProject,
     removeProject,
     reorderProjects,
+    addProjectBullet,
+    updateProjectBullet,
+    removeProjectBullet,
     // Awards
     addAward,
     updateAward,
     removeAward,
     reorderAwards,
+    // Additional Sections
+    addAdditionalSection,
+    removeAdditionalSection,
+    updateAdditionalSectionTitle,
+    addAdditionalEntry,
+    removeAdditionalEntry,
+    updateAdditionalEntry,
+    addAdditionalEntryBullet,
+    removeAdditionalEntryBullet,
+    updateAdditionalEntryBullet,
     // Actions
     generateCV,
     exportFormData,

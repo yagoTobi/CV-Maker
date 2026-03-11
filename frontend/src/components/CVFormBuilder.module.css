@@ -723,6 +723,54 @@
   margin-bottom: 0.25rem;
 }
 
+/* Add Section button in nav */
+.addSectionBtn {
+  margin: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  color: var(--accent);
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.addSectionBtn:hover {
+  background: var(--accent-light);
+  border-style: solid;
+}
+
+/* Additional Section Title */
+.additionalSectionTitleWrapper {
+  flex: 1;
+}
+
+.additionalSectionTitleInput {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  padding: 0.375rem 0.625rem;
+}
+
+.removeSectionBtn {
+  padding: 0.375rem 0.75rem;
+  background: transparent;
+  color: var(--error);
+  border: 1px solid var(--error);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.removeSectionBtn:hover {
+  background: var(--error-light);
+}
+
 /* ─── Animations ──────────────────────────────── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }

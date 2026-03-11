@@ -140,6 +140,7 @@ export interface Project {
   year: string;
   description: string;
   technologies?: string;
+  bullets?: string[];
 }
 
 export interface Award {
@@ -148,9 +149,24 @@ export interface Award {
   description?: string;
 }
 
+export interface AdditionalEntry {
+  title: string;
+  subtitle?: string;
+  startDate?: string;
+  endDate?: string;
+  location?: string;
+  description?: string;
+  bullets: string[];
+}
+
+export interface AdditionalSection {
+  title: string;
+  entries: AdditionalEntry[];
+}
+
 export interface CVFormData {
   templateId: string;
-  /** Ordered list of section ids: 'work' | 'education' | 'skills' | 'projects' | 'awards' */
+  /** Ordered list of section ids: 'work' | 'education' | 'skills' | 'projects' | 'awards' | 'additional-{index}' */
   sectionOrder?: string[];
   personalInfo: PersonalInfo;
   workExperience: WorkEntry[];
@@ -158,6 +174,7 @@ export interface CVFormData {
   skills: SkillCategory[];
   projects?: Project[];
   awards?: Award[];
+  additionalSections?: AdditionalSection[];
 }
 
 export interface CVVersion {

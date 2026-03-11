@@ -86,6 +86,14 @@
 (% for proj in projects %)
     \textbf{(( proj.name | latex_escape ))} (% if proj.year %)\hfill (( proj.year | latex_escape ))(% endif %)\\
     (( proj.description | latex_escape ))(% if proj.technologies %)\\ \textit{(( proj.technologies | latex_escape ))}(% endif %)
+    (% if proj.bullets %)
+    \begin{list}{$\cdot$}{\leftmargin=1em}
+    \setlength{\itemsep}{-0.4em} \vspace{-0.4em}
+    (% for bullet in proj.bullets %)
+    \item (( bullet | latex_escape ))
+    (% endfor %)
+    \end{list}
+    (% endif %)
     \vspace{0.5em}
 (% endfor %)
 \end{rSection}
@@ -98,6 +106,31 @@
 (% endfor %)
     \end{tabular}
 \end{rSection}
+
+(% elif _sec.startswith('additional-') %)
+(% set idx = _sec.split('-')[1] | int %)
+(% if idx < additional_sections | length %)
+(% set asec = additional_sections[idx] %)
+\begin{rSection}{(( asec.title | latex_escape ))}
+(% for entry in asec.entries %)
+(% set has_items = entry.bullets or entry.description %)
+(% if has_items %)
+    \begin{rSubsection}{(( entry.title | latex_escape ))}{(% if entry.startDate %)\textbf{(( entry.startDate | latex_escape ))(% if entry.endDate %)\,--\,(( entry.endDate | latex_escape ))(% endif %)}(% endif %)}{(( entry.subtitle | default('') | latex_escape ))}{(( entry.location | default('') | latex_escape ))}
+(% if entry.description %)
+    \item (( entry.description | latex_escape ))
+(% endif %)
+(% for bullet in entry.bullets %)
+    \item (( bullet | latex_escape ))
+(% endfor %)
+    \end{rSubsection}
+(% else %)
+    \textbf{(( entry.title | latex_escape ))} (% if entry.startDate %)\hfill \textbf{(( entry.startDate | latex_escape ))(% if entry.endDate %)\,--\,(( entry.endDate | latex_escape ))(% endif %)}(% endif %)\\
+    (% if entry.subtitle %)\textit{(( entry.subtitle | latex_escape ))} (% endif %)(% if entry.location %)\hfill \textit{(( entry.location | latex_escape ))}(% endif %)
+    \vspace{0.5em}
+(% endif %)
+(% endfor %)
+\end{rSection}
+(% endif %)
 
 (% endif %)
 (% endfor %)
