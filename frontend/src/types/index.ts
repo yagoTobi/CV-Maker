@@ -39,6 +39,15 @@ export interface MatchAnalysis {
   match_score: number;
 }
 
+export interface CoverLetterResponse {
+  cover_letter: string;
+  key_matches: string[];
+  missing_or_weaker_points: string[];
+  tone_notes: string[];
+  provider: string;
+  mode: 'mock' | 'live';
+}
+
 export interface CVEdit {
   find: string;
   replace: string;

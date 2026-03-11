@@ -7,7 +7,9 @@
 - **Node.js** 18+ (for frontend)
 - **Python** 3.10+ (for backend)
 - **LaTeX Distribution**: TeX Live (Linux), MacTeX (macOS), or MiKTeX (Windows)
-- **AWS CLI** configured with Bedrock access
+- **One AI provider** for live cover letter generation:
+  - Gemini API key, or
+  - AWS credentials with Bedrock access
 
 ### Recommended Tools
 
@@ -45,19 +47,32 @@ cd frontend
 npm install
 ```
 
-### AWS Configuration
+### AI Provider Configuration
 
-The backend uses AWS Bedrock for AI features. Ensure your AWS credentials are configured:
+Copy `.env.example` to `.env` and choose your provider:
 
 ```bash
-aws configure
-# Or set environment variables:
-# AWS_ACCESS_KEY_ID
-# AWS_SECRET_ACCESS_KEY
-# AWS_REGION
+cp .env.example .env
 ```
 
-Required IAM permissions:
+Example Gemini setup:
+
+```env
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=your_key_here
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+Example Bedrock setup:
+
+```env
+LLM_PROVIDER=bedrock
+AWS_REGION=us-east-1
+# Optional:
+# AWS_PROFILE=your-profile
+```
+
+If using Bedrock, required IAM permissions include:
 - `bedrock:InvokeModel`
 - `bedrock:InvokeModelWithResponseStream`
 
@@ -149,11 +164,11 @@ cd backend
 2. Check the LaTeX template for syntax errors
 3. Review backend logs for detailed error messages
 
-### AWS Bedrock Errors
+### AI Provider Errors
 
-1. Verify AWS credentials are configured
-2. Check IAM permissions for Bedrock access
-3. Ensure the AWS region supports the requested model
+1. Verify `LLM_PROVIDER` matches the provider you actually configured
+2. For Gemini: check that `GEMINI_API_KEY` is present and valid
+3. For Bedrock: check credentials, IAM permissions, and region/model availability
 
 ### Frontend Build Issues
 

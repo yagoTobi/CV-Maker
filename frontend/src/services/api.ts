@@ -1,5 +1,15 @@
 import axios from 'axios';
-import type { CompileResponse, ChatRequest, UserProfile, MatchAnalysis, CVFormData, CVVersion, CVVersionMeta, CVImportResponse } from '../types';
+import type {
+  CompileResponse,
+  ChatRequest,
+  UserProfile,
+  MatchAnalysis,
+  CVFormData,
+  CVVersion,
+  CVVersionMeta,
+  CVImportResponse,
+  CoverLetterResponse,
+} from '../types';
 import type { Template } from '../components';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
@@ -268,6 +278,36 @@ export const api = {
         summary: null,
         warnings: null,
         error: message,
+      };
+    }
+  },
+
+  async generateCoverLetter(data: {
+    cvContent: string;
+    jobDescription: string;
+    companyName?: string;
+    instructions?: string;
+  }): Promise<CoverLetterResponse> {
+    try {
+      const response = await axios.post<CoverLetterResponse>(
+        `${API_BASE}/cover-letter/generate`,
+        {
+          cv_content: data.cvContent,
+          job_description: data.jobDescription,
+          company_name: data.companyName,
+          instructions: data.instructions,
+        }
+      );
+      return response.data;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Cover letter generation failed';
+      return {
+        cover_letter: '',
+        key_matches: [],
+        missing_or_weaker_points: [message],
+        tone_notes: ['The request failed before a cover letter was generated.'],
+        provider: 'unknown',
+        mode: 'mock',
       };
     }
   },

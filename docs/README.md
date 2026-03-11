@@ -13,6 +13,7 @@ CV Maker is a web application that combines a LaTeX-based CV editor with AI assi
 - **Live PDF Preview**: Real-time compilation and preview of your CV as a PDF
 - **AI Chat Assistant**: Interactive AI that analyzes your CV against job postings and suggests improvements
 - **Match Analysis**: Quantitative analysis showing how well your CV matches a job description
+- **Cover Letter Generator**: Generate a tailored cover letter from CV content and a target role
 - **Edit Suggestions**: AI-generated inline edits that can be applied with one click
 - **Undo Support**: Ability to undo AI-suggested edits
 - **Clean UI**: Zed-inspired light theme with professional, minimal aesthetics
@@ -27,7 +28,7 @@ CV Maker is a web application that combines a LaTeX-based CV editor with AI assi
 
 ### Backend
 - Python with FastAPI
-- AWS Bedrock for AI (Claude models)
+- Provider-based AI integration for cover letters (`mock`, Bedrock, Gemini)
 - LaTeX compilation service
 
 ## Quick Start
@@ -36,7 +37,7 @@ CV Maker is a web application that combines a LaTeX-based CV editor with AI assi
 - Node.js 18+
 - Python 3.10+
 - LaTeX distribution (TeX Live or MacTeX) with both pdflatex and xelatex
-- AWS credentials configured for Bedrock access
+- One configured live AI provider (`GEMINI_API_KEY` or AWS credentials for Bedrock)
 
 ### LaTeX Package Requirements
 

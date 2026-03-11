@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   LatexEditor,
   JobInput,
@@ -33,6 +33,13 @@ type AppScreen =
   | 'cover_letter';
 
 function App() {
+  const unsavedDraftRef = useRef<{
+    texContent: string;
+    formData: CVFormData | null;
+    jobDescription: string;
+    companyName: string;
+  } | null>(null);
+
   const [currentScreen, setCurrentScreen] = useState<AppScreen>('landing');
   const [activeTab, setActiveTab] = useState<PreviewTab>('latex');
   const [aiTab, setAiTab] = useState<AiTab>('match');
@@ -196,12 +203,83 @@ function App() {
 
   const handleSwitchVersion = useCallback(
     async (id: string) => {
+      if (!id) {
+        if (unsavedDraftRef.current) {
+          templates.updateContent(unsavedDraftRef.current.texContent);
+          setFormData(unsavedDraftRef.current.formData);
+          setJobDescription(unsavedDraftRef.current.jobDescription);
+          setCompanyName(unsavedDraftRef.current.companyName);
+        }
+        setActiveVersion(null);
+        return;
+      }
+
+      if (!activeVersion) {
+        unsavedDraftRef.current = {
+          texContent: templates.content,
+          formData,
+          jobDescription,
+          companyName,
+        };
+      }
+
       const version = await api.getVersion(id);
       if (version) {
         handleVersionLoad(version);
       }
     },
-    [handleVersionLoad]
+    [
+      activeVersion,
+      companyName,
+      formData,
+      handleVersionLoad,
+      jobDescription,
+      templates.content,
+      templates.updateContent,
+    ]
+  );
+
+  const handleSwitchVersionForCoverLetter = useCallback(
+    async (id: string) => {
+      if (!id) {
+        if (unsavedDraftRef.current) {
+          templates.updateContent(unsavedDraftRef.current.texContent);
+          setFormData(unsavedDraftRef.current.formData);
+          setJobDescription(unsavedDraftRef.current.jobDescription);
+          setCompanyName(unsavedDraftRef.current.companyName);
+        }
+        setActiveVersion(null);
+        return;
+      }
+
+      if (!activeVersion) {
+        unsavedDraftRef.current = {
+          texContent: templates.content,
+          formData,
+          jobDescription,
+          companyName,
+        };
+      }
+
+      const version = await api.getVersion(id);
+      if (!version) {
+        return;
+      }
+
+      templates.updateContent(version.texContent);
+      if (version.formData) setFormData(version.formData);
+      if (version.jobDescription) setJobDescription(version.jobDescription);
+      if (version.companyName) setCompanyName(version.companyName);
+      setActiveVersion(version);
+    },
+    [
+      activeVersion,
+      companyName,
+      formData,
+      jobDescription,
+      templates.content,
+      templates.updateContent,
+    ]
   );
 
   const handleCompile = useCallback(async () => {
@@ -304,7 +382,21 @@ function App() {
   }
 
   if (currentScreen === 'cover_letter') {
-    return <CoverLetterScreen onBack={handleChangeTemplate} />;
+    return (
+      <CoverLetterScreen
+        onBack={handleChangeTemplate}
+        activeVersion={activeVersion}
+        savedVersions={savedVersions}
+        onSaveVersion={handleSaveVersion}
+        onSwitchVersion={handleSwitchVersionForCoverLetter}
+        isSavingVersion={isSavingVersion}
+        onDashboard={handleGoToDashboard}
+        previewTexContent={templates.content}
+        jobDescription={jobDescription}
+        onJobDescriptionChange={setJobDescription}
+        companyName={companyName}
+      />
+    );
   }
 
   if (currentScreen === 'form-builder') {

@@ -9,6 +9,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Cover letter generation flow**: dedicated cover letter screen with version-aware CV preview, job description input, and generated letter panel
+- **Cover letter backend endpoint**: `POST /api/cover-letter/generate`
+- **Cover letter prompt** (`backend/prompts/cover_letter.py`) returning structured JSON
+- **LLM provider abstraction** (`backend/services/llm.py`) for cover letter generation
+- **Gemini provider support**: cover letter generation can run with `GEMINI_API_KEY` and `GEMINI_MODEL`
+- **Mock provider fallback** for local development without live AI credentials
 - **Build flow**: New "Build my CV" path — template-select → form-builder → editor (auto-compile)
 - **Form builder** (`CVFormBuilder.tsx`): structured form with 6 sections (Personal Info, Work Experience, Education, Skills, Projects, Awards)
 - **In-form PDF preview**: compiled CV shown alongside the form; drag-to-resize panel (300–760px)
@@ -56,6 +62,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Deedy template: removed `\lastupdated` command (was printing misleading compilation date)
 
 ### Changed
+- Cover letter generation now uses provider-based backend config via `LLM_PROVIDER` (`mock`, `bedrock`, `gemini`)
+- Cover letter page layout now uses left-side CV/JD context and right-side generation/results panel aligned with the main editor styling
 - App initial screen changed from `template-select` to `landing`
 - `AppScreen` type expanded to `'landing' | 'dashboard' | 'template-select' | 'form-builder' | 'editor'`
 - CORS `allow_methods` expanded to include `DELETE`
