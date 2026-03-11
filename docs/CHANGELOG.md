@@ -27,6 +27,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Template compilation test suite (`backend/tests/test_template_compilation.py`) — 18 tests that render templates then compile through pdflatex/xelatex, covering unicode, PDF size validation; marked `@pytest.mark.slow`
 - `backend/pytest.ini` with `slow` marker registration
 - Deedy template: section drag-and-drop disabled in form builder sidebar (fixed two-column layout ignores `sectionOrder`)
+- Generic `additionalSections` schema — supports any CV section type (Leadership, Certifications, Volunteer Work, etc.) without per-section schema changes
+- `AdditionalEntry` and `AdditionalSection` types (frontend + backend)
+- `Project.bullets` field for detailed project achievements
+- Additional sections rendering in all 3 Jinja2 templates (Professional + McDowell via `section_order`, Deedy in right column)
+- Form builder UI for additional sections (add/remove sections, editable titles, full entry CRUD)
+- "Add Section" button in form builder sidebar nav
+- CV Import upload endpoint (`POST /api/cv-import`) accepting PDF, DOCX, JSON
+- CV Import AI extraction via AWS Bedrock (`cv_extractor.py`) with structured prompt
+- CV Import review screen (`CVImportReview.tsx`) with per-field confidence indicators and inline editing
+- CV Import upload screen (`CVImportUpload.tsx`) with drag-and-drop file upload
+- "Import existing CV" card on landing screen
+- DOCX extraction preserves list markers, bold text, heading levels, and indentation
+- Extraction prompt includes bullet granularity preservation, entry order preservation, section order detection
+- `max_tokens` configurable on Bedrock client (8192 for extraction, 4096 default for chat)
+- Truncation detection in extraction response parsing
 
 ### Fixed
 - `latex_escape` sequential-replacement bug: backslash was replaced first, causing subsequent `{`/`}` passes to re-escape `\textbackslash{}`. Rewrote as single-pass regex.
@@ -45,6 +60,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `AppScreen` type expanded to `'landing' | 'dashboard' | 'template-select' | 'form-builder' | 'editor'`
 - CORS `allow_methods` expanded to include `DELETE`
 - Template selection screen now has a Back button (returns to landing)
+- Landing page layout: two-column (branding left, actions right), responsive collapse on mobile
+- `sectionOrder` now supports `additional-{index}` keys for dynamic additional sections
 
 ---
 

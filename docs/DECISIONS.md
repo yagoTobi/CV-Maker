@@ -348,6 +348,32 @@ Disable section drag-and-drop in the form builder sidebar nav when `templateId =
 
 ---
 
+## ADR-015: Generic Additional Sections Instead of Per-Section Types
+
+**Date:** 2026-03-11
+
+**Status:** Accepted
+
+**Context:**
+CVs contain many possible section types beyond the standard work/education/skills — Leadership, Certifications, Volunteer Work, Publications, Research, Languages, Hobbies, etc. Adding a dedicated typed section for each would require changes to types, Pydantic models, form builder, all 3 Jinja2 templates, and the extraction prompt — a cross-cutting change across 6+ files per new section type.
+
+**Decision:**
+Keep typed sections for content with unique rendering needs (work, education, skills). Add a generic `additionalSections: AdditionalSection[]` field to `CVFormData` for everything else. Each `AdditionalSection` has a user-defined title and an array of `AdditionalEntry` objects with a flexible shape (title, subtitle, dates, location, description, bullets).
+
+**Rationale:**
+- One schema addition handles all future section types
+- The form builder renders them generically — user names the section
+- Jinja2 templates use a single generic block (keyed as `additional-{index}` in `sectionOrder`)
+- The extraction prompt maps any non-standard section to `additionalSections` with the original title preserved
+- Standard sections retain their specific rendering (tabular skills, education with GPA, etc.)
+
+**Consequences:**
+- Additional sections have less specialized rendering than typed sections (no per-section template customization)
+- The generic entry shape may not perfectly fit every possible section type (e.g., publications with authors/journals)
+- If a section type becomes common enough to warrant specialized rendering, it can be "promoted" to a typed section later
+
+---
+
 ## Template for New Decisions
 
 ```markdown
