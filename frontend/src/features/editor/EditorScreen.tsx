@@ -1,5 +1,5 @@
-import { useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { LatexEditor, JobInput, ChatPanel, PdfPreview, MatchAnalysis } from './';
 import { VersionSwitcher } from '../dashboard';
 import { useAppContext } from '../../contexts/AppContext';
@@ -7,6 +7,9 @@ import styles from './EditorScreen.module.css';
 
 export default function EditorScreen() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isTuneMode = (location.state as { mode?: string })?.mode === 'tune';
+
   const {
     activeTab,
     setActiveTab,
@@ -25,6 +28,13 @@ export default function EditorScreen() {
     handleSaveVersion,
     handleSwitchVersion,
   } = useAppContext();
+
+  // Force PDF tab in tune mode
+  useEffect(() => {
+    if (isTuneMode) {
+      setActiveTab('pdf');
+    }
+  }, [isTuneMode, setActiveTab]);
 
   // Compile LaTeX to PDF
   const handleCompile = useCallback(async () => {
@@ -61,7 +71,7 @@ export default function EditorScreen() {
           </svg>
           Home
         </button>
-        <h1>Your CV Editor</h1>
+        <h1>{isTuneMode ? 'Tune your CV' : 'Your CV Editor'}</h1>
         <div className={styles.headerRight}>
           <VersionSwitcher
             activeVersion={activeVersion}
@@ -146,20 +156,22 @@ export default function EditorScreen() {
                   </span>
                 )}
               </div>
-              <div className={styles.previewTabs}>
-                <button
-                  className={`${styles.tabBtn} ${activeTab === 'latex' ? styles.active : ''}`}
-                  onClick={() => setActiveTab('latex')}
-                >
-                  LaTeX Code
-                </button>
-                <button
-                  className={`${styles.tabBtn} ${activeTab === 'pdf' ? styles.active : ''}`}
-                  onClick={() => setActiveTab('pdf')}
-                >
-                  PDF
-                </button>
-              </div>
+              {!isTuneMode && (
+                <div className={styles.previewTabs}>
+                  <button
+                    className={`${styles.tabBtn} ${activeTab === 'latex' ? styles.active : ''}`}
+                    onClick={() => setActiveTab('latex')}
+                  >
+                    LaTeX Code
+                  </button>
+                  <button
+                    className={`${styles.tabBtn} ${activeTab === 'pdf' ? styles.active : ''}`}
+                    onClick={() => setActiveTab('pdf')}
+                  >
+                    PDF
+                  </button>
+                </div>
+              )}
             </div>
 
             {compiler.pageCount > 1 && (
@@ -174,7 +186,7 @@ export default function EditorScreen() {
             )}
 
             <div className={styles.previewContent}>
-              {activeTab === 'latex' ? (
+              {!isTuneMode && activeTab === 'latex' ? (
                 <LatexEditor
                   value={templates.content}
                   onChange={templates.updateContent}

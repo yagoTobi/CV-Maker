@@ -4,18 +4,19 @@ import styles from './LandingScreen.module.css';
 
 export default function LandingScreen() {
   const navigate = useNavigate();
-  const { savedVersions, setFormData, setSelectedTemplateForBuild } = useAppContext();
+  const { savedVersions, setFormData, templates } = useAppContext();
 
   const handleBuildCV = () => {
     setFormData(null);
-    setSelectedTemplateForBuild(null);
     navigate('/build/start');
   };
 
-  const handleTuneForJob = () => {
-    setSelectedTemplateForBuild('med-length-proff-cv');
-    setFormData(null);
-    navigate('/build/form', { state: { mode: 'tune' } });
+  const handleTuneForJob = async () => {
+    const success = await templates.selectTemplate('med-length-proff-cv');
+    if (success) {
+      setFormData(null);
+      navigate('/editor', { state: { mode: 'tune' } });
+    }
   };
 
   const handleMyCV = () => {
