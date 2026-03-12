@@ -71,6 +71,7 @@ export default function CVFormBuilder({ templateId, onGenerated, onBack, initial
   const [previewWidth, setPreviewWidth] = useState(520);
   const previewWidthRef = useRef(520);
   const resizingRef = useRef(false);
+  const [isResizing, setIsResizing] = useState(false);
   const resizeStartXRef = useRef(0);
   const resizeStartWidthRef = useRef(0);
   const rafIdRef = useRef<number | null>(null); // Persist RAF ID across calls
@@ -82,6 +83,7 @@ export default function CVFormBuilder({ templateId, onGenerated, onBack, initial
   const startResize = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     resizingRef.current = true;
+    setIsResizing(true);
     resizeStartXRef.current = e.clientX;
     resizeStartWidthRef.current = previewWidthRef.current;
 
@@ -114,6 +116,7 @@ export default function CVFormBuilder({ templateId, onGenerated, onBack, initial
 
       // Immediately stop resizing
       resizingRef.current = false;
+      setIsResizing(false);
 
       // Cancel any pending RAF
       if (rafIdRef.current !== null) {
@@ -385,6 +388,7 @@ export default function CVFormBuilder({ templateId, onGenerated, onBack, initial
               src={`data:application/pdf;base64,${pdfBase64}`}
               title="CV Preview"
               className={styles.pdfFrame}
+              style={{ pointerEvents: isResizing ? 'none' : 'auto' }}
             />
           ) : (
             <div className={styles.previewPlaceholder}>
