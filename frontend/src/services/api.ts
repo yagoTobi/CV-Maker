@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { CompileResponse, ChatRequest, UserProfile, MatchAnalysis, CVFormData, CVVersion, CVVersionMeta, CVImportResponse } from '../types';
+import type { CompileResponse, ChatRequest, UserProfile, MatchAnalysis, CVFormData, CVVersion, CVVersionMeta, CVVersionWithChildren, CVImportResponse } from '../types';
 import type { Template } from '../features/template-selection';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
@@ -184,12 +184,12 @@ export const api = {
     }
   },
 
-  async listVersions(): Promise<CVVersionMeta[]> {
+  async listVersions(): Promise<{ versions: CVVersionWithChildren[]; ungrouped: CVVersionMeta[] }> {
     try {
-      const response = await axios.get<{ versions: CVVersionMeta[] }>(`${API_BASE}/cv-versions`);
-      return response.data.versions;
+      const response = await axios.get<{ versions: CVVersionWithChildren[]; ungrouped: CVVersionMeta[] }>(`${API_BASE}/cv-versions`);
+      return response.data;
     } catch {
-      return [];
+      return { versions: [], ungrouped: [] };
     }
   },
 
@@ -200,7 +200,9 @@ export const api = {
     formData?: CVFormData;
     jobDescription?: string;
     companyName?: string;
+    role?: string;
     matchScore?: number;
+    parentVersionId?: string | null;
   }): Promise<CVVersion | null> {
     try {
       const payload = {
@@ -210,7 +212,9 @@ export const api = {
         form_data: data.formData,
         job_description: data.jobDescription,
         company_name: data.companyName,
+        role: data.role,
         match_score: data.matchScore,
+        parent_version_id: data.parentVersionId,
       };
       const response = await axios.post<CVVersion>(`${API_BASE}/cv-versions`, payload);
       return response.data;
@@ -234,6 +238,18 @@ export const api = {
       await axios.delete(`${API_BASE}/cv-versions/${id}`);
       return true;
     } catch {
+      return false;
+    }
+  },
+
+  async updateVersion(id: string, data: { parentVersionId?: string | null }): Promise<boolean> {
+    try {
+      await axios.patch(`${API_BASE}/cv-versions/${id}`, {
+        parentVersionId: data.parentVersionId,
+      });
+      return true;
+    } catch (err) {
+      console.error('Failed to update version:', err);
       return false;
     }
   },

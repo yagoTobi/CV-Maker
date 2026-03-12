@@ -79,14 +79,23 @@ export function useImport(): UseImportReturn {
         const { templateId: _, sectionOrder: __, ...rest } = parsed;
 
         // Process personalInfo.links to derive labels
-        if (rest.personalInfo && Array.isArray(rest.personalInfo.links)) {
+        if (rest.personalInfo?.links && Array.isArray(rest.personalInfo.links) && rest.personalInfo.links.length > 0) {
           rest.personalInfo.links = rest.personalInfo.links.map((link: any) => {
+            if (!link || typeof link !== 'object') return link;
+
             // If label is empty, equals URL, or looks like a URL, derive it
-            if (!link.label || link.label === link.url ||
-                link.label.includes('://') || link.label.includes('.com') || link.label.includes('.net')) {
+            const shouldDerive = (
+              !link.label ||
+              link.label.trim() === '' ||
+              link.label === link.url ||
+              link.label.startsWith('http://') ||
+              link.label.startsWith('https://')
+            );
+
+            if (shouldDerive && link.url) {
               return {
                 ...link,
-                label: deriveLinkLabel(link.url || ''),
+                label: deriveLinkLabel(link.url),
               };
             }
             return link;

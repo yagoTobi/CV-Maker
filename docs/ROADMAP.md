@@ -75,14 +75,19 @@ See [PRODUCT_STRATEGY.md § Phase 1](PRODUCT_STRATEGY.md#phase-1--nail-the-creat
 
 **High Priority**
 - [ ] **Job-centric version management** (in progress) — hierarchical dashboard with base CVs and job applications
-  - [ ] Backend: Add `parentVersionId` and `role` fields to CVVersion schema
-  - [ ] Backend: Update list endpoint to return hierarchical structure
-  - [ ] Backend: Add move/re-parent endpoint (`PATCH /api/cv-versions/{id}`)
-  - [ ] Dashboard: Hierarchical grouping (base CVs with nested job applications)
-  - [ ] Dashboard: `[+ New]` button on base CVs, `[Move...]` action on job apps
-  - [ ] Dashboard: Ungrouped section for orphaned versions
-  - [ ] Save modal: "Base CV" vs "Job Application" selection + parent picker
-  - [ ] Auto-naming logic: `{company} {role}` or `Application {date}`
+  - [x] Backend: Add `parentVersionId` and `role` fields to CVVersion schema
+  - [x] Backend: Update list endpoint to return hierarchical structure
+  - [x] Backend: Add move/re-parent endpoint (`PATCH /api/cv-versions/{id}`)
+  - [x] Backend: Circular reference validation
+  - [x] Backend: Auto-naming logic for job applications
+  - [x] Backend: Orphan children when parent deleted
+  - [x] Frontend: Update TypeScript types (CVVersion, CVVersionMeta, CVVersionWithChildren)
+  - [x] Frontend: Update API service with new fields and endpoints
+  - [x] Dashboard: Hierarchical grouping (base CVs with nested job applications)
+  - [x] Dashboard: `[+ New]` button on base CVs, `[Move...]` action on job apps
+  - [x] Dashboard: Ungrouped section for orphaned versions
+  - [x] Save modal: "Base CV" vs "Job Application" selection + parent picker
+  - [x] Auto-naming logic: `{company} {role}` or `Application {date}`
   - [ ] "Tune for a job" flow: Base CV picker before opening editor
   - [ ] AI grouping suggestions for ungrouped versions (similarity hints)
 - [ ] Auto-save functionality (localStorage or backend persistence)

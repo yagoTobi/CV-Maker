@@ -8,6 +8,7 @@ import { CVImportUpload, CVImportReview } from './features/cv-import';
 import { useTemplates, useCompiler, useChat } from './hooks';
 import { useImport } from './hooks/useImport';
 import { api } from './services/api';
+import type { SaveVersionData } from './features/dashboard/VersionSwitcher';
 import type { UserProfile, CVFormData, CVVersion, CVVersionMeta } from './types';
 import styles from './App.module.css';
 
@@ -66,10 +67,16 @@ function App() {
     Promise.all([
       api.loadUserData(),
       api.listVersions(),
-    ]).then(([profile, versions]) => {
+    ]).then(([profile, { versions, ungrouped }]) => {
       if (!mounted) return;
       if (profile) setUserProfile(profile);
-      setSavedVersions(versions);
+      // Flatten for now - will properly handle hierarchy in Phase 2
+      const allVersions = [
+        ...versions,
+        ...versions.flatMap(v => v.children || []),
+        ...ungrouped
+      ];
+      setSavedVersions(allVersions);
     });
 
     return () => { mounted = false; };
@@ -79,7 +86,11 @@ function App() {
 
   const handleGoToLanding = useCallback(() => {
     setCurrentScreen('landing');
-  }, []);
+    // Clear any import state when returning to landing
+    cvImport.reset();
+    setFormData(null);
+    setSelectedTemplateForBuild(null);
+  }, [cvImport.reset]);
 
   const handleGoToDashboard = useCallback(() => {
     setCurrentScreen('dashboard');
@@ -132,23 +143,37 @@ function App() {
   // Version loaded from dashboard or switcher
   const handleVersionLoad = useCallback((version: CVVersion) => {
     templates.updateContent(version.texContent);
+    templates.setTemplateId(version.templateId);
     if (version.formData) setFormData(version.formData);
     if (version.jobDescription) setJobDescription(version.jobDescription);
     if (version.companyName) setCompanyName(version.companyName);
     setActiveVersion(version);
     setCurrentScreen('editor');
-  }, [templates.updateContent]);
+  }, [templates.updateContent, templates.setTemplateId]);
 
-  const handleSaveVersion = useCallback(async (name: string) => {
+  // Create new job application from a base CV (Dashboard [+ New] button)
+  const handleNewApplication = useCallback((baseVersion: CVVersion) => {
+    templates.updateContent(baseVersion.texContent);
+    templates.setTemplateId(baseVersion.templateId);
+    if (baseVersion.formData) setFormData(baseVersion.formData);
+    setActiveVersion(null);
+    setCompanyName('');
+    setJobDescription('');
+    setCurrentScreen('editor');
+  }, [templates.updateContent, templates.setTemplateId]);
+
+  const handleSaveVersion = useCallback(async (data: SaveVersionData) => {
     setIsSavingVersion(true);
     const saved = await api.saveVersion({
-      name,
+      name: data.name,
       templateId: templates.selectedId || 'med-length-proff-cv',
       texContent: templates.content,
       formData: formData || undefined,
-      jobDescription: jobDescription || undefined,
-      companyName: companyName || undefined,
-      matchScore: chat.matchAnalysis?.match_score,
+      jobDescription: data.isBaseCV ? undefined : (jobDescription || undefined),
+      companyName: data.companyName || undefined,
+      role: data.role || undefined,
+      matchScore: data.isBaseCV ? undefined : chat.matchAnalysis?.match_score,
+      parentVersionId: data.parentVersionId,
     });
     if (saved) {
       setActiveVersion(saved);
@@ -158,13 +183,15 @@ function App() {
         templateId: saved.templateId,
         jobDescription: saved.jobDescription,
         companyName: saved.companyName,
+        role: saved.role,
         matchScore: saved.matchScore,
+        parentVersionId: saved.parentVersionId,
         createdAt: saved.createdAt,
       };
       setSavedVersions(prev => [meta, ...prev]);
     }
     setIsSavingVersion(false);
-  }, [templates.selectedId, templates.content, formData, jobDescription, companyName, chat.matchAnalysis]);
+  }, [templates.selectedId, templates.content, formData, jobDescription, chat.matchAnalysis]);
 
   const handleSwitchVersion = useCallback(async (id: string) => {
     const version = await api.getVersion(id);
@@ -203,7 +230,12 @@ function App() {
     return (
       <LandingScreen
         hasSavedVersions={savedVersions.length > 0}
-        onBuildCV={() => setCurrentScreen('template-select')}
+        onBuildCV={() => {
+          // Clear any previous form data to ensure fresh start for "Build my CV" flow
+          setFormData(null);
+          setSelectedTemplateForBuild(null);
+          setCurrentScreen('template-select');
+        }}
         onTuneForJob={handleGoToTuneFlow}
         onMyCV={handleGoToDashboard}
         onImportCV={() => {
@@ -235,7 +267,11 @@ function App() {
         warnings={cvImport.importResult.warnings}
         source={cvImport.importResult.source}
         onConfirm={handleImportConfirm}
-        onBack={() => setCurrentScreen('import-upload')}
+        onBack={() => {
+          // Clear formData when going back from import-review
+          setFormData(null);
+          setCurrentScreen('import-upload');
+        }}
       />
     );
   }
@@ -244,6 +280,7 @@ function App() {
     return (
       <Dashboard
         onVersionLoad={handleVersionLoad}
+        onNewApplication={handleNewApplication}
         onBack={handleGoToLanding}
         onVersionsChange={setSavedVersions}
       />
@@ -287,10 +324,12 @@ function App() {
           <VersionSwitcher
             activeVersion={activeVersion}
             versions={savedVersions}
+            baseCvs={savedVersions.filter(v => !v.parentVersionId)}
             onSave={handleSaveVersion}
             onSwitch={handleSwitchVersion}
             isSaving={isSavingVersion}
             onDashboard={handleGoToDashboard}
+            defaultCompanyName={companyName}
           />
         </div>
       </header>

@@ -185,11 +185,17 @@ export interface CVVersion {
   formData?: CVFormData;
   jobDescription?: string;
   companyName?: string;
+  role?: string;
   matchScore?: number;
+  parentVersionId?: string | null;
   createdAt: string;
 }
 
 export type CVVersionMeta = Omit<CVVersion, 'texContent' | 'formData'>;
+
+export interface CVVersionWithChildren extends CVVersionMeta {
+  children?: CVVersionMeta[];
+}
 
 // --- CV Import Types ---
 

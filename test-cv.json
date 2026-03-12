@@ -1,0 +1,50 @@
+{
+  "personalInfo": {
+    "fullName": "John Doe",
+    "email": "john@example.com",
+    "phone": "555-1234",
+    "location": "San Francisco, CA",
+    "links": [
+      {
+        "label": "https://github.com/johndoe",
+        "url": "https://github.com/johndoe"
+      },
+      {
+        "label": "https://linkedin.com/in/johndoe",
+        "url": "https://linkedin.com/in/johndoe"
+      }
+    ],
+    "summary": "Software Engineer",
+    "personalOrder": ["phone", "email", "location", "links"]
+  },
+  "workExperience": [
+    {
+      "company": "Tech Corp",
+      "title": "Software Engineer",
+      "startDate": "Jan 2020",
+      "endDate": "Present",
+      "location": "San Francisco, CA",
+      "bullets": ["Built amazing things"]
+    }
+  ],
+  "education": [
+    {
+      "school": "University",
+      "degree": "BS Computer Science",
+      "startDate": "Sep 2016",
+      "endDate": "May 2020",
+      "location": "Berkeley, CA",
+      "gpa": "3.8",
+      "details": []
+    }
+  ],
+  "skills": [
+    {
+      "category": "Programming",
+      "skills": ["JavaScript", "TypeScript", "Python"]
+    }
+  ],
+  "projects": [],
+  "awards": [],
+  "additionalSections": []
+}

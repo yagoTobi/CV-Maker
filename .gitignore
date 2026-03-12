@@ -251,3 +251,12 @@ sketch
 
 # User data (runtime-generated saved CV versions)
 user_data/versions/*.json
+
+# Test files
+test-cv.json
+**/test-*.json
+!**/__tests__/**/*.json
+
+# Vitest
+.vitest/
+**/coverage/

@@ -73,6 +73,7 @@ export default function CVFormBuilder({ templateId, onGenerated, onBack, initial
   const resizingRef = useRef(false);
   const resizeStartXRef = useRef(0);
   const resizeStartWidthRef = useRef(0);
+  const rafIdRef = useRef<number | null>(null); // Persist RAF ID across calls
 
   // Sidebar section drag state
   const [navDragFrom, setNavDragFrom] = useState<number | null>(null);
@@ -87,8 +88,6 @@ export default function CVFormBuilder({ templateId, onGenerated, onBack, initial
     // Set cursor for the entire document during resize
     document.body.style.cursor = 'col-resize';
 
-    let rafId: number | null = null;
-
     const onMouseMove = (e: MouseEvent) => {
       if (!resizingRef.current) return;
 
@@ -97,23 +96,29 @@ export default function CVFormBuilder({ templateId, onGenerated, onBack, initial
       const newW = Math.max(300, Math.min(760, resizeStartWidthRef.current + delta));
       previewWidthRef.current = newW;
 
-      // Throttle state updates with RAF
-      if (rafId === null) {
-        rafId = requestAnimationFrame(() => {
-          setPreviewWidth(previewWidthRef.current);
-          rafId = null;
-        });
+      // Cancel previous RAF if exists
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
       }
+
+      // Always schedule a new RAF
+      rafIdRef.current = requestAnimationFrame(() => {
+        setPreviewWidth(previewWidthRef.current);
+        rafIdRef.current = null;
+      });
     };
 
     const onMouseUp = () => {
+      // Guard: already cleaned up, prevent double-cleanup
+      if (!resizingRef.current) return;
+
       // Immediately stop resizing
       resizingRef.current = false;
 
       // Cancel any pending RAF
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-        rafId = null;
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
       }
 
       // Do final sync to ensure state matches ref
@@ -122,13 +127,22 @@ export default function CVFormBuilder({ templateId, onGenerated, onBack, initial
       // Remove listeners
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
+      window.removeEventListener('mouseleave', onMouseLeave);
 
-      // Reset cursor (in case it's stuck)
+      // Reset cursor
       document.body.style.cursor = '';
+    };
+
+    // Force cleanup if cursor leaves window (handles extreme edge cases)
+    const onMouseLeave = () => {
+      if (resizingRef.current) {
+        onMouseUp();
+      }
     };
 
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('mouseleave', onMouseLeave);
   }, []);
 
   // Nav drag handlers (only for non-personal sections; index 0 = first reorderable)
