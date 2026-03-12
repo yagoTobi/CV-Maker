@@ -10,10 +10,11 @@ CV Maker follows a client-server architecture with a React frontend and FastAPI 
 │                                                                              │
 │  ┌────────────────┐  ┌──────────────────┐  ┌──────────────┐                 │
 │  │  Landing /     │  │  Form Builder    │  │   Editor     │                 │
-│  │  Dashboard     │  │  (Build path)    │  │  (both paths)│                 │
+│  │  Dashboard     │  │  (Build/Import)  │  │  (all paths) │                 │
 │  └────────────────┘  └──────────────────┘  └──────────────┘                 │
 │                                                                              │
 │  Screens: landing → template-select → form-builder → editor                 │
+│           landing → import-upload → import-review → template-select         │
 │           landing → editor (Tune path, Professional CV pre-loaded)          │
 │           landing → dashboard → editor (load saved version)                 │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -52,16 +53,25 @@ AppScreen = 'landing' | 'dashboard' | 'template-select' | 'form-builder' | 'edit
 landing
   ├── "Build my CV"       → template-select → form-builder → (Generate CV) → editor
   ├── "Import existing CV" → import-upload → import-review → template-select → form-builder
-  ├── "Tune for a job"    → editor (Professional CV pre-loaded, left job panel visible)
-  └── "My Saved CVs"      → dashboard  [only shown when saved versions exist]
+  ├── "Tune for a job"    → base CV picker → editor (selected base CV loaded, job panel visible)
+  ├── "My CVs & Applications" → dashboard  [always shown; shows recent apps inline if versions exist]
+  └── Recent Applications → inline cards grouped by base CV (3 most recent)
 
-dashboard
-  ├── click version card → editor (version content loaded)
+dashboard (hierarchical view)
+  ├── Base CVs (expandable groups)
+  │   ├── [+ New] button per base CV → editor (creates job application from base)
+  │   └── Job applications (nested under base)
+  ├── Ungrouped versions → orphaned CVs without parent
+  ├── click base CV → editor (base CV content loaded)
+  ├── click job application → editor (job content + job panel pre-filled)
+  ├── [Move...] action → re-parent job application to different base CV
   └── back → landing
 
 editor
   ├── VersionSwitcher (header) → save current / switch to saved version
-  └── nav link → dashboard
+  ├── Save modal → choose "Base CV" or "Job Application" + select parent + job details
+  ├── nav link → dashboard
+  └── breadcrumb → "From: Creative CV" (if derived from base)
 ```
 
 ---
@@ -130,14 +140,14 @@ frontend/src/
 
 | Component | Feature | Purpose |
 |-----------|---------|---------|
-| `App.tsx` | - | Main container, 5-screen router, all cross-screen state |
-| `LandingScreen.tsx` | landing | Intent-based entry screen (Build / Tune / My CVs) |
-| `TemplateSelector.tsx` | template-selection | Template selection (Build path only) |
-| `CVFormBuilder.tsx` | form-builder | Structured form with 6 sections + live PDF preview + DnD reordering |
-| `CVImportUpload.tsx` | cv-import | Drag-and-drop file upload for CV import |
-| `CVImportReview.tsx` | cv-import | Review and edit extracted CV data with confidence indicators |
-| `Dashboard.tsx` | dashboard | Saved versions grid (load, delete) |
-| `VersionSwitcher.tsx` | dashboard | In-editor save / switch between saved versions |
+| `App.tsx` | - | Main container, 7-screen router, all cross-screen state |
+| `LandingScreen.tsx` | landing | Intent-based entry screen (Build / Tune / Import / My CVs) |
+| `TemplateSelector.tsx` | template-selection | Template selection (Build path + Import path) |
+| `CVFormBuilder.tsx` | form-builder | Structured form with 7 sections + live PDF preview + DnD reordering |
+| `CVImportUpload.tsx` | cv-import | Drag-and-drop file upload (PDF, DOCX, JSON) with progress indicator |
+| `CVImportReview.tsx` | cv-import | Review and edit extracted CV data with confidence indicators and field-level warnings |
+| `Dashboard.tsx` | dashboard | Hierarchical CV management — base CVs with nested job applications, move/re-parent actions, AI grouping suggestions |
+| `VersionSwitcher.tsx` | dashboard | In-editor save / switch between saved versions, save modal with base CV picker |
 | `LatexEditor.tsx` | editor | CodeMirror-based LaTeX editor (Tune path / fine-tuning) |
 | `PdfPreview.tsx` | editor | PDF rendering via `<iframe>` with base64 source |
 | `ChatPanel.tsx` | editor | AI conversation + inline edit suggestions with undo |
@@ -153,17 +163,17 @@ frontend/src/
 | `useTemplates` | Selected template, content fetch, `setTemplateId` (set without fetch) |
 | `useCompiler` | Compile request, PDF state, markChanged |
 | `useChat` | AI messages, analyzeJob, applyEdit, undo |
-| `useImport` | CV import file upload, AI extraction, progress tracking, validation |
+| `useImport` | CV import file upload (PDF/DOCX/JSON), AI extraction via Bedrock, progress tracking, confidence scoring, validation warnings |
 
 ### State (App.tsx)
 
 | State | Type | Purpose |
 |-------|------|---------|
-| `currentScreen` | `AppScreen` | Active screen |
-| `selectedTemplateForBuild` | `string \| null` | Template chosen in Build path |
+| `currentScreen` | `AppScreen` | Active screen (7 screens: landing, dashboard, template-select, form-builder, editor, import-upload, import-review) |
+| `selectedTemplateForBuild` | `string \| null` | Template chosen in Build/Import path |
 | `activeVersion` | `CVVersion \| null` | Currently loaded saved version |
 | `savedVersions` | `CVVersionMeta[]` | Metadata for version switcher and dashboard |
-| `formData` | `CVFormData \| null` | Form data from Build path (passed to editor for saving) |
+| `formData` | `CVFormData \| null` | Form data from Build/Import path (passed to form-builder and editor) |
 | `isSavingVersion` | `boolean` | Loading state for save |
 
 ---
@@ -275,10 +285,16 @@ CVVersion {
   id, name, templateId, texContent
   formData?: CVFormData   // populated on Build path; null on Tune path
   jobDescription?, companyName?, matchScore?
+  role?: string           // job role/title (e.g., "Senior Product Designer")
+  parentVersionId?: string | null  // ID of base CV this application derives from
   createdAt: string       // ISO-8601
 }
 CVVersionMeta = Omit<CVVersion, 'texContent' | 'formData'>
 ```
+
+**Version Types:**
+- **Base CV**: `parentVersionId = null`, no job details — template to tailor for jobs (e.g., "Creative CV", "Consulting CV")
+- **Job Application**: `parentVersionId = <base-cv-id>`, has job details — tailored version for specific role/company
 
 ---
 
@@ -303,13 +319,17 @@ User sends chat message     → POST /api/chat (streaming)    → AI suggestions
 User applies edit           → LaTeX updated → POST /api/compile → PDF
 ```
 
-### Version Save / Load
+### Version Save / Load (Job-Centric Model)
 
 ```
-Save: POST /api/cv-versions → { name, templateId, texContent, formData?, … }
+Save: POST /api/cv-versions → { name, templateId, texContent, formData?, parentVersionId?, role?, companyName?, jobDescription?, … }
       → user_data/versions/{uuid}.json
-List: GET  /api/cv-versions → sorted newest-first, metadata only
+      → Auto-names if company/role provided: "{company} {role}" or "Application {date}"
+List: GET  /api/cv-versions → sorted newest-first, grouped by parentVersionId
+      → Base CVs (parentVersionId = null) with nested job applications
 Load: GET  /api/cv-versions/{id} → full version → populate editor / form
+      → If job application, pre-fill job panel with company/role/description
+Move: PATCH /api/cv-versions/{id} → { parentVersionId } → re-parent job application
 ```
 
 ---

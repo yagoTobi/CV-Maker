@@ -2,6 +2,31 @@ import { useState, useCallback } from 'react';
 import { api } from '../services/api';
 import type { CVFormData, CVImportResponse, ImportConfidence, ImportSummary } from '../types';
 
+// Auto-derive a display label from a URL (copied from CVFormBuilder)
+function deriveLinkLabel(url: string): string {
+  const PLATFORMS: Array<[RegExp, string]> = [
+    [/github\.com/i, 'GitHub'],
+    [/linkedin\.com/i, 'LinkedIn'],
+    [/twitter\.com|x\.com/i, 'Twitter'],
+    [/gitlab\.com/i, 'GitLab'],
+    [/kaggle\.com/i, 'Kaggle'],
+    [/medium\.com/i, 'Medium'],
+    [/stackoverflow\.com/i, 'Stack Overflow'],
+    [/scholar\.google/i, 'Google Scholar'],
+    [/researchgate\.net/i, 'ResearchGate'],
+    [/orcid\.org/i, 'ORCID'],
+  ];
+  for (const [pattern, label] of PLATFORMS) {
+    if (pattern.test(url)) return label;
+  }
+  try {
+    const normalized = url.startsWith('http') ? url : `https://${url}`;
+    return new URL(normalized).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+
 export interface ImportProgress {
   message: string;
   step: number;
@@ -53,6 +78,21 @@ export function useImport(): UseImportReturn {
         // Strip fields that get set later during template selection
         const { templateId: _, sectionOrder: __, ...rest } = parsed;
 
+        // Process personalInfo.links to derive labels
+        if (rest.personalInfo && Array.isArray(rest.personalInfo.links)) {
+          rest.personalInfo.links = rest.personalInfo.links.map((link: any) => {
+            // If label is empty, equals URL, or looks like a URL, derive it
+            if (!link.label || link.label === link.url ||
+                link.label.includes('://') || link.label.includes('.com') || link.label.includes('.net')) {
+              return {
+                ...link,
+                label: deriveLinkLabel(link.url || ''),
+              };
+            }
+            return link;
+          });
+        }
+
         const result: CVImportResponse = {
           success: true,
           formData: { templateId: '_import', ...rest } as CVFormData,
@@ -83,18 +123,35 @@ export function useImport(): UseImportReturn {
     setIsImporting(true);
     setImportProgress({ message: 'Reading file...', step: 1, totalSteps: 4 });
 
-    // Simulate progress states (backend extraction doesn't send progress yet)
-    setTimeout(() => {
-      if (isImporting) setImportProgress({ message: 'Analyzing structure...', step: 2, totalSteps: 4 });
-    }, 800);
-    setTimeout(() => {
-      if (isImporting) setImportProgress({ message: 'Extracting data...', step: 3, totalSteps: 4 });
-    }, 2000);
-    setTimeout(() => {
-      if (isImporting) setImportProgress({ message: 'Almost done...', step: 4, totalSteps: 4 });
-    }, 4000);
+    // Use a ref to track if we should continue updating progress
+    const progressActive = { current: true };
 
-    const result = await api.importCV(file);
+    // Simulated progress updates
+    const updateProgress = async () => {
+      await new Promise(r => setTimeout(r, 600));
+      if (progressActive.current) {
+        setImportProgress({ message: 'Analyzing structure...', step: 2, totalSteps: 4 });
+      }
+
+      await new Promise(r => setTimeout(r, 1000));
+      if (progressActive.current) {
+        setImportProgress({ message: 'Extracting data...', step: 3, totalSteps: 4 });
+      }
+
+      await new Promise(r => setTimeout(r, 1200));
+      if (progressActive.current) {
+        setImportProgress({ message: 'Almost done...', step: 4, totalSteps: 4 });
+      }
+    };
+
+    // Start progress updates and API call in parallel
+    const [result] = await Promise.all([
+      api.importCV(file),
+      updateProgress()
+    ]);
+
+    // Stop progress updates
+    progressActive.current = false;
 
     setIsImporting(false);
     setImportProgress(null);

@@ -2,7 +2,7 @@
 
 ## Current Status
 
-CV-Maker is in **Phase 1: Nail the Creation Loop** (see [PRODUCT_STRATEGY.md](PRODUCT_STRATEGY.md) for full phased plan). The core Build and Tune flows are functional. CV Import feature is actively being built — backend extraction endpoint is complete, frontend review screen is wired up and in progress.
+CV-Maker is in **Phase 1: Nail the Creation Loop** (see [PRODUCT_STRATEGY.md](PRODUCT_STRATEGY.md) for full phased plan). The core Build and Tune flows are functional. CV Import feature is complete with comprehensive test coverage.
 
 ---
 
@@ -49,17 +49,18 @@ CV-Maker is in **Phase 1: Nail the Creation Loop** (see [PRODUCT_STRATEGY.md](PR
 - [x] Delete versions
 - [x] Version storage as JSON files in `user_data/versions/`
 
-**CV Import (In Progress)**
+**CV Import**
 - [x] Backend: Upload endpoint (`POST /api/cv-import`) accepting PDF, DOCX, JSON (10MB limit)
 - [x] Backend: AI extraction service for structured data extraction via Claude
-- [x] Frontend: Upload screen (`CVImportUpload.tsx`)
-- [x] Frontend: Review screen (`CVImportReview.tsx`) — wired up, polish in progress
-- [ ] End-to-end testing and accuracy tuning across real CV formats
-- [ ] Image-based PDF detection and graceful fallback messaging
+- [x] Frontend: Upload screen (`CVImportUpload.tsx`) with drag-and-drop
+- [x] Frontend: Review screen (`CVImportReview.tsx`) with confidence indicators
+- [x] End-to-end testing with comprehensive test suite (integration, error paths, edge cases)
+- [x] Image-based PDF detection and graceful error messaging
 
 **Testing**
 - [x] Backend template rendering test suite (21 tests covering minimal, maximal, special chars, empty sections, section ordering, filters)
 - [x] Backend template compilation test suite (18 tests with pdflatex/xelatex, unicode, PDF size validation)
+- [x] Backend CV import test suite (integration tests, error path tests, extraction validation)
 
 **UI/UX**
 - [x] Zed-inspired light design system (soft gray-blue backgrounds, clean typography)
@@ -73,7 +74,17 @@ CV-Maker is in **Phase 1: Nail the Creation Loop** (see [PRODUCT_STRATEGY.md](PR
 See [PRODUCT_STRATEGY.md § Phase 1](PRODUCT_STRATEGY.md#phase-1--nail-the-creation-loop-current-focus) for full context.
 
 **High Priority**
-- [ ] CV Import end-to-end polish (review screen UX, confidence flagging, edge case handling)
+- [ ] **Job-centric version management** (in progress) — hierarchical dashboard with base CVs and job applications
+  - [ ] Backend: Add `parentVersionId` and `role` fields to CVVersion schema
+  - [ ] Backend: Update list endpoint to return hierarchical structure
+  - [ ] Backend: Add move/re-parent endpoint (`PATCH /api/cv-versions/{id}`)
+  - [ ] Dashboard: Hierarchical grouping (base CVs with nested job applications)
+  - [ ] Dashboard: `[+ New]` button on base CVs, `[Move...]` action on job apps
+  - [ ] Dashboard: Ungrouped section for orphaned versions
+  - [ ] Save modal: "Base CV" vs "Job Application" selection + parent picker
+  - [ ] Auto-naming logic: `{company} {role}` or `Application {date}`
+  - [ ] "Tune for a job" flow: Base CV picker before opening editor
+  - [ ] AI grouping suggestions for ungrouped versions (similarity hints)
 - [ ] Auto-save functionality (localStorage or backend persistence)
 - [ ] ATS optimization feedback built into match analysis (keyword gaps, formatting advice)
 - [ ] Onboarding clarity / first-run experience (tooltips, guided flow, example data)

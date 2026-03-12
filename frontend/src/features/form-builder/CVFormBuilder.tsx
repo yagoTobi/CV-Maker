@@ -84,18 +84,49 @@ export default function CVFormBuilder({ templateId, onGenerated, onBack, initial
     resizeStartXRef.current = e.clientX;
     resizeStartWidthRef.current = previewWidthRef.current;
 
+    // Set cursor for the entire document during resize
+    document.body.style.cursor = 'col-resize';
+
+    let rafId: number | null = null;
+
     const onMouseMove = (e: MouseEvent) => {
       if (!resizingRef.current) return;
-      const delta = resizeStartXRef.current - e.clientX;
+
+      // Update ref immediately for smooth tracking
+      const delta = resizeStartXRef.current - e.clientX; // Correct: drag right = shrink preview
       const newW = Math.max(300, Math.min(760, resizeStartWidthRef.current + delta));
-      setPreviewWidth(newW);
       previewWidthRef.current = newW;
+
+      // Throttle state updates with RAF
+      if (rafId === null) {
+        rafId = requestAnimationFrame(() => {
+          setPreviewWidth(previewWidthRef.current);
+          rafId = null;
+        });
+      }
     };
+
     const onMouseUp = () => {
+      // Immediately stop resizing
       resizingRef.current = false;
+
+      // Cancel any pending RAF
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+
+      // Do final sync to ensure state matches ref
+      setPreviewWidth(previewWidthRef.current);
+
+      // Remove listeners
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
+
+      // Reset cursor (in case it's stuck)
+      document.body.style.cursor = '';
     };
+
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
   }, []);
@@ -378,16 +409,27 @@ function useDrag(onReorder: (from: number, to: number) => void) {
     if (card) card.draggable = true;
   };
 
-  const onDragStart = (i: number) => { dragFromRef.current = i; };
-  const onDragEnter = (i: number) => { if (dragFromRef.current !== null && dragFromRef.current !== i) setDragOver(i); };
-  const onDragOver  = (e: React.DragEvent) => e.preventDefault();
-  const onDrop      = (i: number) => {
+  const onDragStart = (e: React.DragEvent, i: number) => {
+    e.stopPropagation();
+    dragFromRef.current = i;
+  };
+  const onDragEnter = (e: React.DragEvent, i: number) => {
+    e.stopPropagation();
+    if (dragFromRef.current !== null && dragFromRef.current !== i) setDragOver(i);
+  };
+  const onDragOver  = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  const onDrop      = (e: React.DragEvent, i: number) => {
+    e.stopPropagation();
     if (dragFromRef.current !== null && dragFromRef.current !== i) onReorder(dragFromRef.current, i);
     dragFromRef.current = null;
     setDragOver(null);
   };
   // Resets draggable=false on the card after drag completes
   const onDragEnd   = (e: React.DragEvent) => {
+    e.stopPropagation();
     (e.currentTarget as HTMLElement).draggable = false;
     dragFromRef.current = null;
     setDragOver(null);
@@ -460,10 +502,10 @@ function PersonalSection({ fb }: { fb: FB }) {
                 className={`${styles.headerChip} ${!hasValue ? styles.headerChipEmpty : ''} ${headerDrag.dragOver === i ? styles.headerChipDragOver : ''}`}
                 data-drag-card
                 onMouseDown={headerDrag.onHandleMouseDown}
-                onDragStart={() => headerDrag.onDragStart(i)}
-                onDragEnter={() => headerDrag.onDragEnter(i)}
+                onDragStart={(e) => headerDrag.onDragStart(e, i)}
+                onDragEnter={(e) => headerDrag.onDragEnter(e, i)}
                 onDragOver={headerDrag.onDragOver}
-                onDrop={() => headerDrag.onDrop(i)}
+                onDrop={(e) => headerDrag.onDrop(e, i)}
                 onDragEnd={headerDrag.onDragEnd}
               >
                 <GripIcon />
@@ -506,6 +548,95 @@ function PersonalSection({ fb }: { fb: FB }) {
   );
 }
 
+interface WorkEntryCardProps {
+  job: CVFormData['workExperience'][0];
+  index: number;
+  total: number;
+  fb: FB;
+  dragState: ReturnType<typeof useDrag>;
+}
+
+function WorkEntryCard({ job, index: i, total, fb, dragState: drag }: WorkEntryCardProps) {
+  const bulletDrag = useDrag((from, to) => fb.reorderBullets(i, from, to));
+
+  return (
+    <div
+      className={`${styles.card} ${drag.dragOver === i ? styles.cardDragOver : ''}`}
+      data-drag-card
+      onDragStart={(e) => drag.onDragStart(e, i)}
+      onDragEnter={(e) => drag.onDragEnter(e, i)}
+      onDragOver={drag.onDragOver}
+      onDrop={(e) => drag.onDrop(e, i)}
+      onDragEnd={drag.onDragEnd}
+    >
+      <div className={styles.cardHeader}>
+        <span className={styles.cardDragHandle} onMouseDown={drag.onHandleMouseDown}><GripIcon /></span>
+        <span className={styles.cardLabel}>{job.company || `Position ${i + 1}`}</span>
+        {total > 1 && (
+          <button className={styles.removeBtn} onClick={() => fb.removeWorkEntry(i)}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        )}
+      </div>
+      <div className={styles.formGrid}>
+        <Field label="Company" required>
+          <input className={styles.input} value={job.company} onChange={e => fb.updateWorkEntry(i, { company: e.target.value })} placeholder="Acme Corp" />
+        </Field>
+        <Field label="Title" required>
+          <input className={styles.input} value={job.title} onChange={e => fb.updateWorkEntry(i, { title: e.target.value })} placeholder="Software Engineer" />
+        </Field>
+        <Field label="Start Date">
+          <input className={styles.input} value={job.startDate} onChange={e => fb.updateWorkEntry(i, { startDate: e.target.value })} placeholder="Jan 2022" />
+        </Field>
+        <Field label="End Date">
+          <input className={styles.input} value={job.endDate} onChange={e => fb.updateWorkEntry(i, { endDate: e.target.value })} placeholder="Present" />
+        </Field>
+        <Field label="Location">
+          <input className={styles.input} value={job.location} onChange={e => fb.updateWorkEntry(i, { location: e.target.value })} placeholder="London, UK" />
+        </Field>
+      </div>
+      <div className={styles.bulletsSection}>
+        <div className={styles.subSectionHeader}>
+          <h4>Bullet Points</h4>
+          <button className={styles.addBtn} onClick={() => fb.addBullet(i)}>+ Add</button>
+        </div>
+        {job.bullets.map((bullet, bi) => (
+          <div
+            key={bi}
+            className={`${styles.bulletRow} ${bulletDrag.dragOver === bi ? styles.bulletRowDragOver : ''}`}
+            data-drag-card
+            onDragStart={(e) => bulletDrag.onDragStart(e, bi)}
+            onDragEnter={(e) => bulletDrag.onDragEnter(e, bi)}
+            onDragOver={bulletDrag.onDragOver}
+            onDrop={(e) => bulletDrag.onDrop(e, bi)}
+            onDragEnd={bulletDrag.onDragEnd}
+          >
+            <span
+              className={styles.bulletDragHandle}
+              onMouseDown={bulletDrag.onHandleMouseDown}
+              aria-label="Drag to reorder"
+            >
+              <GripIcon />
+            </span>
+            <textarea
+              className={`${styles.input} ${styles.bulletInput}`}
+              value={bullet}
+              onChange={e => fb.updateBullet(i, bi, e.target.value)}
+              placeholder="Describe an achievement or responsibility..."
+              rows={2}
+            />
+            {job.bullets.length > 1 && (
+              <button className={styles.removeBtn} onClick={() => fb.removeBullet(i, bi)}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function WorkSection({ fb }: { fb: FB }) {
   const drag = useDrag(fb.reorderWorkEntries);
   return (
@@ -514,87 +645,106 @@ function WorkSection({ fb }: { fb: FB }) {
         <h3 className={styles.sectionTitle}>Work Experience</h3>
         <button className={styles.addBtn} onClick={fb.addWorkEntry}>+ Add Position</button>
       </div>
-      {fb.formData.workExperience.map((job, i) => {
-        const bulletDrag = useDrag((from, to) => fb.reorderBullets(i, from, to));
-        return (
-          <div
-            key={i}
-            className={`${styles.card} ${drag.dragOver === i ? styles.cardDragOver : ''}`}
-            data-drag-card
-            onDragStart={() => drag.onDragStart(i)}
-            onDragEnter={() => drag.onDragEnter(i)}
-            onDragOver={drag.onDragOver}
-            onDrop={() => drag.onDrop(i)}
-            onDragEnd={drag.onDragEnd}
-          >
-            <div className={styles.cardHeader}>
-              <span className={styles.cardDragHandle} onMouseDown={drag.onHandleMouseDown}><GripIcon /></span>
-              <span className={styles.cardLabel}>{job.company || `Position ${i + 1}`}</span>
-              {fb.formData.workExperience.length > 1 && (
-                <button className={styles.removeBtn} onClick={() => fb.removeWorkEntry(i)}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-              )}
-            </div>
-            <div className={styles.formGrid}>
-              <Field label="Company" required>
-                <input className={styles.input} value={job.company} onChange={e => fb.updateWorkEntry(i, { company: e.target.value })} placeholder="Acme Corp" />
-              </Field>
-              <Field label="Title" required>
-                <input className={styles.input} value={job.title} onChange={e => fb.updateWorkEntry(i, { title: e.target.value })} placeholder="Software Engineer" />
-              </Field>
-              <Field label="Start Date">
-                <input className={styles.input} value={job.startDate} onChange={e => fb.updateWorkEntry(i, { startDate: e.target.value })} placeholder="Jan 2022" />
-              </Field>
-              <Field label="End Date">
-                <input className={styles.input} value={job.endDate} onChange={e => fb.updateWorkEntry(i, { endDate: e.target.value })} placeholder="Present" />
-              </Field>
-              <Field label="Location">
-                <input className={styles.input} value={job.location} onChange={e => fb.updateWorkEntry(i, { location: e.target.value })} placeholder="London, UK" />
-              </Field>
-            </div>
-            <div className={styles.bulletsSection}>
-              <div className={styles.subSectionHeader}>
-                <h4>Bullet Points</h4>
-                <button className={styles.addBtn} onClick={() => fb.addBullet(i)}>+ Add</button>
-              </div>
-              {job.bullets.map((bullet, bi) => (
-                <div
-                  key={bi}
-                  className={`${styles.bulletRow} ${bulletDrag.dragOver === bi ? styles.bulletRowDragOver : ''}`}
-                  data-drag-card
-                  onDragStart={() => bulletDrag.onDragStart(bi)}
-                  onDragEnter={() => bulletDrag.onDragEnter(bi)}
-                  onDragOver={bulletDrag.onDragOver}
-                  onDrop={() => bulletDrag.onDrop(bi)}
-                  onDragEnd={bulletDrag.onDragEnd}
-                >
-                  <span
-                    className={styles.bulletDragHandle}
-                    onMouseDown={bulletDrag.onHandleMouseDown}
-                    aria-label="Drag to reorder"
-                  >
-                    <GripIcon />
-                  </span>
-                  <textarea
-                    className={`${styles.input} ${styles.bulletInput}`}
-                    value={bullet}
-                    onChange={e => fb.updateBullet(i, bi, e.target.value)}
-                    placeholder="Describe an achievement or responsibility..."
-                    rows={2}
-                  />
-                  {job.bullets.length > 1 && (
-                    <button className={styles.removeBtn} onClick={() => fb.removeBullet(i, bi)}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
+      {fb.formData.workExperience.map((job, i) => (
+        <WorkEntryCard
+          key={i}
+          job={job}
+          index={i}
+          total={fb.formData.workExperience.length}
+          fb={fb}
+          dragState={drag}
+        />
+      ))}
     </section>
+  );
+}
+
+interface EducationEntryCardProps {
+  edu: CVFormData['education'][0];
+  index: number;
+  total: number;
+  fb: FB;
+  dragState: ReturnType<typeof useDrag>;
+}
+
+function EducationEntryCard({ edu, index: i, total, fb, dragState: drag }: EducationEntryCardProps) {
+  const detailDrag = useDrag((from, to) => fb.reorderEduDetails(i, from, to));
+
+  return (
+    <div
+      className={`${styles.card} ${drag.dragOver === i ? styles.cardDragOver : ''}`}
+      data-drag-card
+      onDragStart={(e) => drag.onDragStart(e, i)}
+      onDragEnter={(e) => drag.onDragEnter(e, i)}
+      onDragOver={drag.onDragOver}
+      onDrop={(e) => drag.onDrop(e, i)}
+      onDragEnd={drag.onDragEnd}
+    >
+      <div className={styles.cardHeader}>
+        <span className={styles.cardDragHandle} onMouseDown={drag.onHandleMouseDown}><GripIcon /></span>
+        <span className={styles.cardLabel}>{edu.school || `Institution ${i + 1}`}</span>
+        {total > 1 && (
+          <button className={styles.removeBtn} onClick={() => fb.removeEducationEntry(i)}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        )}
+      </div>
+      <div className={styles.formGrid}>
+        <Field label="School / University" required>
+          <input className={styles.input} value={edu.school} onChange={e => fb.updateEducationEntry(i, { school: e.target.value })} placeholder="University of Oxford" />
+        </Field>
+        <Field label="Degree" required>
+          <input className={styles.input} value={edu.degree} onChange={e => fb.updateEducationEntry(i, { degree: e.target.value })} placeholder="BSc Computer Science" />
+        </Field>
+        <Field label="Start Date">
+          <input className={styles.input} value={edu.startDate} onChange={e => fb.updateEducationEntry(i, { startDate: e.target.value })} placeholder="Sep 2019" />
+        </Field>
+        <Field label="End Date">
+          <input className={styles.input} value={edu.endDate} onChange={e => fb.updateEducationEntry(i, { endDate: e.target.value })} placeholder="Jun 2023" />
+        </Field>
+        <Field label="Location">
+          <input className={styles.input} value={edu.location} onChange={e => fb.updateEducationEntry(i, { location: e.target.value })} placeholder="Oxford, UK" />
+        </Field>
+        <Field label="GPA">
+          <input className={styles.input} value={edu.gpa || ''} onChange={e => fb.updateEducationEntry(i, { gpa: e.target.value })} placeholder="3.8 / 4.0" />
+        </Field>
+      </div>
+      <div className={styles.bulletsSection}>
+        <div className={styles.subSectionHeader}>
+          <h4>Notable Details</h4>
+          <button className={styles.addBtn} onClick={() => fb.addEduDetail(i)}>+ Add</button>
+        </div>
+        {edu.details.map((detail, di) => (
+          <div
+            key={di}
+            className={`${styles.bulletRow} ${detailDrag.dragOver === di ? styles.bulletRowDragOver : ''}`}
+            data-drag-card
+            onDragStart={(e) => detailDrag.onDragStart(e, di)}
+            onDragEnter={(e) => detailDrag.onDragEnter(e, di)}
+            onDragOver={detailDrag.onDragOver}
+            onDrop={(e) => detailDrag.onDrop(e, di)}
+            onDragEnd={detailDrag.onDragEnd}
+          >
+            <span
+              className={styles.bulletDragHandle}
+              onMouseDown={detailDrag.onHandleMouseDown}
+              aria-label="Drag to reorder"
+            >
+              <GripIcon />
+            </span>
+            <input
+              className={styles.input}
+              value={detail}
+              onChange={e => fb.updateEduDetail(i, di, e.target.value)}
+              placeholder="Thesis, honours, coursework..."
+            />
+            <button className={styles.removeBtn} onClick={() => fb.removeEduDetail(i, di)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -606,86 +756,16 @@ function EducationSection({ fb }: { fb: FB }) {
         <h3 className={styles.sectionTitle}>Education</h3>
         <button className={styles.addBtn} onClick={fb.addEducationEntry}>+ Add Entry</button>
       </div>
-      {fb.formData.education.map((edu, i) => {
-        const detailDrag = useDrag((from, to) => fb.reorderEduDetails(i, from, to));
-        return (
-          <div
-            key={i}
-            className={`${styles.card} ${drag.dragOver === i ? styles.cardDragOver : ''}`}
-            data-drag-card
-            onDragStart={() => drag.onDragStart(i)}
-            onDragEnter={() => drag.onDragEnter(i)}
-            onDragOver={drag.onDragOver}
-            onDrop={() => drag.onDrop(i)}
-            onDragEnd={drag.onDragEnd}
-          >
-            <div className={styles.cardHeader}>
-              <span className={styles.cardDragHandle} onMouseDown={drag.onHandleMouseDown}><GripIcon /></span>
-              <span className={styles.cardLabel}>{edu.school || `Institution ${i + 1}`}</span>
-              {fb.formData.education.length > 1 && (
-                <button className={styles.removeBtn} onClick={() => fb.removeEducationEntry(i)}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-              )}
-            </div>
-            <div className={styles.formGrid}>
-              <Field label="School / University" required>
-                <input className={styles.input} value={edu.school} onChange={e => fb.updateEducationEntry(i, { school: e.target.value })} placeholder="University of Oxford" />
-              </Field>
-              <Field label="Degree" required>
-                <input className={styles.input} value={edu.degree} onChange={e => fb.updateEducationEntry(i, { degree: e.target.value })} placeholder="BSc Computer Science" />
-              </Field>
-              <Field label="Start Date">
-                <input className={styles.input} value={edu.startDate} onChange={e => fb.updateEducationEntry(i, { startDate: e.target.value })} placeholder="Sep 2019" />
-              </Field>
-              <Field label="End Date">
-                <input className={styles.input} value={edu.endDate} onChange={e => fb.updateEducationEntry(i, { endDate: e.target.value })} placeholder="Jun 2023" />
-              </Field>
-              <Field label="Location">
-                <input className={styles.input} value={edu.location} onChange={e => fb.updateEducationEntry(i, { location: e.target.value })} placeholder="Oxford, UK" />
-              </Field>
-              <Field label="GPA">
-                <input className={styles.input} value={edu.gpa || ''} onChange={e => fb.updateEducationEntry(i, { gpa: e.target.value })} placeholder="3.8 / 4.0" />
-              </Field>
-            </div>
-            <div className={styles.bulletsSection}>
-              <div className={styles.subSectionHeader}>
-                <h4>Notable Details</h4>
-                <button className={styles.addBtn} onClick={() => fb.addEduDetail(i)}>+ Add</button>
-              </div>
-              {edu.details.map((detail, di) => (
-                <div
-                  key={di}
-                  className={`${styles.bulletRow} ${detailDrag.dragOver === di ? styles.bulletRowDragOver : ''}`}
-                  data-drag-card
-                  onDragStart={() => detailDrag.onDragStart(di)}
-                  onDragEnter={() => detailDrag.onDragEnter(di)}
-                  onDragOver={detailDrag.onDragOver}
-                  onDrop={() => detailDrag.onDrop(di)}
-                  onDragEnd={detailDrag.onDragEnd}
-                >
-                  <span
-                    className={styles.bulletDragHandle}
-                    onMouseDown={detailDrag.onHandleMouseDown}
-                    aria-label="Drag to reorder"
-                  >
-                    <GripIcon />
-                  </span>
-                  <input
-                    className={styles.input}
-                    value={detail}
-                    onChange={e => fb.updateEduDetail(i, di, e.target.value)}
-                    placeholder="Thesis, honours, coursework..."
-                  />
-                  <button className={styles.removeBtn} onClick={() => fb.removeEduDetail(i, di)}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
+      {fb.formData.education.map((edu, i) => (
+        <EducationEntryCard
+          key={i}
+          edu={edu}
+          index={i}
+          total={fb.formData.education.length}
+          fb={fb}
+          dragState={drag}
+        />
+      ))}
     </section>
   );
 }
@@ -704,10 +784,10 @@ function SkillsSection({ fb }: { fb: FB }) {
           key={i}
           className={`${styles.card} ${drag.dragOver === i ? styles.cardDragOver : ''}`}
           data-drag-card
-          onDragStart={() => drag.onDragStart(i)}
-          onDragEnter={() => drag.onDragEnter(i)}
+          onDragStart={(e) => drag.onDragStart(e, i)}
+          onDragEnter={(e) => drag.onDragEnter(e, i)}
           onDragOver={drag.onDragOver}
-          onDrop={() => drag.onDrop(i)}
+          onDrop={(e) => drag.onDrop(e, i)}
           onDragEnd={drag.onDragEnd}
         >
           <div className={styles.cardHeader}>
@@ -733,6 +813,98 @@ function SkillsSection({ fb }: { fb: FB }) {
   );
 }
 
+interface ProjectEntryCardProps {
+  proj: NonNullable<CVFormData['projects']>[0];
+  index: number;
+  fb: FB;
+  dragState: ReturnType<typeof useDrag>;
+}
+
+function ProjectEntryCard({ proj, index: i, fb, dragState: drag }: ProjectEntryCardProps) {
+  const bulletDrag = useDrag((from, to) => fb.reorderProjectBullets(i, from, to));
+
+  return (
+    <div
+      className={`${styles.card} ${drag.dragOver === i ? styles.cardDragOver : ''}`}
+      data-drag-card
+      onDragStart={(e) => drag.onDragStart(e, i)}
+      onDragEnter={(e) => drag.onDragEnter(e, i)}
+      onDragOver={drag.onDragOver}
+      onDrop={(e) => drag.onDrop(e, i)}
+      onDragEnd={drag.onDragEnd}
+    >
+      <div className={styles.cardHeader}>
+        <span className={styles.cardDragHandle} onMouseDown={drag.onHandleMouseDown}><GripIcon /></span>
+        <span className={styles.cardLabel}>{proj.name || `Project ${i + 1}`}</span>
+        <button className={styles.removeBtn} onClick={() => fb.removeProject(i)}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div className={styles.formGrid}>
+        <Field label="Project Name">
+          <input className={styles.input} value={proj.name} onChange={e => fb.updateProject(i, { name: e.target.value })} placeholder="My Awesome App" />
+        </Field>
+        <Field label="Year">
+          <input className={styles.input} value={proj.year} onChange={e => fb.updateProject(i, { year: e.target.value })} placeholder="2024" />
+        </Field>
+        <Field label="Technologies">
+          <input className={styles.input} value={proj.technologies || ''} onChange={e => fb.updateProject(i, { technologies: e.target.value })} placeholder="React, Python, PostgreSQL" />
+        </Field>
+      </div>
+      <Field label="Description">
+        <textarea className={`${styles.input} ${styles.textarea}`} value={proj.description} onChange={e => fb.updateProject(i, { description: e.target.value })} placeholder="Describe what you built and its impact..." rows={3} />
+      </Field>
+
+      {/* Project bullets */}
+      {(proj.bullets && proj.bullets.length > 0) && (
+        <div className={styles.bulletsSection}>
+          <div className={styles.subSectionHeader}>
+            <h4>Bullet Points</h4>
+            <button className={styles.addBtn} onClick={() => fb.addProjectBullet(i)}>+ Add</button>
+          </div>
+          {proj.bullets.map((bullet, bi) => (
+            <div
+              key={bi}
+              className={`${styles.bulletRow} ${bulletDrag.dragOver === bi ? styles.bulletRowDragOver : ''}`}
+              data-drag-card
+              onDragStart={(e) => bulletDrag.onDragStart(e, bi)}
+              onDragEnter={(e) => bulletDrag.onDragEnter(e, bi)}
+              onDragOver={bulletDrag.onDragOver}
+              onDrop={(e) => bulletDrag.onDrop(e, bi)}
+              onDragEnd={bulletDrag.onDragEnd}
+            >
+              <span
+                className={styles.bulletDragHandle}
+                onMouseDown={bulletDrag.onHandleMouseDown}
+                aria-label="Drag to reorder"
+              >
+                <GripIcon />
+              </span>
+              <textarea
+                className={`${styles.input} ${styles.bulletInput}`}
+                value={bullet}
+                onChange={e => fb.updateProjectBullet(i, bi, e.target.value)}
+                placeholder="Describe an achievement or key feature..."
+                rows={2}
+              />
+              {proj.bullets!.length > 1 && (
+                <button className={styles.removeBtn} onClick={() => fb.removeProjectBullet(i, bi)}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      {(!proj.bullets || proj.bullets.length === 0) && (
+        <button className={styles.addBtn} onClick={() => fb.addProjectBullet(i)} style={{ marginTop: '0.75rem' }}>
+          + Add Bullet Points
+        </button>
+      )}
+    </div>
+  );
+}
+
 function ProjectsSection({ fb }: { fb: FB }) {
   const drag = useDrag(fb.reorderProjects);
   return (
@@ -745,88 +917,13 @@ function ProjectsSection({ fb }: { fb: FB }) {
         <p className={styles.emptyState}>No projects added yet. Click "Add Project" to get started.</p>
       )}
       {(fb.formData.projects || []).map((proj, i) => (
-        <div
+        <ProjectEntryCard
           key={i}
-          className={`${styles.card} ${drag.dragOver === i ? styles.cardDragOver : ''}`}
-          data-drag-card
-          onDragStart={() => drag.onDragStart(i)}
-          onDragEnter={() => drag.onDragEnter(i)}
-          onDragOver={drag.onDragOver}
-          onDrop={() => drag.onDrop(i)}
-          onDragEnd={drag.onDragEnd}
-        >
-          <div className={styles.cardHeader}>
-            <span className={styles.cardDragHandle} onMouseDown={drag.onHandleMouseDown}><GripIcon /></span>
-            <span className={styles.cardLabel}>{proj.name || `Project ${i + 1}`}</span>
-            <button className={styles.removeBtn} onClick={() => fb.removeProject(i)}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-          </div>
-          <div className={styles.formGrid}>
-            <Field label="Project Name">
-              <input className={styles.input} value={proj.name} onChange={e => fb.updateProject(i, { name: e.target.value })} placeholder="My Awesome App" />
-            </Field>
-            <Field label="Year">
-              <input className={styles.input} value={proj.year} onChange={e => fb.updateProject(i, { year: e.target.value })} placeholder="2024" />
-            </Field>
-            <Field label="Technologies">
-              <input className={styles.input} value={proj.technologies || ''} onChange={e => fb.updateProject(i, { technologies: e.target.value })} placeholder="React, Python, PostgreSQL" />
-            </Field>
-          </div>
-          <Field label="Description">
-            <textarea className={`${styles.input} ${styles.textarea}`} value={proj.description} onChange={e => fb.updateProject(i, { description: e.target.value })} placeholder="Describe what you built and its impact..." rows={3} />
-          </Field>
-
-          {/* Project bullets */}
-          {(proj.bullets && proj.bullets.length > 0) && (() => {
-            const bulletDrag = useDrag((from, to) => fb.reorderProjectBullets(i, from, to));
-            return (
-              <div className={styles.bulletsSection}>
-                <div className={styles.subSectionHeader}>
-                  <h4>Bullet Points</h4>
-                  <button className={styles.addBtn} onClick={() => fb.addProjectBullet(i)}>+ Add</button>
-                </div>
-                {proj.bullets!.map((bullet, bi) => (
-                  <div
-                    key={bi}
-                    className={`${styles.bulletRow} ${bulletDrag.dragOver === bi ? styles.bulletRowDragOver : ''}`}
-                    data-drag-card
-                    onDragStart={() => bulletDrag.onDragStart(bi)}
-                    onDragEnter={() => bulletDrag.onDragEnter(bi)}
-                    onDragOver={bulletDrag.onDragOver}
-                    onDrop={() => bulletDrag.onDrop(bi)}
-                    onDragEnd={bulletDrag.onDragEnd}
-                  >
-                    <span
-                      className={styles.bulletDragHandle}
-                      onMouseDown={bulletDrag.onHandleMouseDown}
-                      aria-label="Drag to reorder"
-                    >
-                      <GripIcon />
-                    </span>
-                    <textarea
-                      className={`${styles.input} ${styles.bulletInput}`}
-                      value={bullet}
-                      onChange={e => fb.updateProjectBullet(i, bi, e.target.value)}
-                      placeholder="Describe an achievement or key feature..."
-                      rows={2}
-                    />
-                    {proj.bullets!.length > 1 && (
-                      <button className={styles.removeBtn} onClick={() => fb.removeProjectBullet(i, bi)}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            );
-          })()}
-          {(!proj.bullets || proj.bullets.length === 0) && (
-            <button className={styles.addBtn} onClick={() => fb.addProjectBullet(i)} style={{ marginTop: '0.75rem' }}>
-              + Add Bullet Points
-            </button>
-          )}
-        </div>
+          proj={proj}
+          index={i}
+          fb={fb}
+          dragState={drag}
+        />
       ))}
     </section>
   );
@@ -848,10 +945,10 @@ function AwardsSection({ fb }: { fb: FB }) {
           key={i}
           className={`${styles.card} ${drag.dragOver === i ? styles.cardDragOver : ''}`}
           data-drag-card
-          onDragStart={() => drag.onDragStart(i)}
-          onDragEnter={() => drag.onDragEnter(i)}
+          onDragStart={(e) => drag.onDragStart(e, i)}
+          onDragEnter={(e) => drag.onDragEnter(e, i)}
           onDragOver={drag.onDragOver}
-          onDrop={() => drag.onDrop(i)}
+          onDrop={(e) => drag.onDrop(e, i)}
           onDragEnd={drag.onDragEnd}
         >
           <div className={styles.cardHeader}>
@@ -875,6 +972,120 @@ function AwardsSection({ fb }: { fb: FB }) {
         </div>
       ))}
     </section>
+  );
+}
+
+interface AdditionalEntryCardProps {
+  entry: NonNullable<CVFormData['additionalSections']>[0]['entries'][0];
+  sectionIndex: number;
+  entryIndex: number;
+  fb: FB;
+}
+
+function AdditionalEntryCard({ entry, sectionIndex, entryIndex: ei, fb }: AdditionalEntryCardProps) {
+  const bulletDrag = useDrag((from, to) => fb.reorderAdditionalEntryBullets(sectionIndex, ei, from, to));
+
+  return (
+    <div className={styles.card}>
+      <div className={styles.cardHeader}>
+        <span className={styles.cardLabel}>{entry.title || `Entry ${ei + 1}`}</span>
+        <button className={styles.removeBtn} onClick={() => fb.removeAdditionalEntry(sectionIndex, ei)}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div className={styles.formGrid}>
+        <Field label="Title" required>
+          <input
+            className={styles.input}
+            value={entry.title}
+            onChange={e => fb.updateAdditionalEntry(sectionIndex, ei, { title: e.target.value })}
+            placeholder="Entry title"
+          />
+        </Field>
+        <Field label="Subtitle">
+          <input
+            className={styles.input}
+            value={entry.subtitle || ''}
+            onChange={e => fb.updateAdditionalEntry(sectionIndex, ei, { subtitle: e.target.value })}
+            placeholder="Subtitle (optional)"
+          />
+        </Field>
+        <Field label="Start Date">
+          <input
+            className={styles.input}
+            value={entry.startDate || ''}
+            onChange={e => fb.updateAdditionalEntry(sectionIndex, ei, { startDate: e.target.value })}
+            placeholder="Jan 2022"
+          />
+        </Field>
+        <Field label="End Date">
+          <input
+            className={styles.input}
+            value={entry.endDate || ''}
+            onChange={e => fb.updateAdditionalEntry(sectionIndex, ei, { endDate: e.target.value })}
+            placeholder="Dec 2023"
+          />
+        </Field>
+        <Field label="Location">
+          <input
+            className={styles.input}
+            value={entry.location || ''}
+            onChange={e => fb.updateAdditionalEntry(sectionIndex, ei, { location: e.target.value })}
+            placeholder="Location"
+          />
+        </Field>
+      </div>
+
+      <Field label="Description">
+        <textarea
+          className={`${styles.input} ${styles.textarea}`}
+          value={entry.description || ''}
+          onChange={e => fb.updateAdditionalEntry(sectionIndex, ei, { description: e.target.value })}
+          placeholder="Description (optional)"
+          rows={2}
+        />
+      </Field>
+
+      <div className={styles.bulletsSection}>
+        <div className={styles.subSectionHeader}>
+          <h4>Bullet Points</h4>
+          <button className={styles.addBtn} onClick={() => fb.addAdditionalEntryBullet(sectionIndex, ei)}>+ Add</button>
+        </div>
+        {entry.bullets.map((bullet, bi) => (
+          <div
+            key={bi}
+            className={`${styles.bulletRow} ${bulletDrag.dragOver === bi ? styles.bulletRowDragOver : ''}`}
+            data-drag-card
+            onDragStart={(e) => bulletDrag.onDragStart(e, bi)}
+            onDragEnter={(e) => bulletDrag.onDragEnter(e, bi)}
+            onDragOver={bulletDrag.onDragOver}
+            onDrop={(e) => bulletDrag.onDrop(e, bi)}
+            onDragEnd={bulletDrag.onDragEnd}
+          >
+            <span
+              className={styles.bulletDragHandle}
+              onMouseDown={bulletDrag.onHandleMouseDown}
+              aria-label="Drag to reorder"
+            >
+              <GripIcon />
+            </span>
+            <textarea
+              className={`${styles.input} ${styles.bulletInput}`}
+              value={bullet}
+              onChange={e => fb.updateAdditionalEntryBullet(sectionIndex, ei, bi, e.target.value)}
+              placeholder="Describe an achievement or detail..."
+              rows={2}
+            />
+            {entry.bullets.length > 1 && (
+              <button className={styles.removeBtn} onClick={() => fb.removeAdditionalEntryBullet(sectionIndex, ei, bi)}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -914,111 +1125,13 @@ function AdditionalSectionView({ fb, sectionIndex }: { fb: FB; sectionIndex: num
       )}
 
       {section.entries.map((entry, ei) => (
-        <div key={ei} className={styles.card}>
-          <div className={styles.cardHeader}>
-            <span className={styles.cardLabel}>{entry.title || `Entry ${ei + 1}`}</span>
-            <button className={styles.removeBtn} onClick={() => fb.removeAdditionalEntry(sectionIndex, ei)}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-          </div>
-
-          <div className={styles.formGrid}>
-            <Field label="Title" required>
-              <input
-                className={styles.input}
-                value={entry.title}
-                onChange={e => fb.updateAdditionalEntry(sectionIndex, ei, { title: e.target.value })}
-                placeholder="Entry title"
-              />
-            </Field>
-            <Field label="Subtitle">
-              <input
-                className={styles.input}
-                value={entry.subtitle || ''}
-                onChange={e => fb.updateAdditionalEntry(sectionIndex, ei, { subtitle: e.target.value })}
-                placeholder="Subtitle (optional)"
-              />
-            </Field>
-            <Field label="Start Date">
-              <input
-                className={styles.input}
-                value={entry.startDate || ''}
-                onChange={e => fb.updateAdditionalEntry(sectionIndex, ei, { startDate: e.target.value })}
-                placeholder="Jan 2022"
-              />
-            </Field>
-            <Field label="End Date">
-              <input
-                className={styles.input}
-                value={entry.endDate || ''}
-                onChange={e => fb.updateAdditionalEntry(sectionIndex, ei, { endDate: e.target.value })}
-                placeholder="Dec 2023"
-              />
-            </Field>
-            <Field label="Location">
-              <input
-                className={styles.input}
-                value={entry.location || ''}
-                onChange={e => fb.updateAdditionalEntry(sectionIndex, ei, { location: e.target.value })}
-                placeholder="Location"
-              />
-            </Field>
-          </div>
-
-          <Field label="Description">
-            <textarea
-              className={`${styles.input} ${styles.textarea}`}
-              value={entry.description || ''}
-              onChange={e => fb.updateAdditionalEntry(sectionIndex, ei, { description: e.target.value })}
-              placeholder="Description (optional)"
-              rows={2}
-            />
-          </Field>
-
-          {(() => {
-            const bulletDrag = useDrag((from, to) => fb.reorderAdditionalEntryBullets(sectionIndex, ei, from, to));
-            return (
-              <div className={styles.bulletsSection}>
-                <div className={styles.subSectionHeader}>
-                  <h4>Bullet Points</h4>
-                  <button className={styles.addBtn} onClick={() => fb.addAdditionalEntryBullet(sectionIndex, ei)}>+ Add</button>
-                </div>
-                {entry.bullets.map((bullet, bi) => (
-                  <div
-                    key={bi}
-                    className={`${styles.bulletRow} ${bulletDrag.dragOver === bi ? styles.bulletRowDragOver : ''}`}
-                    data-drag-card
-                    onDragStart={() => bulletDrag.onDragStart(bi)}
-                    onDragEnter={() => bulletDrag.onDragEnter(bi)}
-                    onDragOver={bulletDrag.onDragOver}
-                    onDrop={() => bulletDrag.onDrop(bi)}
-                    onDragEnd={bulletDrag.onDragEnd}
-                  >
-                    <span
-                      className={styles.bulletDragHandle}
-                      onMouseDown={bulletDrag.onHandleMouseDown}
-                      aria-label="Drag to reorder"
-                    >
-                      <GripIcon />
-                    </span>
-                    <textarea
-                      className={`${styles.input} ${styles.bulletInput}`}
-                      value={bullet}
-                      onChange={e => fb.updateAdditionalEntryBullet(sectionIndex, ei, bi, e.target.value)}
-                      placeholder="Describe an achievement or detail..."
-                      rows={2}
-                    />
-                    {entry.bullets.length > 1 && (
-                      <button className={styles.removeBtn} onClick={() => fb.removeAdditionalEntryBullet(sectionIndex, ei, bi)}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            );
-          })()}
-        </div>
+        <AdditionalEntryCard
+          key={ei}
+          entry={entry}
+          sectionIndex={sectionIndex}
+          entryIndex={ei}
+          fb={fb}
+        />
       ))}
     </section>
   );

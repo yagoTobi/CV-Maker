@@ -374,6 +374,67 @@ Keep typed sections for content with unique rendering needs (work, education, sk
 
 ---
 
+## ADR-016: Job-Centric Version Management with Hierarchical Grouping
+
+**Date:** 2026-03-11
+
+**Status:** Accepted
+
+**Context:**
+Users were confused by the versioning workflow. The "My Saved CVs" dashboard showed a flat list of versions with no clear relationship to job applications. Version management was hidden behind a tiny icon in the editor header. Users couldn't easily understand: (1) which versions were base templates vs job-specific, (2) how versions related to each other, and (3) how to manage versions across multiple job applications.
+
+User workflow research revealed: most users create 1-2 **base CVs** (e.g., "Creative CV", "Consulting CV") and then tailor them for specific **job applications** (e.g., "Spotify Product Designer", "McKinsey Consultant"). The mental model is **Base CV → Job Application → Tailored Version**, not a flat list of saved CVs.
+
+**Decision:**
+Reframe versioning as a **hierarchical, job-centric model** with base CVs as parents and job applications as children.
+
+**Key Changes:**
+1. **Data model**: Add `parentVersionId` to `CVVersion` schema
+   - Base CVs have `parentVersionId = null`
+   - Job applications have `parentVersionId = <base-cv-id>`
+   - Add `role` field for job title (used in auto-naming)
+2. **Dashboard redesign**: Show base CVs as expandable groups with nested job applications
+   - Each base CV shows count: "Creative CV (3 applications)"
+   - Job applications display: role/company, match score, date (no template name)
+   - `[+ New]` button on each base CV to quickly create a job application from it
+   - Ungrouped section for orphaned versions without parent
+3. **Save flow**: Modal prompts for "Base CV" or "Job Application"
+   - Job applications select parent base CV (dropdown of existing bases + "None")
+   - Company and role fields optional but recommended
+   - Auto-naming: `{company} {role}` → `{company} Application` → `{role}` → `Application {date}`
+4. **"Tune for a job" flow**: Show base CV picker before opening editor
+   - User selects which base CV to start from (or "Start from scratch")
+   - Editor opens with base CV loaded + job panel visible
+5. **Re-parenting**: `[Move...]` action on job applications to change parent base CV
+6. **AI grouping suggestions**: For ungrouped versions, show similarity hint
+   - "💡 Suggested: Group with Creative CV (78% similar)"
+   - One-click `[Move to Creative CV]` action
+
+**Rationale:**
+- **Matches user mental model**: Base template → job-specific tailoring is how users naturally think
+- **Reduces clutter**: 2 base CVs + 10 job applications is clearer than a flat list of 12 versions
+- **Explicit relationships**: Parent-child model makes derivation clear
+- **Better discoverability**: Dashboard is prominently featured on landing page, not hidden
+- **Workflow-aligned**: Naming uses job details (company/role), not generic "Version 5"
+- **Flexible**: Allows ungrouped versions for users who don't care about hierarchy
+- **Intelligent nudges**: AI suggestions help organize without forcing rigid structure
+
+**Consequences:**
+- **Migration**: Existing versions have `parentVersionId = null` (become bases or ungrouped)
+- **Backend changes**: Add `parentVersionId`, `role` fields; update list endpoint to group by parent
+- **Frontend redesign**: Dashboard becomes hierarchical; save modal adds base CV picker
+- **AI integration**: Grouping suggestions require Bedrock similarity analysis
+- **Complexity**: More complex UI (expand/collapse, re-parenting) vs flat list
+- **Edge cases**: Orphaned versions, circular references (prevented by validation), re-parenting chains
+
+**Alternatives Considered:**
+1. **Flat list with tags** — rejected; doesn't show relationships clearly
+2. **Forced base CV selection** — rejected; too rigid, prevents quick saves
+3. **No ungrouped versions** — rejected; users should be able to opt out of hierarchy
+4. **Job applications as first-class entities (separate from CVs)** — rejected; too much conceptual overhead
+
+---
+
 ## Template for New Decisions
 
 ```markdown

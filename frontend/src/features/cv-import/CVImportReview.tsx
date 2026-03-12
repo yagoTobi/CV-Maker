@@ -54,6 +54,69 @@ function useDrag(onReorder: (from: number, to: number) => void) {
   return { dragOver, onHandleMouseDown, onDragStart, onDragEnter, onDragOver, onDrop, onDragEnd };
 }
 
+// BulletList component to avoid calling useDrag inside map loops
+interface BulletListProps {
+  bullets: string[];
+  onReorder: (from: number, to: number) => void;
+  onUpdate: (idx: number, val: string) => void;
+  onRemove: (idx: number) => void;
+  useTextarea?: boolean;
+  placeholder?: string;
+}
+
+function BulletList({ bullets, onReorder, onUpdate, onRemove, useTextarea = false, placeholder = "Achievement or responsibility..." }: BulletListProps) {
+  const bulletDrag = useDrag(onReorder);
+
+  return (
+    <>
+      {bullets.map((bullet, bi) => (
+        <div
+          key={bi}
+          className={`${styles.inlineRow} ${bulletDrag.dragOver === bi ? styles.inlineRowDragOver : ''}`}
+          data-drag-bullet
+          onDragStart={() => bulletDrag.onDragStart(bi)}
+          onDragEnter={() => bulletDrag.onDragEnter(bi)}
+          onDragOver={bulletDrag.onDragOver}
+          onDrop={() => bulletDrag.onDrop(bi)}
+          onDragEnd={bulletDrag.onDragEnd}
+        >
+          <span
+            className={styles.bulletDragHandle}
+            onMouseDown={bulletDrag.onHandleMouseDown}
+            aria-label="Drag to reorder"
+          >
+            <GripIcon />
+          </span>
+          {useTextarea ? (
+            <textarea
+              className={`${styles.input} ${styles.bulletTextarea}`}
+              value={bullet}
+              onChange={e => onUpdate(bi, e.target.value)}
+              placeholder={placeholder}
+              rows={2}
+            />
+          ) : (
+            <input
+              className={styles.input}
+              value={bullet}
+              onChange={e => onUpdate(bi, e.target.value)}
+              placeholder={placeholder}
+            />
+          )}
+          {bullets.length > 1 && (
+            <button className={styles.removeBtn} onClick={() => onRemove(bi)} title="Remove">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          )}
+        </div>
+      ))}
+    </>
+  );
+}
+
 interface CVImportReviewProps {
   formData: CVFormData;
   confidence: ImportConfidence;
@@ -568,33 +631,12 @@ export default function CVImportReview({
                   {renderInput('Location', entry.location, v => updateArrayEntry<WorkEntry>('workExperience', i, { location: v } as Partial<WorkEntry>), `workExperience[${i}].location`)}
                 </div>
                 <div className={styles.subsectionLabel}>Bullet Points</div>
-                {(() => {
-                  const bulletDrag = useDrag((from, to) => reorderNestedItems('workExperience', i, 'bullets', from, to));
-                  return entry.bullets.map((b, bi) => (
-                    <div
-                      key={bi}
-                      className={`${styles.inlineRow} ${bulletDrag.dragOver === bi ? styles.inlineRowDragOver : ''}`}
-                      data-drag-bullet
-                      onDragStart={() => bulletDrag.onDragStart(bi)}
-                      onDragEnter={() => bulletDrag.onDragEnter(bi)}
-                      onDragOver={bulletDrag.onDragOver}
-                      onDrop={() => bulletDrag.onDrop(bi)}
-                      onDragEnd={bulletDrag.onDragEnd}
-                    >
-                      <span
-                        className={styles.bulletDragHandle}
-                        onMouseDown={bulletDrag.onHandleMouseDown}
-                        aria-label="Drag to reorder"
-                      >
-                        <GripIcon />
-                      </span>
-                      <input className={styles.input} value={b} onChange={e => updateNestedArray('workExperience', i, 'bullets', bi, e.target.value)} />
-                      <button className={styles.removeBtn} onClick={() => removeNestedItem('workExperience', i, 'bullets', bi)} title="Remove">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                      </button>
-                    </div>
-                  ));
-                })()}
+                <BulletList
+                  bullets={entry.bullets}
+                  onReorder={(from, to) => reorderNestedItems('workExperience', i, 'bullets', from, to)}
+                  onUpdate={(bi, val) => updateNestedArray('workExperience', i, 'bullets', bi, val)}
+                  onRemove={(bi) => removeNestedItem('workExperience', i, 'bullets', bi)}
+                />
                 <button className={styles.addBtn} onClick={() => addNestedItem('workExperience', i, 'bullets')}>+ Add bullet</button>
               </div>
             ))}
@@ -631,33 +673,12 @@ export default function CVImportReview({
                   {renderInput('GPA', entry.gpa || '', v => updateArrayEntry<EducationEntry>('education', i, { gpa: v } as Partial<EducationEntry>))}
                 </div>
                 <div className={styles.subsectionLabel}>Details</div>
-                {(() => {
-                  const detailDrag = useDrag((from, to) => reorderNestedItems('education', i, 'details', from, to));
-                  return entry.details.map((d, di) => (
-                    <div
-                      key={di}
-                      className={`${styles.inlineRow} ${detailDrag.dragOver === di ? styles.inlineRowDragOver : ''}`}
-                      data-drag-bullet
-                      onDragStart={() => detailDrag.onDragStart(di)}
-                      onDragEnter={() => detailDrag.onDragEnter(di)}
-                      onDragOver={detailDrag.onDragOver}
-                      onDrop={() => detailDrag.onDrop(di)}
-                      onDragEnd={detailDrag.onDragEnd}
-                    >
-                      <span
-                        className={styles.bulletDragHandle}
-                        onMouseDown={detailDrag.onHandleMouseDown}
-                        aria-label="Drag to reorder"
-                      >
-                        <GripIcon />
-                      </span>
-                      <input className={styles.input} value={d} onChange={e => updateNestedArray('education', i, 'details', di, e.target.value)} />
-                      <button className={styles.removeBtn} onClick={() => removeNestedItem('education', i, 'details', di)} title="Remove">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                      </button>
-                    </div>
-                  ));
-                })()}
+                <BulletList
+                  bullets={entry.details}
+                  onReorder={(from, to) => reorderNestedItems('education', i, 'details', from, to)}
+                  onUpdate={(di, val) => updateNestedArray('education', i, 'details', di, val)}
+                  onRemove={(di) => removeNestedItem('education', i, 'details', di)}
+                />
                 <button className={styles.addBtn} onClick={() => addNestedItem('education', i, 'details')}>+ Add detail</button>
               </div>
             ))}
@@ -827,44 +848,14 @@ export default function CVImportReview({
                   {renderInput('Description', entry.description || '', v => updateAdditionalEntry(si, ei, { description: v }), undefined, true)}
 
                   <div className={styles.subsectionLabel}>Bullet Points</div>
-                  {(() => {
-                    const bulletDrag = useDrag((from, to) => reorderAdditionalEntryBullets(si, ei, from, to));
-                    return entry.bullets.map((bullet, bi) => (
-                      <div
-                        key={bi}
-                        className={`${styles.inlineRow} ${bulletDrag.dragOver === bi ? styles.inlineRowDragOver : ''}`}
-                        data-drag-bullet
-                        onDragStart={() => bulletDrag.onDragStart(bi)}
-                        onDragEnter={() => bulletDrag.onDragEnter(bi)}
-                        onDragOver={bulletDrag.onDragOver}
-                        onDrop={() => bulletDrag.onDrop(bi)}
-                        onDragEnd={bulletDrag.onDragEnd}
-                      >
-                        <span
-                          className={styles.bulletDragHandle}
-                          onMouseDown={bulletDrag.onHandleMouseDown}
-                          aria-label="Drag to reorder"
-                        >
-                          <GripIcon />
-                        </span>
-                        <textarea
-                          className={`${styles.input} ${styles.bulletTextarea}`}
-                          value={bullet}
-                          onChange={e => updateAdditionalEntryBullet(si, ei, bi, e.target.value)}
-                          placeholder="Describe an achievement or detail..."
-                          rows={2}
-                        />
-                        {entry.bullets.length > 1 && (
-                          <button className={styles.removeBtn} onClick={() => removeAdditionalEntryBullet(si, ei, bi)} title="Remove">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <line x1="18" y1="6" x2="6" y2="18" />
-                              <line x1="6" y1="6" x2="18" y2="18" />
-                            </svg>
-                          </button>
-                        )}
-                      </div>
-                    ));
-                  })()}
+                  <BulletList
+                    bullets={entry.bullets}
+                    onReorder={(from, to) => reorderAdditionalEntryBullets(si, ei, from, to)}
+                    onUpdate={(bi, val) => updateAdditionalEntryBullet(si, ei, bi, val)}
+                    onRemove={(bi) => removeAdditionalEntryBullet(si, ei, bi)}
+                    useTextarea={true}
+                    placeholder="Describe an achievement or detail..."
+                  />
                   <button className={styles.addBtn} onClick={() => addAdditionalEntryBullet(si, ei)}>+ Add bullet</button>
                 </div>
               ))}

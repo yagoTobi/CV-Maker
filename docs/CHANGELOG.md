@@ -9,6 +9,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Job-centric version management**: Hierarchical dashboard with base CVs and nested job applications
+  - Base CVs (e.g., "Creative CV", "Consulting CV") act as templates for job applications
+  - Job applications (e.g., "Spotify Product Designer") are derived from base CVs with job-specific tailoring
+  - Dashboard groups versions by parent base CV: "Creative CV (3 applications)"
+  - `[+ New]` button on each base CV to quickly create a job application from it
+  - `[Move...]` action to re-parent job applications to different base CVs
+  - Ungrouped section for orphaned versions without parent
+  - AI grouping suggestions: "💡 Suggested: Group with Creative CV (78% similar)"
+  - Auto-naming for job applications: uses company + role or auto-generates "Application {date}"
+- "Tune for a job" flow now shows base CV picker (select existing base or start from scratch)
+- Save modal redesigned: choose "Base CV" or "Job Application" + select parent + job details
+- `parentVersionId` and `role` fields added to CVVersion schema
 - **Build flow**: New "Build my CV" path — template-select → form-builder → editor (auto-compile)
 - **Form builder** (`CVFormBuilder.tsx`): structured form with 6 sections (Personal Info, Work Experience, Education, Skills, Projects, Awards)
 - **In-form PDF preview**: compiled CV shown alongside the form; drag-to-resize panel (300–760px)
@@ -33,15 +45,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Additional sections rendering in all 3 Jinja2 templates (Professional + McDowell via `section_order`, Deedy in right column)
 - Form builder UI for additional sections (add/remove sections, editable titles, full entry CRUD)
 - "Add Section" button in form builder sidebar nav
-- CV Import upload endpoint (`POST /api/cv-import`) accepting PDF, DOCX, JSON
-- CV Import AI extraction via AWS Bedrock (`cv_extractor.py`) with structured prompt
-- CV Import review screen (`CVImportReview.tsx`) with per-field confidence indicators and inline editing
-- CV Import upload screen (`CVImportUpload.tsx`) with drag-and-drop file upload
-- "Import existing CV" card on landing screen
-- DOCX extraction preserves list markers, bold text, heading levels, and indentation
-- Extraction prompt includes bullet granularity preservation, entry order preservation, section order detection
-- `max_tokens` configurable on Bedrock client (8192 for extraction, 4096 default for chat)
-- Truncation detection in extraction response parsing
 
 ### Fixed
 - `latex_escape` sequential-replacement bug: backslash was replaced first, causing subsequent `{`/`}` passes to re-escape `\textbackslash{}`. Rewrote as single-pass regex.
@@ -62,6 +65,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Template selection screen now has a Back button (returns to landing)
 - Landing page layout: two-column (branding left, actions right), responsive collapse on mobile
 - `sectionOrder` now supports `additional-{index}` keys for dynamic additional sections
+
+---
+
+## [0.0.6] - 2026-03-11
+
+### Added
+- **CV Import feature**: upload existing CV from PDF, DOCX, or JSON formats
+- CV Import upload endpoint (`POST /api/cv-import`) accepting PDF, DOCX, JSON
+- CV Import AI extraction via AWS Bedrock (`cv_extractor.py`) with structured prompt
+- CV Import review screen (`CVImportReview.tsx`) with per-field confidence indicators and inline editing
+- CV Import upload screen (`CVImportUpload.tsx`) with drag-and-drop file upload
+- "Import existing CV" card on landing screen
+- DOCX extraction preserves list markers, bold text, heading levels, and indentation
+- Extraction prompt includes bullet granularity preservation, entry order preservation, section order detection
+- `max_tokens` configurable on Bedrock client (8192 for extraction, 4096 default for chat)
+- Truncation detection in extraction response parsing
+- Comprehensive test suite for CV extraction and import pipeline (`backend/tests/test_cv_extraction.py`)
 
 ---
 

@@ -4,6 +4,7 @@
 \documentclass[]{mcdowellcv}
 
 \usepackage{amsmath}
+\usepackage[hidelinks]{hyperref}
 
 \name{(( personal.fullName | latex_escape ))}
 (% if personal.location %)
@@ -12,7 +13,7 @@
 (% set contact_items = personal_items | selectattr('field', 'ne', 'location') | list %)
 (% if contact_items %)
 \contacts{%
-(% for item in contact_items -%)(( item.value | latex_escape ))(% if not loop.last %)\linebreak (% endif -%)(% endfor %)}
+(% for item in contact_items -%)(% if item.url -%)\href{(( item.url | latex_url_escape ))}{(( item.value | latex_escape ))}(% else -%)(( item.value | latex_escape ))(% endif -%)(% if not loop.last %)\linebreak (% endif -%)(% endfor %)}
 (% endif %)
 
 \begin{document}
