@@ -1,9 +1,10 @@
 import { useState, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useFormBuilder, type FormSection, DEFAULT_PERSONAL_ORDER } from '../../hooks/useFormBuilder';
 import { useAppContext } from '../../contexts/AppContext';
 import { api } from '../../services/api';
 import type { CVFormData } from '../../types';
+import { JobTuningPanel } from './JobTuningPanel';
 import styles from './CVFormBuilder.module.css';
 
 // Auto-derive a display label from a URL
@@ -53,7 +54,9 @@ function GripIcon() {
 
 export default function CVFormBuilder() {
   const navigate = useNavigate();
-  const { selectedTemplateForBuild, formData, templates, compiler, setActiveTab } = useAppContext();
+  const location = useLocation();
+  const mode = (location.state as { mode?: 'build' | 'tune' })?.mode || 'build';
+  const { selectedTemplateForBuild, formData, templates, chat } = useAppContext();
 
   const templateId = selectedTemplateForBuild || 'med-length-proff-cv';
 
@@ -79,6 +82,12 @@ export default function CVFormBuilder() {
   // Sidebar section drag state
   const [navDragFrom, setNavDragFrom] = useState<number | null>(null);
   const [navDragOver, setNavDragOver] = useState<number | null>(null);
+
+  // Right panel tab state
+  const [rightPanelTab, setRightPanelTab] = useState<'preview' | 'tuning'>(
+    mode === 'tune' ? 'tuning' : 'preview'
+  );
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const startResize = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -188,6 +197,41 @@ export default function CVFormBuilder() {
     }
   };
 
+  // Analyze match for job tuning
+  const handleAnalyzeMatch = async () => {
+    setIsAnalyzing(true);
+    setCompileError(null);
+
+    // Generate LaTeX from current form data
+    const { texContent, error } = await fb.generateCV();
+    if (error || !texContent) {
+      setIsAnalyzing(false);
+      return;
+    }
+
+    // Update templates context with generated LaTeX
+    templates.updateContent(texContent);
+    templates.setTemplateId(templateId);
+
+    // Trigger match analysis via chat hook
+    await chat.getMatchAnalysis();
+
+    setIsAnalyzing(false);
+  };
+
+  const handleOpenEditor = async () => {
+    // Generate LaTeX from current form data
+    const { texContent, error } = await fb.generateCV();
+    if (error || !texContent) return;
+
+    // Store in templates context
+    templates.updateContent(texContent);
+    templates.setTemplateId(templateId);
+
+    // Navigate to editor
+    navigate('/editor');
+  };
+
   const handleRegenerate = async () => {
     if (!generatedTex) return;
     setIsCompiling(true);
@@ -196,16 +240,6 @@ export default function CVFormBuilder() {
     setIsCompiling(false);
     if (result.success && result.pdf_base64) setPdfBase64(result.pdf_base64);
     else setCompileError(result.error || 'Compilation failed');
-  };
-
-  const handleOpenInEditor = () => {
-    if (generatedTex) {
-      templates.setTemplateId(templateId);
-      templates.updateContent(generatedTex);
-      compiler.compile(generatedTex, templateId);
-      setActiveTab('pdf');
-      navigate('/editor');
-    }
   };
 
   const isGenerateDisabled = fb.isGenerating || isCompiling;
@@ -362,52 +396,71 @@ export default function CVFormBuilder() {
       {/* ── Preview panel ── */}
       <aside className={styles.previewPanel} style={{ width: previewWidth }}>
         <div className={styles.previewHeader}>
-          <h3>CV Preview</h3>
-          {pdfBase64 && (
-            <button className={styles.openEditorBtn} onClick={handleOpenInEditor}>
+          <div className={styles.previewTabs}>
+            <button
+              className={`${styles.previewTabBtn} ${rightPanelTab === 'preview' ? styles.previewTabActive : ''}`}
+              onClick={() => setRightPanelTab('preview')}
+            >
+              Preview
+            </button>
+            <button
+              className={`${styles.previewTabBtn} ${rightPanelTab === 'tuning' ? styles.previewTabActive : ''}`}
+              onClick={() => setRightPanelTab('tuning')}
+            >
+              Job Tuning
+            </button>
+          </div>
+          {rightPanelTab === 'preview' && (
+            <button className={styles.openEditorBtn} onClick={handleOpenEditor}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
               </svg>
-              Open in Editor
+              Advanced Editor
             </button>
           )}
         </div>
 
         <div className={styles.previewContent}>
-          {isCompiling ? (
-            <div className={styles.previewLoading}>
-              <div className={styles.previewSpinner} />
-              <p>Compiling PDF...</p>
-            </div>
-          ) : compileError ? (
-            <div className={styles.previewError}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
-              <p>Compilation error</p>
-              <pre className={styles.compileErrorPre}>{compileError}</pre>
-              <button className={styles.retryBtn} onClick={handleRegenerate}>Try again</button>
-            </div>
-          ) : pdfBase64 ? (
-            <iframe
-              src={`data:application/pdf;base64,${pdfBase64}`}
-              title="CV Preview"
-              className={styles.pdfFrame}
-              style={{ pointerEvents: isResizing ? 'none' : 'auto' }}
-            />
+          {rightPanelTab === 'preview' ? (
+            <>
+              {isCompiling ? (
+                <div className={styles.previewLoading}>
+                  <div className={styles.previewSpinner} />
+                  <p>Compiling PDF...</p>
+                </div>
+              ) : compileError ? (
+                <div className={styles.previewError}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <p>Compilation error</p>
+                  <pre className={styles.compileErrorPre}>{compileError}</pre>
+                  <button className={styles.retryBtn} onClick={handleRegenerate}>Try again</button>
+                </div>
+              ) : pdfBase64 ? (
+                <iframe
+                  src={`data:application/pdf;base64,${pdfBase64}`}
+                  title="CV Preview"
+                  className={styles.pdfFrame}
+                  style={{ pointerEvents: isResizing ? 'none' : 'auto' }}
+                />
+              ) : (
+                <div className={styles.previewPlaceholder}>
+                  <div className={styles.placeholderIcon}>
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14 2 14 8 20 8"/>
+                      <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+                      <polyline points="10 9 9 9 8 9"/>
+                    </svg>
+                  </div>
+                  <p>Fill in your details,<br />then click <strong>Generate CV</strong></p>
+                </div>
+              )}
+            </>
           ) : (
-            <div className={styles.previewPlaceholder}>
-              <div className={styles.placeholderIcon}>
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
-                  <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
-                  <polyline points="10 9 9 9 8 9"/>
-                </svg>
-              </div>
-              <p>Fill in your details,<br />then click <strong>Generate CV</strong></p>
-            </div>
+            <JobTuningPanel onAnalyze={handleAnalyzeMatch} isAnalyzing={isAnalyzing} />
           )}
         </div>
       </aside>
