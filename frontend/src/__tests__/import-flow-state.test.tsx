@@ -1,25 +1,24 @@
 /**
- * Integration tests for import flow state management in App.tsx.
+ * Integration tests for navigation flow and state management in App.tsx.
  *
- * Test Scenario #1: Import Data Isolation
- *   After importing a CV and going Back to landing, clicking "Build my CV"
- *   should start with a completely blank form.
+ * Updated for React Router architecture:
+ * - App uses <Routes> with path-based navigation
+ * - All state lives in AppContext (no props)
+ * - "Build my CV" -> /build/start (BuildChoiceScreen) -> /build (TemplateSelector) -> /build/form
+ * - Landing has 2 cards: "Build my CV" and "Tune for a job" (no "Import existing CV")
+ * - Import is accessed via BuildChoiceScreen's drop zone
  *
- * Test Scenario #2: Import Flow Data Persistence
- *   Imported data should persist through import -> review -> template-select -> form-builder.
- *
- * Approach: Render the full App component and simulate user navigation.
- * We mock the api module to avoid network calls and control responses.
+ * Approach: Render the full App component wrapped in MemoryRouter and simulate
+ * user navigation. We mock the api module to avoid network calls.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import App from '../App';
-import type { CVFormData, CVImportResponse } from '../types';
 
 // ---- Mocks ----
 
-// Mock the api module
+// Mock the api module — include all methods that AppContext and hooks call
 vi.mock('../services/api', () => ({
   api: {
     loadUserData: vi.fn().mockResolvedValue(null),
@@ -36,200 +35,54 @@ vi.mock('../services/api', () => ({
   },
 }));
 
-// Mock CSS modules — they return empty objects
-vi.mock('../App.module.css', () => ({ default: {} }));
+/** Render App wrapped in MemoryRouter starting at the given path */
+function renderApp(initialPath = '/') {
+  return render(
+    <MemoryRouter initialEntries={[initialPath]}>
+      <App />
+    </MemoryRouter>
+  );
+}
 
-// Sample imported CV data
-const IMPORTED_FORM_DATA: CVFormData = {
-  templateId: '_import',
-  personalInfo: {
-    fullName: 'John Doe',
-    email: 'john@test.com',
-    phone: '555-1234',
-    location: 'New York, NY',
-    links: [
-      { label: 'GitHub', url: 'https://github.com/johndoe' },
-    ],
-    summary: 'Experienced developer',
-  },
-  workExperience: [
-    {
-      company: 'Acme Corp',
-      title: 'Senior Engineer',
-      startDate: 'Jan 2020',
-      endDate: 'Present',
-      location: 'NYC',
-      bullets: ['Built things', 'Led team'],
-    },
-  ],
-  education: [
-    {
-      school: 'MIT',
-      degree: 'BS Computer Science',
-      startDate: 'Sep 2015',
-      endDate: 'May 2019',
-      location: 'Cambridge',
-      details: ['Dean\'s List'],
-    },
-  ],
-  skills: [
-    { category: 'Languages', skills: ['TypeScript', 'Python'] },
-  ],
-};
-
-const IMPORT_RESULT: CVImportResponse = {
-  success: true,
-  formData: IMPORTED_FORM_DATA,
-  source: 'json',
-  confidence: { overall: 'high', fields: {} },
-  summary: { workEntries: 1, educationEntries: 1, skillCategories: 1, projects: 0, awards: 0 },
-  warnings: null,
-  error: null,
-};
-
-describe('Import Flow State Management', () => {
+describe('Navigation Flow State Management', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('Test 1: Import Data Isolation — "Build my CV" starts blank after import', () => {
-    it('formData passed to CVFormBuilder is undefined (no initialFormData) when using Build path without prior import', async () => {
-      /**
-       * Verifies the state management logic in App.tsx:
-       * - When "Build my CV" is clicked, `setCurrentScreen('template-select')` is called
-       * - formData is NOT set (it stays null from initial state)
-       * - CVFormBuilder receives `initialFormData={formData || undefined}` = undefined
-       * - useFormBuilder with undefined importedData creates `initialFormData(templateId)` = blank
-       *
-       * This is a state-level verification of the isolation mechanism.
-       */
-      render(<App />);
-
-      // Wait for landing screen to appear
-      await waitFor(() => {
-        expect(screen.getByText('Build my CV')).toBeInTheDocument();
-      });
-
-      // Click "Build my CV" — goes to template-select
-      fireEvent.click(screen.getByText('Build my CV'));
-
-      // Should show template selector
-      await waitFor(() => {
-        expect(screen.getByText('Choose Your Template')).toBeInTheDocument();
-      });
-    });
-
-    it('handleImportConfirm sets formData, but handleChangeTemplate resets it', () => {
-      /**
-       * State-level verification: the key isolation mechanism is that
-       * handleChangeTemplate (going back to landing) calls setFormData(null).
-       * So even if import set formData, returning to landing clears it.
-       *
-       * handleTemplateBuildSelect does NOT set formData — it only sets
-       * selectedTemplateForBuild and navigates to form-builder.
-       *
-       * So the flow: Import -> set formData -> go to landing (reset) -> Build
-       * results in formData=null, which means CVFormBuilder gets
-       * initialFormData=undefined and creates a blank form.
-       */
-
-      // This is validated by the App.tsx source code:
-      // Line 111-114: handleImportConfirm sets formData via setFormData(editedFormData)
-      // Line 189-198: handleChangeTemplate sets formData to null via setFormData(null)
-      // Line 117-120: handleTemplateBuildSelect does NOT touch formData
-      // Line 264-272: CVFormBuilder receives initialFormData={formData || undefined}
-
-      // When formData is null (after reset), formData || undefined = undefined
-      // useFormBuilder(templateId, undefined) creates initialFormData(templateId) = blank form
-
-      expect(true).toBe(true); // Architecture validation — covered by render test below
-    });
-
-    it('clicking import->back->build results in blank form (no imported data leaks)', async () => {
-      /**
-       * Full flow simulation:
-       * 1. Landing -> Import Upload -> Back -> Landing
-       * 2. Landing -> Build my CV -> Template Select
-       * 3. Verify template selector is shown (formData stays null throughout Build path)
-       *
-       * The key insight: "Import existing CV" button calls cvImport.reset() then
-       * navigates to import-upload. Going "Back" returns to landing.
-       * The formData state is never set during this sequence.
-       * So "Build my CV" starts with formData=null -> blank form.
-       */
-      render(<App />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Build my CV')).toBeInTheDocument();
-      });
-
-      // Click "Import existing CV"
-      fireEvent.click(screen.getByText('Import existing CV'));
-
-      // Should show import upload screen
-      await waitFor(() => {
-        expect(screen.getByText('Import your CV')).toBeInTheDocument();
-      });
-
-      // Click Back to return to landing
-      fireEvent.click(screen.getByText('Back'));
-
-      await waitFor(() => {
-        expect(screen.getByText('Build my CV')).toBeInTheDocument();
-      });
-
-      // Now click "Build my CV"
-      fireEvent.click(screen.getByText('Build my CV'));
-
-      // Should show template selector — no import data should have leaked
-      await waitFor(() => {
-        expect(screen.getByText('Choose Your Template')).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Test 2: Import Flow Data Persistence — imported data persists through full flow', () => {
-    it('verifies handleImportConfirm stores formData for later use in form-builder', () => {
-      /**
-       * State-level analysis of the import->template-select->form-builder flow:
-       *
-       * 1. CVImportReview calls onConfirm(editedFormData)
-       * 2. App.tsx handleImportConfirm:
-       *    - setFormData(editedFormData)  — stores imported data in App state
-       *    - setCurrentScreen('template-select')
-       * 3. TemplateSelector calls onSelect(templateId)
-       * 4. App.tsx handleTemplateBuildSelect:
-       *    - setSelectedTemplateForBuild(templateId) — stores template choice
-       *    - setCurrentScreen('form-builder')
-       * 5. CVFormBuilder receives:
-       *    - templateId={selectedTemplateForBuild || 'med-length-proff-cv'}
-       *    - initialFormData={formData || undefined}  — the IMPORTED data
-       * 6. useFormBuilder(templateId, importedData) uses importedData to initialize form
-       *
-       * This is the critical chain that makes import data persist.
-       */
-
-      // Verify the code structure:
-      // handleImportConfirm (line 111): setFormData(editedFormData)
-      // handleTemplateBuildSelect (line 117): does NOT clear formData
-      // CVFormBuilder render (line 270): initialFormData={formData || undefined}
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Navigation state transitions', () => {
-    it('landing screen renders all action buttons', async () => {
-      render(<App />);
+  describe('Landing screen', () => {
+    it('renders the two action cards: "Build my CV" and "Tune for a job"', async () => {
+      renderApp();
 
       await waitFor(() => {
         expect(screen.getByText('Build my CV')).toBeInTheDocument();
         expect(screen.getByText('Tune for a job')).toBeInTheDocument();
-        expect(screen.getByText('Import existing CV')).toBeInTheDocument();
       });
     });
 
-    it('"Build my CV" navigates to template selector', async () => {
-      render(<App />);
+    it('does not show "Import existing CV" button on landing (import moved to BuildChoiceScreen)', async () => {
+      renderApp();
+
+      await waitFor(() => {
+        expect(screen.getByText('Build my CV')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText('Import existing CV')).not.toBeInTheDocument();
+    });
+
+    it('does not show "My Saved CVs" link when there are no saved versions', async () => {
+      renderApp();
+
+      await waitFor(() => {
+        expect(screen.getByText('Build my CV')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText('My Saved CVs')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Build flow: Landing -> BuildChoiceScreen -> TemplateSelector', () => {
+    it('"Build my CV" navigates to BuildChoiceScreen showing "Build your CV"', async () => {
+      renderApp();
 
       await waitFor(() => {
         expect(screen.getByText('Build my CV')).toBeInTheDocument();
@@ -238,46 +91,12 @@ describe('Import Flow State Management', () => {
       fireEvent.click(screen.getByText('Build my CV'));
 
       await waitFor(() => {
-        expect(screen.getByText('Choose Your Template')).toBeInTheDocument();
+        expect(screen.getByText('Build your CV')).toBeInTheDocument();
       });
     });
 
-    it('"Import existing CV" navigates to upload screen', async () => {
-      render(<App />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Import existing CV')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Import existing CV'));
-
-      await waitFor(() => {
-        expect(screen.getByText('Import your CV')).toBeInTheDocument();
-      });
-    });
-
-    it('Back button from import-upload returns to landing', async () => {
-      render(<App />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Import existing CV')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Import existing CV'));
-
-      await waitFor(() => {
-        expect(screen.getByText('Import your CV')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Back'));
-
-      await waitFor(() => {
-        expect(screen.getByText('Build my CV')).toBeInTheDocument();
-      });
-    });
-
-    it('Back button from template-select returns to landing', async () => {
-      render(<App />);
+    it('BuildChoiceScreen shows import drop zone and "Start from scratch" button', async () => {
+      renderApp();
 
       await waitFor(() => {
         expect(screen.getByText('Build my CV')).toBeInTheDocument();
@@ -286,52 +105,172 @@ describe('Import Flow State Management', () => {
       fireEvent.click(screen.getByText('Build my CV'));
 
       await waitFor(() => {
-        expect(screen.getByText('Choose Your Template')).toBeInTheDocument();
+        expect(screen.getByText('Build your CV')).toBeInTheDocument();
+        expect(screen.getByText('Start from scratch')).toBeInTheDocument();
+        expect(screen.getByText(/Drag your CV here/)).toBeInTheDocument();
       });
+    });
 
-      fireEvent.click(screen.getByText('Back'));
+    it('"Start from scratch" navigates to template selector showing "Choose Your Template"', async () => {
+      renderApp();
 
       await waitFor(() => {
         expect(screen.getByText('Build my CV')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Build my CV'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Start from scratch')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Start from scratch'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Choose Your Template')).toBeInTheDocument();
       });
     });
   });
 
-  describe('formData isolation between flows', () => {
-    it('import flow followed by Build path does not leak formData when user does not confirm import', async () => {
+  describe('Back button navigation', () => {
+    it('Back from BuildChoiceScreen returns to landing', async () => {
+      renderApp();
+
+      await waitFor(() => {
+        expect(screen.getByText('Build my CV')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Build my CV'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Build your CV')).toBeInTheDocument();
+      });
+
+      // Click the Back button in BuildChoiceScreen
+      fireEvent.click(screen.getByText('Back'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Build my CV')).toBeInTheDocument();
+      });
+    });
+
+    it('Back from template selector returns to BuildChoiceScreen', async () => {
+      renderApp();
+
+      await waitFor(() => {
+        expect(screen.getByText('Build my CV')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Build my CV'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Start from scratch')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Start from scratch'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Choose Your Template')).toBeInTheDocument();
+      });
+
+      // TemplateSelector Back button navigates to /build/start (BuildChoiceScreen)
+      fireEvent.click(screen.getByText('Back'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Build your CV')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('State isolation: Build path starts with clean state', () => {
+    it('"Build my CV" -> BuildChoiceScreen -> "Start from scratch" -> template selector (formData stays null)', async () => {
+      /**
+       * Verifies the state management in the new architecture:
+       * - LandingScreen.handleBuildCV calls setFormData(null) before navigating to /build/start
+       * - BuildChoiceScreen.handleStartFromScratch calls setFormData(null) + setSelectedTemplateForBuild(null)
+       * - At no point is formData set, so CVFormBuilder would receive undefined -> blank form
+       */
+      renderApp();
+
+      await waitFor(() => {
+        expect(screen.getByText('Build my CV')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Build my CV'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Build your CV')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Start from scratch'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Choose Your Template')).toBeInTheDocument();
+      });
+    });
+
+    it('navigating to BuildChoiceScreen and back does not leak state into Build path', async () => {
       /**
        * Flow:
-       * 1. Go to Import -> Upload screen
-       * 2. Do NOT complete the import (just go back)
-       * 3. Go to Build my CV
-       * 4. formData should still be null (never set)
+       * 1. Landing -> BuildChoiceScreen (do NOT import or start from scratch)
+       * 2. Back to Landing
+       * 3. Build my CV -> BuildChoiceScreen -> Start from scratch -> Template Selector
+       * 4. Verify template selector shows (formData never set)
        */
-      render(<App />);
+      renderApp();
 
       await waitFor(() => {
-        expect(screen.getByText('Import existing CV')).toBeInTheDocument();
+        expect(screen.getByText('Build my CV')).toBeInTheDocument();
       });
 
-      // Go to import
-      fireEvent.click(screen.getByText('Import existing CV'));
+      // Go to BuildChoiceScreen
+      fireEvent.click(screen.getByText('Build my CV'));
       await waitFor(() => {
-        expect(screen.getByText('Import your CV')).toBeInTheDocument();
+        expect(screen.getByText('Build your CV')).toBeInTheDocument();
       });
 
-      // Go back without completing import
+      // Go back without doing anything
       fireEvent.click(screen.getByText('Back'));
       await waitFor(() => {
         expect(screen.getByText('Build my CV')).toBeInTheDocument();
       });
 
-      // Start build path
+      // Start the build path again
       fireEvent.click(screen.getByText('Build my CV'));
+      await waitFor(() => {
+        expect(screen.getByText('Build your CV')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Start from scratch'));
       await waitFor(() => {
         expect(screen.getByText('Choose Your Template')).toBeInTheDocument();
       });
+    });
+  });
 
-      // formData was never set, so CVFormBuilder would receive undefined
-      // This is the isolation guarantee
+  describe('Direct URL navigation', () => {
+    it('renders landing screen at /', async () => {
+      renderApp('/');
+
+      await waitFor(() => {
+        expect(screen.getByText('Build my CV')).toBeInTheDocument();
+      });
+    });
+
+    it('renders BuildChoiceScreen at /build/start', async () => {
+      renderApp('/build/start');
+
+      await waitFor(() => {
+        expect(screen.getByText('Build your CV')).toBeInTheDocument();
+      });
+    });
+
+    it('renders TemplateSelector at /build', async () => {
+      renderApp('/build');
+
+      await waitFor(() => {
+        expect(screen.getByText('Choose Your Template')).toBeInTheDocument();
+      });
     });
   });
 });

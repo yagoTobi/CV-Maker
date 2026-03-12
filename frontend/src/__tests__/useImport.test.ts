@@ -7,7 +7,7 @@
  * automatically replaced with derived platform names (e.g., "GitHub").
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { useImport } from '../hooks/useImport';
 import type { CVFormData } from '../types';
 

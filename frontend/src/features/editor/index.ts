@@ -1,5 +1,4 @@
 export { default as EditorScreen } from './EditorScreen';
-export { LatexEditor } from './LatexEditor';
 export { PdfPreview } from './PdfPreview';
 export { ChatPanel } from './ChatPanel';
 export { JobInput } from './JobInput';

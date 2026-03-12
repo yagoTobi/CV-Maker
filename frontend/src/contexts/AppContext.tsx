@@ -8,8 +8,6 @@ import type { UserProfile, CVFormData, CVVersion, CVVersionMeta } from '../types
 
 interface AppContextValue {
   // UI tabs
-  activeTab: 'latex' | 'pdf';
-  setActiveTab: (tab: 'latex' | 'pdf') => void;
   aiTab: 'chat' | 'match';
   setAiTab: (tab: 'chat' | 'match') => void;
 
@@ -64,7 +62,6 @@ interface AppProviderProps {
 
 export function AppProvider({ children }: AppProviderProps) {
   // UI tabs
-  const [activeTab, setActiveTab] = useState<'latex' | 'pdf'>('latex');
   const [aiTab, setAiTab] = useState<'chat' | 'match'>('match');
 
   // Job input state
@@ -172,8 +169,6 @@ export function AppProvider({ children }: AppProviderProps) {
   }, [handleVersionLoad]);
 
   const value = useMemo(() => ({
-    activeTab,
-    setActiveTab,
     aiTab,
     setAiTab,
     companyName,
@@ -199,7 +194,6 @@ export function AppProvider({ children }: AppProviderProps) {
     handleSaveVersion,
     handleSwitchVersion,
   }), [
-    activeTab,
     aiTab,
     companyName,
     jobDescription,

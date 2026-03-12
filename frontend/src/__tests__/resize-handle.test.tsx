@@ -11,15 +11,23 @@
  * mouse events on the resize handle and document.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, fireEvent, act } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { AppProvider } from '../contexts/AppContext';
 import { CVFormBuilder } from '../features/form-builder';
-import type { CVFormData } from '../types';
 
-// Mock the api module
+// Mock the api module — include all methods AppContext and hooks call on mount
 vi.mock('../services/api', () => ({
   api: {
+    loadUserData: vi.fn().mockResolvedValue(null),
+    listVersions: vi.fn().mockResolvedValue({ versions: [], ungrouped: [] }),
+    fetchTemplates: vi.fn().mockResolvedValue([
+      { id: 'med-length-proff-cv', name: 'Professional CV', description: 'A clean layout', previewUrl: '/preview1.png' },
+    ]),
+    loadTemplateContent: vi.fn().mockResolvedValue({ content: '\\documentclass{article}', clsContent: null }),
     generateLatex: vi.fn().mockResolvedValue({ texContent: '\\documentclass{article}' }),
     compileLatex: vi.fn().mockResolvedValue({ success: true, pdf_base64: 'AAAA', page_count: 1 }),
+    importCV: vi.fn(),
   },
 }));
 
@@ -57,22 +65,27 @@ function flushRaf() {
   });
 }
 
-describe('Resize Handle', () => {
-  const defaultProps = {
-    templateId: 'med-length-proff-cv',
-    onGenerated: vi.fn(),
-    onBack: vi.fn(),
-  };
+/** Render CVFormBuilder wrapped in router + context providers */
+function renderFormBuilder() {
+  return render(
+    <MemoryRouter initialEntries={['/build/form']}>
+      <AppProvider>
+        <CVFormBuilder />
+      </AppProvider>
+    </MemoryRouter>
+  );
+}
 
+describe('Resize Handle', () => {
   describe('basic resize behavior', () => {
     it('renders a resize handle element', () => {
-      render(<CVFormBuilder {...defaultProps} />);
+      renderFormBuilder();
       const handle = document.querySelector('[title="Drag to resize"]');
       expect(handle).not.toBeNull();
     });
 
     it('sets col-resize cursor on document.body during drag', () => {
-      render(<CVFormBuilder {...defaultProps} />);
+      renderFormBuilder();
       const handle = document.querySelector('[title="Drag to resize"]') as HTMLElement;
 
       // Start resize
@@ -82,7 +95,7 @@ describe('Resize Handle', () => {
     });
 
     it('resets cursor on mouseup', () => {
-      render(<CVFormBuilder {...defaultProps} />);
+      renderFormBuilder();
       const handle = document.querySelector('[title="Drag to resize"]') as HTMLElement;
 
       // Start resize
@@ -98,7 +111,7 @@ describe('Resize Handle', () => {
 
   describe('min/max width clamping', () => {
     it('clamps to minimum width (300px) when dragged far right', () => {
-      render(<CVFormBuilder {...defaultProps} />);
+      renderFormBuilder();
       const handle = document.querySelector('[title="Drag to resize"]') as HTMLElement;
 
       // Start at x=500
@@ -117,7 +130,7 @@ describe('Resize Handle', () => {
     });
 
     it('clamps to maximum width (760px) when dragged far left', () => {
-      render(<CVFormBuilder {...defaultProps} />);
+      renderFormBuilder();
       const handle = document.querySelector('[title="Drag to resize"]') as HTMLElement;
 
       // Start at x=500
@@ -138,7 +151,7 @@ describe('Resize Handle', () => {
 
   describe('clean release at limits', () => {
     it('releases cleanly at max width and allows subsequent drag', () => {
-      render(<CVFormBuilder {...defaultProps} />);
+      renderFormBuilder();
       const handle = document.querySelector('[title="Drag to resize"]') as HTMLElement;
 
       // First drag to max
@@ -161,7 +174,7 @@ describe('Resize Handle', () => {
     });
 
     it('releases cleanly at min width and allows subsequent drag', () => {
-      render(<CVFormBuilder {...defaultProps} />);
+      renderFormBuilder();
       const handle = document.querySelector('[title="Drag to resize"]') as HTMLElement;
 
       // First drag to min
@@ -183,7 +196,7 @@ describe('Resize Handle', () => {
 
   describe('edge case: mouse leaves window during resize', () => {
     it('cleans up when mouse leaves the window', () => {
-      render(<CVFormBuilder {...defaultProps} />);
+      renderFormBuilder();
       const handle = document.querySelector('[title="Drag to resize"]') as HTMLElement;
 
       // Start resize
@@ -202,7 +215,7 @@ describe('Resize Handle', () => {
     });
 
     it('allows normal drag after window mouseleave cleanup', () => {
-      render(<CVFormBuilder {...defaultProps} />);
+      renderFormBuilder();
       const handle = document.querySelector('[title="Drag to resize"]') as HTMLElement;
 
       // First drag, mouse leaves window
@@ -221,7 +234,7 @@ describe('Resize Handle', () => {
 
   describe('double mouseup does not cause issues', () => {
     it('handles double mouseup gracefully (guard: already cleaned up)', () => {
-      render(<CVFormBuilder {...defaultProps} />);
+      renderFormBuilder();
       const handle = document.querySelector('[title="Drag to resize"]') as HTMLElement;
 
       fireEvent.mouseDown(handle, { clientX: 500 });

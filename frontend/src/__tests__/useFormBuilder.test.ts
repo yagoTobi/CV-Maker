@@ -7,7 +7,7 @@
  * - With importedData: uses imported data with overridden templateId
  * - Form operations (add/remove/update) work correctly
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useFormBuilder, DEFAULT_SECTION_ORDER, DEFAULT_PERSONAL_ORDER } from '../hooks/useFormBuilder';
 import type { CVFormData } from '../types';
