@@ -7,9 +7,10 @@
 }
 
 .header {
-  padding: 0.875rem 1.5rem;
+  padding: 1rem 1.5rem;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -35,7 +36,7 @@
   align-items: center;
   gap: 0.375rem;
   padding: 0.5rem 0.875rem;
-  background: var(--bg-tertiary);
+  background: var(--bg-secondary);
   color: var(--text-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
@@ -43,12 +44,14 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
+  box-shadow: var(--shadow-sm);
 }
 
 .changeTemplateBtn:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
   border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
 }
 
 .main {
@@ -58,9 +61,13 @@
   gap: 1rem;
   padding: 1rem;
   min-height: 0;
-  height: calc(100vh - 57px);
-  max-height: calc(100vh - 57px);
+  height: calc(100vh - 61px);
+  max-height: calc(100vh - 61px);
   overflow: hidden;
+  background-image:
+    linear-gradient(var(--border-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-color) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
 
 .leftPanel,
@@ -77,9 +84,10 @@
 .jobPostingSection {
   background: var(--bg-secondary);
   border-radius: var(--radius);
-  padding: 1rem;
+  padding: 1.25rem;
   flex-shrink: 0;
   border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
 }
 
 .jobPostingSection h2,
@@ -90,7 +98,7 @@
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.875rem;
 }
 
 /* AI Section */
@@ -103,18 +111,19 @@
   border-radius: var(--radius);
   overflow: hidden;
   border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
 }
 
 .aiSectionHeader {
-  padding: 0.75rem 1rem;
-  background: var(--bg-tertiary);
+  padding: 1rem 1.25rem;
+  background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
 }
 
 .aiTabs {
   display: flex;
   gap: 0.25rem;
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   padding: 0.25rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);
@@ -135,12 +144,14 @@
 
 .aiTabBtn:hover {
   color: var(--text-primary);
-  background: var(--bg-tertiary);
+  background: var(--bg-secondary);
 }
 
 .aiTabBtn.active {
-  background: var(--accent);
-  color: white;
+  background: var(--bg-secondary);
+  color: var(--accent);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
 }
 
 .aiContent {
@@ -159,14 +170,15 @@
   border-radius: var(--radius);
   overflow: hidden;
   border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
 }
 
 .previewHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1rem;
-  background: var(--bg-tertiary);
+  padding: 1rem 1.25rem;
+  background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -185,7 +197,7 @@
 .previewTabs {
   display: flex;
   gap: 0.25rem;
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   padding: 0.25rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);
@@ -205,12 +217,14 @@
 
 .tabBtn:hover {
   color: var(--text-primary);
-  background: var(--bg-tertiary);
+  background: var(--bg-secondary);
 }
 
 .tabBtn.active {
-  background: var(--accent);
-  color: white;
+  background: var(--bg-secondary);
+  color: var(--accent);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
 }
 
 .previewContent {
@@ -263,7 +277,7 @@
   .main {
     grid-template-columns: 1fr;
     height: auto;
-    min-height: calc(100vh - 57px);
+    min-height: calc(100vh - 61px);
   }
 
   .leftPanel,
@@ -274,7 +288,7 @@
 
 @media (max-width: 640px) {
   .header {
-    padding: 0.75rem 1rem;
+    padding: 0.875rem 1rem;
   }
 
   .header h1 {
@@ -287,7 +301,7 @@
   }
 
   .jobPostingSection {
-    padding: 0.75rem;
+    padding: 1rem;
   }
 
   .previewHeader {
