@@ -1,19 +1,7 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAppContext } from '../../contexts/AppContext';
 import styles from './CVImportUpload.module.css';
-
-interface ImportProgress {
-  message: string;
-  step: number;
-  totalSteps: number;
-}
-
-interface CVImportUploadProps {
-  onFileSelected: (file: File) => void;
-  isUploading: boolean;
-  uploadProgress: ImportProgress | null;
-  error: string | null;
-  onBack: () => void;
-}
 
 const VALID_EXTENSIONS = ['.pdf', '.docx', '.json'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -33,16 +21,19 @@ function validateFile(file: File): string | null {
   return null;
 }
 
-export default function CVImportUpload({
-  onFileSelected,
-  isUploading,
-  uploadProgress,
-  error,
-  onBack,
-}: CVImportUploadProps) {
+export default function CVImportUpload() {
+  const navigate = useNavigate();
+  const { cvImport } = useAppContext();
   const [isDragOver, setIsDragOver] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Navigate to review when import completes successfully
+  useEffect(() => {
+    if (cvImport.importResult?.success) {
+      navigate('/import/review');
+    }
+  }, [cvImport.importResult, navigate]);
 
   const handleFile = useCallback((file: File) => {
     setLocalError(null);
@@ -51,8 +42,8 @@ export default function CVImportUpload({
       setLocalError(validationError);
       return;
     }
-    onFileSelected(file);
-  }, [onFileSelected]);
+    cvImport.handleFileSelected(file);
+  }, [cvImport]);
 
   const onDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -85,10 +76,10 @@ export default function CVImportUpload({
   }, [handleFile]);
 
   const openFilePicker = useCallback(() => {
-    if (fileInputRef.current && !isUploading) {
+    if (fileInputRef.current && !cvImport.isImporting) {
       fileInputRef.current.click();
     }
-  }, [isUploading]);
+  }, [cvImport.isImporting]);
 
   const clearError = useCallback(() => {
     setLocalError(null);
@@ -97,16 +88,16 @@ export default function CVImportUpload({
   const dropZoneClasses = [
     styles.dropZone,
     isDragOver && styles.dragOver,
-    isUploading && styles.uploading,
+    cvImport.isImporting && styles.uploading,
   ].filter(Boolean).join(' ');
 
-  const displayError = error || localError;
+  const displayError = cvImport.importError || localError;
 
   return (
     <div className={styles.container}>
       <div className={styles.background} />
       <div className={styles.content}>
-        <button className={styles.backBtn} onClick={onBack}>
+        <button className={styles.backBtn} onClick={() => navigate('/')}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="m15 18-6-6 6-6" />
           </svg>
@@ -125,21 +116,21 @@ export default function CVImportUpload({
           onDrop={onDrop}
           onClick={openFilePicker}
         >
-          {isUploading ? (
+          {cvImport.isImporting ? (
             <div className={styles.loadingState}>
               <div className={styles.spinner} />
               <p className={styles.progressText}>
-                {uploadProgress?.message || 'Processing...'}
+                {cvImport.importProgress?.message || 'Processing...'}
               </p>
-              {uploadProgress && (
+              {cvImport.importProgress && (
                 <div className={styles.progressIndicator}>
                   <span className={styles.stepText}>
-                    Step {uploadProgress.step} of {uploadProgress.totalSteps}
+                    Step {cvImport.importProgress.step} of {cvImport.importProgress.totalSteps}
                   </span>
                   <div className={styles.progressBar}>
                     <div
                       className={styles.progressFill}
-                      style={{ width: `${(uploadProgress.step / uploadProgress.totalSteps) * 100}%` }}
+                      style={{ width: `${(cvImport.importProgress.step / cvImport.importProgress.totalSteps) * 100}%` }}
                     />
                   </div>
                 </div>
@@ -192,7 +183,7 @@ export default function CVImportUpload({
           hidden
           accept=".pdf,.docx,.json"
           onChange={onFileInputChange}
-          disabled={isUploading}
+          disabled={cvImport.isImporting}
         />
       </div>
     </div>

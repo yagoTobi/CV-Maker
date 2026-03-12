@@ -1,14 +1,33 @@
+import { useNavigate } from 'react-router-dom';
+import { useAppContext } from '../../contexts/AppContext';
 import styles from './LandingScreen.module.css';
 
-interface LandingScreenProps {
-  hasSavedVersions: boolean;
-  onBuildCV: () => void;
-  onTuneForJob: () => void;
-  onMyCV: () => void;
-  onImportCV: () => void;
-}
+export default function LandingScreen() {
+  const navigate = useNavigate();
+  const { savedVersions, templates, setFormData, setSelectedTemplateForBuild, cvImport } = useAppContext();
 
-export default function LandingScreen({ hasSavedVersions, onBuildCV, onTuneForJob, onMyCV, onImportCV }: LandingScreenProps) {
+  const handleBuildCV = () => {
+    setFormData(null);
+    setSelectedTemplateForBuild(null);
+    navigate('/build');
+  };
+
+  const handleTuneForJob = async () => {
+    const success = await templates.selectTemplate('med-length-proff-cv');
+    if (success) {
+      setFormData(null);
+      navigate('/editor');
+    }
+  };
+
+  const handleMyCV = () => {
+    navigate('/dashboard');
+  };
+
+  const handleImportCV = () => {
+    cvImport.reset();
+    navigate('/import');
+  };
   return (
     <div className={styles.container}>
       <div className={styles.background} />
@@ -30,7 +49,7 @@ export default function LandingScreen({ hasSavedVersions, onBuildCV, onTuneForJo
 
         <div className={styles.actions}>
           <div className={styles.cards}>
-            <button className={`${styles.card} ${styles.cardPrimary}`} onClick={onBuildCV}>
+            <button className={`${styles.card} ${styles.cardPrimary}`} onClick={handleBuildCV}>
               <div className={styles.cardIcon}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 20h9"/>
@@ -49,7 +68,7 @@ export default function LandingScreen({ hasSavedVersions, onBuildCV, onTuneForJo
               </div>
             </button>
 
-            <button className={`${styles.card} ${styles.cardSecondary}`} onClick={onTuneForJob}>
+            <button className={`${styles.card} ${styles.cardSecondary}`} onClick={handleTuneForJob}>
               <div className={styles.cardIcon}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="11" cy="11" r="8"/>
@@ -68,7 +87,7 @@ export default function LandingScreen({ hasSavedVersions, onBuildCV, onTuneForJo
               </div>
             </button>
 
-            <button className={`${styles.card} ${styles.cardSecondary}`} onClick={onImportCV}>
+            <button className={`${styles.card} ${styles.cardSecondary}`} onClick={handleImportCV}>
               <div className={styles.cardIcon}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -89,8 +108,8 @@ export default function LandingScreen({ hasSavedVersions, onBuildCV, onTuneForJo
             </button>
           </div>
 
-          {hasSavedVersions && (
-            <button className={styles.savedLink} onClick={onMyCV}>
+          {savedVersions.length > 0 && (
+            <button className={styles.savedLink} onClick={handleMyCV}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
                 <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>

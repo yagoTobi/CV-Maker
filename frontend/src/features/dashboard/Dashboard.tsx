@@ -1,14 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
-import type { CVVersion, CVVersionMeta, CVVersionWithChildren } from '../../types';
+import { useAppContext } from '../../contexts/AppContext';
+import type { CVVersionMeta, CVVersionWithChildren } from '../../types';
 import styles from './Dashboard.module.css';
-
-interface DashboardProps {
-  onVersionLoad: (version: CVVersion) => void;
-  onNewApplication: (baseVersion: CVVersion) => void;
-  onBack: () => void;
-  onVersionsChange: (versions: CVVersionMeta[]) => void;
-}
 
 function scoreColor(score: number): string {
   if (score >= 80) return 'good';
@@ -31,7 +26,9 @@ function displayName(v: CVVersionMeta): string {
   return v.name;
 }
 
-export default function Dashboard({ onVersionLoad, onNewApplication, onBack, onVersionsChange }: DashboardProps) {
+export default function Dashboard() {
+  const navigate = useNavigate();
+  const { handleVersionLoad, setSavedVersions, templates, setFormData, setCompanyName, setJobDescription, setActiveVersion } = useAppContext();
   const [baseCvs, setBaseCvs] = useState<CVVersionWithChildren[]>([]);
   const [ungrouped, setUngrouped] = useState<CVVersionMeta[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -72,8 +69,8 @@ export default function Dashboard({ onVersionLoad, onNewApplication, onBack, onV
       ...bases.flatMap(v => v.children || []),
       ...ug
     ];
-    onVersionsChange(all);
-  }, [onVersionsChange]);
+    setSavedVersions(all);
+  }, [setSavedVersions]);
 
   const toggleGroup = useCallback((id: string) => {
     setExpandedGroups(prev => {
@@ -88,16 +85,27 @@ export default function Dashboard({ onVersionLoad, onNewApplication, onBack, onV
     setLoadingId(id);
     const version = await api.getVersion(id);
     setLoadingId(null);
-    if (version) onVersionLoad(version);
-  }, [onVersionLoad]);
+    if (version) {
+      handleVersionLoad(version);
+      navigate('/editor');
+    }
+  }, [handleVersionLoad, navigate]);
 
   const handleNewApplication = useCallback(async (baseId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setLoadingId(baseId);
     const version = await api.getVersion(baseId);
     setLoadingId(null);
-    if (version) onNewApplication(version);
-  }, [onNewApplication]);
+    if (version) {
+      templates.updateContent(version.texContent);
+      templates.setTemplateId(version.templateId);
+      if (version.formData) setFormData(version.formData);
+      setActiveVersion(null);
+      setCompanyName('');
+      setJobDescription('');
+      navigate('/editor');
+    }
+  }, [templates, setFormData, setActiveVersion, setCompanyName, setJobDescription, navigate]);
 
   const handleDelete = useCallback(async (id: string) => {
     setDeletingId(id);
@@ -232,7 +240,7 @@ export default function Dashboard({ onVersionLoad, onNewApplication, onBack, onV
       <div className={styles.background} />
       <div className={styles.content}>
         <header className={styles.header}>
-          <button className={styles.backBtn} onClick={onBack}>
+          <button className={styles.backBtn} onClick={() => navigate('/')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="m15 18-6-6 6-6"/>
             </svg>
@@ -262,7 +270,7 @@ export default function Dashboard({ onVersionLoad, onNewApplication, onBack, onV
             </div>
             <h2>No saved CVs yet</h2>
             <p>Build or import your first CV. Saved versions will appear here, organized by base CV.</p>
-            <button className={styles.emptyAction} onClick={onBack}>
+            <button className={styles.emptyAction} onClick={() => navigate('/')}>
               Get started
             </button>
           </div>

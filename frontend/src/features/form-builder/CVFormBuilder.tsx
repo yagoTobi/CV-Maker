@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useFormBuilder, type FormSection, DEFAULT_PERSONAL_ORDER } from '../../hooks/useFormBuilder';
+import { useAppContext } from '../../contexts/AppContext';
 import { api } from '../../services/api';
 import type { CVFormData } from '../../types';
 import styles from './CVFormBuilder.module.css';
@@ -29,13 +31,6 @@ function deriveLinkLabel(url: string): string {
   }
 }
 
-interface CVFormBuilderProps {
-  templateId: string;
-  onGenerated: (texContent: string, templateId: string, formData: CVFormData) => void;
-  onBack: () => void;
-  initialFormData?: CVFormData;
-}
-
 const SECTION_LABELS: Record<FormSection, string> = {
   personal: 'Personal Info',
   work: 'Work Experience',
@@ -56,9 +51,14 @@ function GripIcon() {
   );
 }
 
-export default function CVFormBuilder({ templateId, onGenerated, onBack, initialFormData }: CVFormBuilderProps) {
+export default function CVFormBuilder() {
+  const navigate = useNavigate();
+  const { selectedTemplateForBuild, formData, templates, compiler, setActiveTab } = useAppContext();
+
+  const templateId = selectedTemplateForBuild || 'med-length-proff-cv';
+
   // All hooks at top — never after a conditional return (key learning #3)
-  const fb = useFormBuilder(templateId, initialFormData);
+  const fb = useFormBuilder(templateId, formData || undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // PDF preview state
@@ -199,7 +199,13 @@ export default function CVFormBuilder({ templateId, onGenerated, onBack, initial
   };
 
   const handleOpenInEditor = () => {
-    if (generatedTex) onGenerated(generatedTex, templateId, fb.formData);
+    if (generatedTex) {
+      templates.setTemplateId(templateId);
+      templates.updateContent(generatedTex);
+      compiler.compile(generatedTex, templateId);
+      setActiveTab('pdf');
+      navigate('/editor');
+    }
   };
 
   const isGenerateDisabled = fb.isGenerating || isCompiling;
@@ -210,7 +216,7 @@ export default function CVFormBuilder({ templateId, onGenerated, onBack, initial
       {/* ── Sidebar ── */}
       <aside className={styles.sidebar}>
         <div className={styles.sidebarHeader}>
-          <button className={styles.backBtn} onClick={onBack}>
+          <button className={styles.backBtn} onClick={() => navigate('/build')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="m15 18-6-6 6-6"/>
             </svg>

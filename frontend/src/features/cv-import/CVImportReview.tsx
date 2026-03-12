@@ -1,4 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAppContext } from '../../contexts/AppContext';
 import type {
   CVFormData,
   PersonalInfo,
@@ -8,8 +10,6 @@ import type {
   Project,
   Award,
   AdditionalEntry,
-  ImportConfidence,
-  ImportSummary,
 } from '../../types';
 import styles from './CVImportReview.module.css';
 
@@ -117,15 +117,6 @@ function BulletList({ bullets, onReorder, onUpdate, onRemove, useTextarea = fals
   );
 }
 
-interface CVImportReviewProps {
-  formData: CVFormData;
-  confidence: ImportConfidence;
-  summary: ImportSummary;
-  warnings: string[] | null;
-  source: 'pdf' | 'docx' | 'json';
-  onConfirm: (editedFormData: CVFormData) => void;
-  onBack: () => void;
-}
 
 // --- Helpers ---
 
@@ -199,15 +190,21 @@ function getConfidenceTooltip(level: 'high' | 'medium' | 'low'): string {
 
 // --- Component ---
 
-export default function CVImportReview({
-  formData: initialData,
-  confidence,
-  summary,
-  warnings,
-  source,
-  onConfirm,
-  onBack,
-}: CVImportReviewProps) {
+export default function CVImportReview() {
+  const navigate = useNavigate();
+  const { cvImport, setFormData } = useAppContext();
+
+  // Redirect if no import data
+  if (!cvImport.importResult?.formData) {
+    navigate('/import');
+    return null;
+  }
+
+  const initialData = cvImport.importResult.formData;
+  const confidence = cvImport.importResult.confidence || { overall: 'medium', fields: {} };
+  const summary = cvImport.importResult.summary || { workEntries: 0, educationEntries: 0, skillCategories: 0, projects: 0, awards: 0 };
+  const warnings = cvImport.importResult.warnings;
+  const source = cvImport.importResult.source;
   const [data, setData] = useState<CVFormData>(() => structuredClone(initialData));
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
@@ -889,7 +886,7 @@ export default function CVImportReview({
     <div className={styles.container}>
       <div className={styles.background} />
       <div className={styles.content}>
-        <button className={styles.backBtn} onClick={onBack}>
+        <button className={styles.backBtn} onClick={() => navigate('/import')}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="m15 18-6-6 6-6" />
           </svg>
@@ -953,7 +950,10 @@ export default function CVImportReview({
         {/* Confirm button */}
         <button
           className={styles.confirmBtn}
-          onClick={() => onConfirm(data)}
+          onClick={() => {
+            setFormData(data);
+            navigate('/build');
+          }}
           disabled={!hasData}
         >
           Confirm & Continue
