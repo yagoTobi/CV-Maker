@@ -48,30 +48,44 @@ CV Maker follows a client-server architecture with a React frontend and FastAPI 
 ## Screen Flow
 
 ```
-AppScreen = 'landing' | 'dashboard' | 'template-select' | 'form-builder' | 'editor' | 'import-upload' | 'import-review'
+React Router v6 Routes:
+/                → LandingScreen
+/build/start     → BuildChoiceScreen
+/build           → TemplateSelector
+/build/form      → CVFormBuilder
+/import          → CVImportUpload
+/import/review   → CVImportReview
+/dashboard       → Dashboard
+/editor          → EditorScreen
 
-landing
-  ├── "Build my CV"       → template-select → form-builder → (Generate CV) → editor
-  ├── "Import existing CV" → import-upload → import-review → template-select → form-builder
-  ├── "Tune for a job"    → base CV picker → editor (selected base CV loaded, job panel visible)
-  ├── "My CVs & Applications" → dashboard  [always shown; shows recent apps inline if versions exist]
+landing (/)
+  ├── "Build my CV"       → /build/start → "Start from scratch" → /build → /build/form → /editor
+  │                                     → "Import existing CV" → /import → /import/review → /build → /build/form
+  ├── "Tune for a job"    → /build/form (mode:'tune', Job Tuning tab default in right panel)
+  ├── "My CVs & Applications" → /dashboard  [always shown; shows recent apps inline if versions exist]
   └── Recent Applications → inline cards grouped by base CV (3 most recent)
 
-dashboard (hierarchical view)
+dashboard (/dashboard) — hierarchical view
   ├── Base CVs (expandable groups)
-  │   ├── [+ New] button per base CV → editor (creates job application from base)
+  │   ├── [+ New] button per base CV → /editor (creates job application from base)
   │   └── Job applications (nested under base)
   ├── Ungrouped versions → orphaned CVs without parent
-  ├── click base CV → editor (base CV content loaded)
-  ├── click job application → editor (job content + job panel pre-filled)
+  ├── click base CV → /editor (base CV content loaded)
+  ├── click job application → /editor (job content + job panel pre-filled)
   ├── [Move...] action → re-parent job application to different base CV
-  └── back → landing
+  └── back → /
 
-editor
+editor (/editor)
   ├── VersionSwitcher (header) → save current / switch to saved version
   ├── Save modal → choose "Base CV" or "Job Application" + select parent + job details
-  ├── nav link → dashboard
+  ├── nav link → /dashboard
   └── breadcrumb → "From: Creative CV" (if derived from base)
+
+build/form (/build/form) — CVFormBuilder
+  ├── Right panel tabs: "Preview" (PDF) | "Job Tuning" (job description + AI match analysis)
+  ├── Mode passed via location.state.mode: 'build' | 'tune'
+  ├── "Advanced Editor" button in preview header → /editor (escape hatch for power users)
+  └── VoiceWidget (overlay pill in sidebar) → voice interview session
 ```
 
 ---
@@ -87,6 +101,10 @@ frontend/src/
 │   │   ├── LandingScreen.tsx
 │   │   ├── LandingScreen.module.css
 │   │   └── index.ts
+│   ├── build-choice/         Build entry choice ("Start from scratch" | "Import existing CV")
+│   │   ├── BuildChoiceScreen.tsx
+│   │   ├── BuildChoiceScreen.module.css
+│   │   └── index.ts
 │   ├── template-selection/   Template picker (Build path)
 │   │   ├── TemplateSelector.tsx
 │   │   ├── TemplateSelector.css
@@ -94,6 +112,8 @@ frontend/src/
 │   ├── form-builder/         Structured form builder
 │   │   ├── CVFormBuilder.tsx
 │   │   ├── CVFormBuilder.module.css
+│   │   ├── JobTuningPanel.tsx
+│   │   ├── JobTuningPanel.module.css
 │   │   └── index.ts
 │   ├── cv-import/            CV import upload + review
 │   │   ├── CVImportUpload.tsx
@@ -101,7 +121,13 @@ frontend/src/
 │   │   ├── CVImportReview.tsx
 │   │   ├── CVImportReview.module.css
 │   │   └── index.ts
+│   ├── voice-widget/         Voice interview overlay
+│   │   ├── VoiceWidget.tsx
+│   │   ├── VoiceWidget.module.css
+│   │   └── index.ts
 │   ├── editor/               All editor-related components
+│   │   ├── EditorScreen.tsx
+│   │   ├── EditorScreen.module.css
 │   │   ├── LatexEditor.tsx
 │   │   ├── LatexEditor.module.css
 │   │   ├── PdfPreview.tsx
@@ -122,11 +148,13 @@ frontend/src/
 │   └── shared/               Reusable cross-feature components
 │       ├── ErrorBoundary.tsx
 │       └── index.ts
+├── contexts/                 React Context providers
+│   └── AppContext.tsx        Global shared state (replaces App.tsx god component)
 ├── hooks/                    Custom React hooks
 ├── services/                 API client
 ├── styles/                   Design tokens (variables.css)
 ├── types/                    TypeScript type definitions
-├── App.tsx                   Main app router
+├── App.tsx                   React Router route definitions (~25 lines)
 └── main.tsx                  React entry point
 ```
 
@@ -140,15 +168,20 @@ frontend/src/
 
 | Component | Feature | Purpose |
 |-----------|---------|---------|
-| `App.tsx` | - | Main container, 7-screen router, all cross-screen state |
+| `App.tsx` | - | React Router v6 route definitions only (~25 lines) |
+| `AppContext.tsx` | contexts | Global shared state provider (replaces App.tsx god component) |
 | `LandingScreen.tsx` | landing | Intent-based entry screen (Build / Tune / Import / My CVs) |
+| `BuildChoiceScreen.tsx` | build-choice | Build entry choice ("Start from scratch" \| "Import existing CV") |
 | `TemplateSelector.tsx` | template-selection | Template selection (Build path + Import path) |
-| `CVFormBuilder.tsx` | form-builder | Structured form with 7 sections + live PDF preview + DnD reordering |
+| `CVFormBuilder.tsx` | form-builder | Structured form with 7 sections + right panel tabs (Preview \| Job Tuning) + DnD reordering |
+| `JobTuningPanel.tsx` | form-builder | Job description input + AI match analysis (right panel tab in form builder) |
+| `VoiceWidget.tsx` | voice-widget | Voice interview overlay with animated orb, transcript feed, mic controls |
 | `CVImportUpload.tsx` | cv-import | Drag-and-drop file upload (PDF, DOCX, JSON) with progress indicator |
 | `CVImportReview.tsx` | cv-import | Review and edit extracted CV data with confidence indicators and field-level warnings |
 | `Dashboard.tsx` | dashboard | Hierarchical CV management — base CVs with nested job applications, move/re-parent actions, AI grouping suggestions |
 | `VersionSwitcher.tsx` | dashboard | In-editor save / switch between saved versions, save modal with base CV picker |
-| `LatexEditor.tsx` | editor | CodeMirror-based LaTeX editor (Tune path / fine-tuning) |
+| `EditorScreen.tsx` | editor | Advanced LaTeX editor screen (power-user escape hatch) |
+| `LatexEditor.tsx` | editor | CodeMirror-based LaTeX editor component |
 | `PdfPreview.tsx` | editor | PDF rendering via `<iframe>` with base64 source |
 | `ChatPanel.tsx` | editor | AI conversation + inline edit suggestions with undo |
 | `MatchAnalysis.tsx` | editor | CV-job match score display |
@@ -164,17 +197,21 @@ frontend/src/
 | `useCompiler` | Compile request, PDF state, markChanged |
 | `useChat` | AI messages, analyzeJob, applyEdit, undo |
 | `useImport` | CV import file upload (PDF/DOCX/JSON), AI extraction via Bedrock, progress tracking, confidence scoring, validation warnings |
+| `useVoiceInterview` | Voice interview WebSocket connection, transcript collection, mic controls, session management |
 
-### State (App.tsx)
+### State Management (AppContext.tsx)
+
+AppContext replaced the old App.tsx god component pattern. All shared state and handlers are now centralized in `contexts/AppContext.tsx`.
 
 | State | Type | Purpose |
 |-------|------|---------|
-| `currentScreen` | `AppScreen` | Active screen (7 screens: landing, dashboard, template-select, form-builder, editor, import-upload, import-review) |
 | `selectedTemplateForBuild` | `string \| null` | Template chosen in Build/Import path |
 | `activeVersion` | `CVVersion \| null` | Currently loaded saved version |
 | `savedVersions` | `CVVersionMeta[]` | Metadata for version switcher and dashboard |
 | `formData` | `CVFormData \| null` | Form data from Build/Import path (passed to form-builder and editor) |
 | `isSavingVersion` | `boolean` | Loading state for save |
+
+Navigation handled by React Router v6 with browser history (back/forward support).
 
 ---
 
@@ -195,6 +232,9 @@ frontend/src/
 | `/api/cv-versions` | GET/POST | List / create saved CV versions |
 | `/api/cv-versions/{id}` | GET/DELETE | Load / delete a saved version |
 | `/api/cv-import` | POST | Upload PDF/DOCX/JSON for AI extraction |
+| `/api/ws/voice-interview` | WebSocket | Pipecat WebSocket pipeline (Nova Sonic S2S) |
+| `/api/voice/extract-cv` | POST | Extract CV data from voice session transcript |
+| `/api/voice/profile` | GET/POST | Get/save returning user's voice profile |
 | `/api/health` | GET | Health check |
 
 ### Services & Routes
@@ -205,6 +245,7 @@ frontend/src/
 | `routes/generate_latex.py` | CVFormData → LaTeX via Jinja2, `latex_escape` filter (all special chars), `latex_url_escape` filter (URLs: `%` and `#` only), `_build_personal_items` |
 | `routes/cv_versions.py` | Version CRUD + all shared Pydantic models (PersonalInfo, WorkEntry, CVFormData, …) |
 | `routes/cv_import.py` | CV import upload endpoint (PDF/DOCX/JSON) |
+| `routes/voice_interview.py` | Voice interview WebSocket endpoint + transcript extraction + profile management |
 | `routes/chat.py` | AI chat streaming |
 | `routes/templates.py` | Template listing and file serving |
 | `routes/user_data.py` | JSON-file user profile |
@@ -213,6 +254,35 @@ frontend/src/
 | `services/cv_extractor.py` | AI-powered CV extraction via Bedrock (PDF multimodal, DOCX text, JSON direct) |
 | `services/latex_compiler.py` | pdflatex / xelatex subprocess wrapper |
 | `prompts/cv_agent.py` | AI prompt templates |
+| `prompts/voice_interview.py` | Voice interview system prompt and extraction prompt |
+
+### Voice Interview Architecture
+
+The voice interview feature provides an alternative to manual form filling through natural conversation.
+
+**Pipeline (Pipecat + Amazon Nova Sonic):**
+
+```
+User audio → WebSocket transport → user_aggregator
+                                  ↓
+                           Nova Sonic LLM (S2S)
+                                  ↓
+           TranscriptCollector ← assistant audio → transport output
+                                  ↓
+                           assistant_aggregator
+```
+
+**Key Components:**
+- **WebSocket transport**: `FastAPIWebsocketTransport` with `ProtobufFrameSerializer` for binary audio frames
+- **Nova Sonic**: Amazon's speech-to-speech LLM service (16kHz input, 24kHz output sample rates)
+- **TranscriptCollector**: Custom frame processor that collects `TranscriptionFrame` objects to build session transcript
+- **Session storage**: In-memory dict `{session_id: [utterances]}` — cleared on restart (needs TTL cleanup for production)
+- **Extraction endpoint**: `POST /api/voice/extract-cv` takes full transcript and uses Bedrock to extract structured `CVFormData`
+- **Voice profile**: Returning user detection stores name/email in `user_data/voice_profile.json` for personalized greeting
+
+**Dependencies:**
+- Optional: `pip install 'pipecat-ai[aws]'` — app starts without it (feature disabled)
+- Alpha quality: no error recovery, no session persistence, no rate limiting
 
 ### LaTeX Templates
 
@@ -340,36 +410,32 @@ Move: PATCH /api/cv-versions/{id} → { parentVersionId } → re-parent job appl
 
 ```
 src/
-├── components/
-│   ├── CVFormBuilder.tsx       # Build-path form with inline PDF preview
-│   ├── CVFormBuilder.module.css
-│   ├── Dashboard.tsx           # Saved versions grid
-│   ├── Dashboard.module.css
-│   ├── LandingScreen.tsx       # Entry screen
-│   ├── LandingScreen.module.css
-│   ├── VersionSwitcher.tsx     # In-editor save/switch widget
-│   ├── VersionSwitcher.module.css
-│   ├── TemplateSelector.tsx    # Template cards (Build path)
-│   ├── TemplateSelector.css
-│   ├── LatexEditor.tsx         # CodeMirror LaTeX editor
-│   ├── PdfPreview.tsx          # iframe PDF viewer
-│   ├── ChatPanel.tsx           # AI chat + edit suggestions
-│   ├── MatchAnalysis.tsx       # Match score UI
-│   ├── JobInput.tsx            # Job description input
-│   ├── ErrorBoundary.tsx       # Error boundary
-│   └── index.ts
+├── features/
+│   ├── landing/                # LandingScreen.tsx, .module.css, index.ts
+│   ├── build-choice/           # BuildChoiceScreen.tsx, .module.css, index.ts
+│   ├── template-selection/     # TemplateSelector.tsx, .css, index.ts
+│   ├── form-builder/           # CVFormBuilder.tsx, JobTuningPanel.tsx, .module.css, index.ts
+│   ├── cv-import/              # CVImportUpload.tsx, CVImportReview.tsx, .module.css, index.ts
+│   ├── voice-widget/           # VoiceWidget.tsx, .module.css, index.ts
+│   ├── editor/                 # EditorScreen.tsx, LatexEditor, PdfPreview, ChatPanel, JobInput, MatchAnalysis
+│   ├── dashboard/              # Dashboard.tsx, VersionSwitcher.tsx, .module.css, index.ts
+│   └── shared/                 # ErrorBoundary.tsx, index.ts
+├── contexts/
+│   └── AppContext.tsx          # Global shared state provider
 ├── hooks/
 │   ├── useFormBuilder.ts       # CVFormData state + CRUD
 │   ├── useTemplates.ts         # Template selection + content
 │   ├── useCompiler.ts          # LaTeX compilation
-│   └── useChat.ts              # AI chat
+│   ├── useChat.ts              # AI chat
+│   ├── useImport.ts            # CV import file upload + extraction
+│   └── useVoiceInterview.ts    # Voice interview WebSocket + transcript
 ├── services/
-│   └── api.ts                  # All API calls (13 endpoints)
+│   └── api.ts                  # All API calls (16 endpoints)
 ├── styles/
 │   └── variables.css           # CSS design tokens
 ├── types/
 │   └── index.ts                # All TypeScript types
-├── App.tsx                     # 5-screen router + cross-screen state
+├── App.tsx                     # React Router route definitions (~25 lines)
 ├── App.module.css
 └── main.tsx
 ```
@@ -383,6 +449,7 @@ backend/
 │   ├── generate_latex.py       # POST /generate-latex
 │   ├── cv_versions.py          # CRUD /cv-versions + shared Pydantic models
 │   ├── cv_import.py            # POST /cv-import (upload + extraction)
+│   ├── voice_interview.py      # WS /ws/voice-interview, POST /voice/extract-cv, GET/POST /voice/profile
 │   ├── chat.py                 # POST /chat, /match-analysis
 │   ├── templates.py            # GET /templates
 │   └── user_data.py            # GET/POST /user-data
@@ -396,7 +463,8 @@ backend/
 │   ├── cv_extractor.py         # AI extraction (PDF/DOCX/JSON)
 │   └── latex_compiler.py
 ├── prompts/
-│   └── cv_agent.py
+│   ├── cv_agent.py
+│   └── voice_interview.py      # Voice interview system prompt + extraction prompt
 ├── config/
 │   └── templates.py            # TemplateConfig entries (3 templates)
 ├── tests/
@@ -405,6 +473,7 @@ backend/
 │   └── test_template_compilation.py  # pdflatex/xelatex compilation tests (18 tests, ~28s)
 ├── user_data/
 │   ├── profile.json            # User profile
+│   ├── voice_profile.json      # Voice interview returning user data
 │   └── versions/               # Saved CV versions ({uuid}.json)
 ├── pytest.ini                  # pytest config (slow marker)
 └── main.py                     # FastAPI app + router registration

@@ -1,11 +1,13 @@
 import boto3
 import json
+import os
 from typing import Generator, List, Dict, Any
 
 
 class BedrockClient:
     def __init__(self):
-        self.client = boto3.client("bedrock-runtime", region_name="us-east-1")
+        region = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
+        self.client = boto3.client("bedrock-runtime", region_name=region)
         # Use cross-region inference profile for Claude 3.5 Sonnet v2
         self.model_id = "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
 

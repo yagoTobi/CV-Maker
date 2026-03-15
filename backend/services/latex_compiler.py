@@ -24,7 +24,7 @@ class LaTeXCompiler:
     # Dangerous LaTeX commands that could execute shell commands or access files
     DANGEROUS_PATTERNS = [
         r'\\write18\s*\{',          # Shell escape
-        r'\\immediate\\write18',     # Immediate shell escape
+        r'\\immediate',             # Immediate execution (shell escape, file writes)
         r'\\input\s*\|',            # Pipe input (shell command)
         r'\\openin',                # Open file for reading
         r'\\openout',               # Open file for writing
@@ -33,6 +33,9 @@ class LaTeXCompiler:
         r'\\closeout',              # Close output file
         r'\\catcode',               # Change category codes (can be used for exploits)
         r'\\csname\s+input\s+\|',   # Alternative pipe input
+        r'\\def\\',                 # TeX primitive definition
+        r'\\let\\',                 # TeX primitive assignment
+        r'\\special\s*\{',          # DVI special commands
     ]
 
     def __init__(self):
@@ -95,18 +98,22 @@ class LaTeXCompiler:
 
             # Run LaTeX twice for proper references
             for _ in range(2):
-                result = subprocess.run(
-                    [
-                        engine_path,
-                        "-interaction=nonstopmode",
-                        "-halt-on-error",
-                        "document.tex"
-                    ],
-                    cwd=temp_dir,
-                    capture_output=True,
-                    text=True,
-                    timeout=90  # XeLaTeX can be slower
-                )
+                try:
+                    result = subprocess.run(
+                        [
+                            engine_path,
+                            "-interaction=nonstopmode",
+                            "-halt-on-error",
+                            "document.tex"
+                        ],
+                        cwd=temp_dir,
+                        capture_output=True,
+                        text=True,
+                        timeout=90  # XeLaTeX can be slower
+                    )
+                except subprocess.TimeoutExpired:
+                    logger.warning("LaTeX compilation timed out")
+                    return CompileResult(success=False, error="Compilation timed out. Your document may be too complex.")
 
                 if result.returncode != 0:
                     # Extract meaningful error from log

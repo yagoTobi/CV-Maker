@@ -2,13 +2,23 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
 import json
+import logging
 import os
 import uuid
 from datetime import datetime, timezone
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 VERSIONS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "user_data", "versions")
+
+
+def _validate_version_id(version_id: str):
+    """Validate that version_id is a valid UUID to prevent path traversal."""
+    try:
+        uuid.UUID(version_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid version ID")
 
 
 # --- Pydantic Models ---
@@ -245,12 +255,10 @@ async def create_version(payload: CVVersionCreate):
 
     # Validate parent exists if specified
     if payload.parent_version_id:
+        _validate_version_id(payload.parent_version_id)
         parent_path = _version_path(payload.parent_version_id)
         if not os.path.exists(parent_path):
             raise HTTPException(status_code=400, detail=f"Parent version {payload.parent_version_id} not found")
-
-        # Prevent circular references
-        _validate_no_circular_reference(payload.parent_version_id, payload.parent_version_id)
 
     version_id = str(uuid.uuid4())
     created_at = datetime.now(timezone.utc).isoformat()
@@ -278,12 +286,14 @@ async def create_version(payload: CVVersionCreate):
 @router.get("/cv-versions/{version_id}")
 async def get_version(version_id: str):
     """Get full CV version including tex content."""
+    _validate_version_id(version_id)
     return _load_version(version_id)
 
 
 @router.delete("/cv-versions/{version_id}")
 async def delete_version(version_id: str):
     """Delete a saved CV version. Orphan any child versions (set their parentVersionId to null)."""
+    _validate_version_id(version_id)
     path = _version_path(version_id)
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail=f"Version {version_id} not found")
@@ -317,6 +327,7 @@ class UpdateVersionPayload(BaseModel):
 @router.patch("/cv-versions/{version_id}")
 async def update_version(version_id: str, payload: UpdateVersionPayload):
     """Update a CV version (currently supports re-parenting only)."""
+    _validate_version_id(version_id)
     version_data = _load_version(version_id)
 
     # Update parent relationship
@@ -325,6 +336,7 @@ async def update_version(version_id: str, payload: UpdateVersionPayload):
 
         # Validate new parent exists (if not null)
         if new_parent_id:
+            _validate_version_id(new_parent_id)
             parent_path = _version_path(new_parent_id)
             if not os.path.exists(parent_path):
                 raise HTTPException(status_code=400, detail=f"Parent version {new_parent_id} not found")

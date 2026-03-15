@@ -9,15 +9,18 @@ CV Maker is a web application that combines a LaTeX-based CV editor with AI assi
 ## Features
 
 - **Form Builder**: Structured form with drag-and-drop section ordering and inline PDF preview
+- **Voice Interview (Alpha)**: Natural conversation-based CV creation using Amazon Nova Sonic speech-to-speech AI
 - **Template Selection**: Choose from 3 professionally-designed CV templates (Professional CV, Deedy Resume, McDowell CV)
 - **LaTeX CV Editor**: Full-featured code editor with syntax highlighting for fine-tuning
 - **Live PDF Preview**: Real-time compilation and preview of your CV as a PDF
 - **AI Chat Assistant**: Interactive AI that analyzes your CV against job postings and suggests improvements
 - **Match Analysis**: Quantitative analysis showing how well your CV matches a job description
 - **Edit Suggestions**: AI-generated inline edits that can be applied with one click
-- **Version Management**: Save and switch between multiple CV versions
+- **Version Management**: Save and switch between multiple CV versions with hierarchical job application tracking
 - **JSON Export/Import**: Export your CV data as JSON and re-import to restore
+- **CV Import**: Upload existing CVs from PDF, DOCX, or JSON with AI-powered extraction
 - **Clean UI**: Zed-inspired light theme with professional, minimal aesthetics
+- **React Router Navigation**: URL-based routing with browser back/forward support
 
 ## Tech Stack
 
@@ -48,6 +51,17 @@ If using a minimal TeX installation (e.g., BasicTeX), install required packages:
 ```bash
 sudo tlmgr install changepage ifplatform enumitem textpos isodate titlesec catchfile substr
 ```
+
+### Optional: Voice Interview Feature
+
+The voice interview feature requires the Pipecat framework with AWS dependencies:
+
+```bash
+cd backend
+pip install 'pipecat-ai[aws]'
+```
+
+**Note:** This is optional. The app will start and run normally without Pipecat; the voice feature will simply be unavailable.
 
 ### Running the Application
 

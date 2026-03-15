@@ -193,7 +193,7 @@ def _parse_extraction_response(raw: str, source: str) -> CVImportResult:
                 source=source,
                 error="The extraction was cut short — your CV may be too long for a single pass. Try removing some content or uploading a shorter version.",
             )
-        logger.error("Failed to parse extraction JSON: %s — raw[:500]: %s", e, raw[:500])
+        logger.error("Failed to parse extraction JSON: %s", e)
         return CVImportResult(
             success=False,
             source=source,
@@ -362,11 +362,11 @@ async def extract_from_docx(file_bytes: bytes) -> CVImportResult:
         )
         return _parse_extraction_response(response, source="docx")
     except Exception as e:
-        logger.error("DOCX extraction failed: %s", e)
+        logger.exception("DOCX extraction failed")
         return CVImportResult(
             success=False,
             source="docx",
-            error=f"Failed to extract CV from DOCX: {e}",
+            error="Failed to extract CV from DOCX. Please try a different file format.",
         )
 
 

@@ -1,5 +1,6 @@
 import json
 import os
+import time
 import uuid
 from datetime import date
 from pathlib import Path
@@ -49,7 +50,22 @@ except ImportError as e:
 router = APIRouter()
 
 # In-memory session transcripts — cleared on restart; fine for POC
-_sessions: dict[str, list[str]] = {}
+# Each entry: {"transcript": [...], "created_at": <timestamp>}
+_sessions: dict[str, dict] = {}
+
+SESSION_TTL_SECONDS = 3600  # 1 hour
+
+
+def _cleanup_stale_sessions():
+    """Remove sessions older than SESSION_TTL_SECONDS."""
+    now = time.time()
+    stale_ids = [
+        sid for sid, data in _sessions.items()
+        if now - data.get("created_at", 0) > SESSION_TTL_SECONDS
+    ]
+    for sid in stale_ids:
+        logger.info("[voice] Cleaning up stale session %s", sid)
+        del _sessions[sid]
 
 PROFILE_PATH = Path("user_data/voice_profile.json")
 
@@ -87,7 +103,7 @@ if PIPECAT_AVAILABLE:
         def __init__(self, session_id: str):
             super().__init__()
             self._session_id = session_id
-            _sessions[session_id] = []
+            _sessions[session_id] = {"transcript": [], "created_at": time.time()}
 
         async def process_frame(self, frame: Frame, direction: FrameDirection):
             await super().process_frame(frame, direction)
@@ -98,7 +114,7 @@ if PIPECAT_AVAILABLE:
                     logger.info(
                         "[voice] session {} — 🎤 USER: {}", self._session_id, text
                     )
-                    _sessions[self._session_id].append(f"User: {text}")
+                    _sessions[self._session_id]["transcript"].append(f"User: {text}")
                     await self.push_frame(
                         OutputTransportMessageFrame(
                             message={
@@ -113,7 +129,7 @@ if PIPECAT_AVAILABLE:
             elif isinstance(frame, TextFrame) and frame.text:
                 text = frame.text
                 logger.info("[voice] session {} — 🤖 AI: {}", self._session_id, text)
-                _sessions[self._session_id].append(f"AI: {text}")
+                _sessions[self._session_id]["transcript"].append(f"AI: {text}")
 
                 if "generating your cv now" in text.lower():
                     await self.push_frame(
@@ -158,6 +174,7 @@ async def voice_interview_ws(websocket: WebSocket):
         return
 
     await websocket.accept()
+    _cleanup_stale_sessions()
     session_id = str(uuid.uuid4())
     logger.info("[voice] session {} — WebSocket accepted", session_id)
 
@@ -271,11 +288,12 @@ async def voice_interview_ws(websocket: WebSocket):
 
     except WebSocketDisconnect:
         logger.info("[voice] session {} — WebSocketDisconnect", session_id)
+        _sessions.pop(session_id, None)
     except Exception as exc:
         logger.exception("[voice] session {} — pipeline error: {}", session_id, exc)
         try:
             await websocket.send_text(
-                json.dumps({"type": "error", "message": str(exc)})
+                json.dumps({"type": "error", "message": "An internal error occurred"})
             )
         except Exception:
             pass
@@ -292,7 +310,8 @@ class ExtractCVRequest(BaseModel):
 
 @router.post("/voice/extract-cv")
 async def extract_cv(request: ExtractCVRequest):
-    transcript_lines = _sessions.get(request.session_id, [])
+    session_data = _sessions.get(request.session_id)
+    transcript_lines = session_data["transcript"] if session_data else []
     if not transcript_lines:
         raise HTTPException(
             status_code=404, detail="Session not found or empty transcript"
@@ -318,8 +337,9 @@ async def extract_cv(request: ExtractCVRequest):
 
     form_data = _parse_json_response(result)
     if form_data is None:
+        logger.error("[voice] session %s — failed to parse CV JSON from transcript", request.session_id)
         raise HTTPException(
-            status_code=500, detail="Failed to parse CV JSON from transcript"
+            status_code=500, detail="An internal error occurred"
         )
 
     # Best-effort: save a profile summary for future sessions

@@ -1,11 +1,13 @@
 from fastapi import APIRouter, HTTPException
 from jinja2 import Environment, FileSystemLoader
+import logging
 import os
 import re
 
 from routes.cv_versions import CVFormData
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "..", "latex_templates")
 
@@ -110,7 +112,8 @@ async def generate_latex(form_data: CVFormData):
     try:
         template = _jinja_env.get_template(template_file)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load template: {e}")
+        logger.exception("Failed to load template: %s", form_data.templateId)
+        raise HTTPException(status_code=500, detail="An internal error occurred")
 
     personal_order = form_data.personalInfo.personalOrder or _DEFAULT_PERSONAL_ORDER
     context = {
@@ -128,6 +131,7 @@ async def generate_latex(form_data: CVFormData):
     try:
         tex_content = template.render(**context)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Template rendering failed: {e}")
+        logger.exception("Template rendering failed for: %s", form_data.templateId)
+        raise HTTPException(status_code=500, detail="An internal error occurred")
 
     return {"tex_content": tex_content}

@@ -2,10 +2,12 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel
 import base64
+import logging
 
 from services.latex_compiler import compiler
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class CompileRequest(BaseModel):
@@ -39,7 +41,8 @@ async def compile_latex(request: CompileRequest):
         )
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("LaTeX compilation error")
+        raise HTTPException(status_code=500, detail="An internal error occurred")
 
 
 @router.post("/compile/pdf")
@@ -65,5 +68,8 @@ async def compile_latex_pdf(request: CompileRequest):
         else:
             raise HTTPException(status_code=400, detail=result.error)
 
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("LaTeX PDF compilation error")
+        raise HTTPException(status_code=500, detail="An internal error occurred")

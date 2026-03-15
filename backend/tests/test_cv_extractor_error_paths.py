@@ -314,7 +314,7 @@ class TestExtractFromDocx:
         assert result.success is False
         assert result.source == "docx"
         assert result.error is not None
-        assert "Bedrock throttled" in result.error  # error includes exception text
+        assert "Failed to extract CV from DOCX" in result.error
 
     @patch("services.cv_extractor.bedrock_client")
     @patch("services.cv_extractor.Document")
@@ -325,9 +325,9 @@ class TestExtractFromDocx:
         result = run(extract_from_docx(b"fake"))
         assert result.success is False
         assert result.source == "docx"
-        # Error message includes the exception text
+        # Error message is generic (no internal details leaked)
         assert result.error is not None
-        assert "DNS resolution failed" in result.error
+        assert "Failed to extract CV from DOCX" in result.error
 
     @patch("services.cv_extractor.bedrock_client")
     @patch("services.cv_extractor.Document")
@@ -338,7 +338,7 @@ class TestExtractFromDocx:
         result = run(extract_from_docx(b"fake"))
         assert result.success is False
         assert result.error is not None
-        assert "Read timed out" in result.error
+        assert "Failed to extract CV from DOCX" in result.error
 
     @patch("services.cv_extractor.Document")
     def test_python_docx_raises_exception(self, mock_document_cls):
@@ -348,7 +348,7 @@ class TestExtractFromDocx:
         assert result.success is False
         assert result.source == "docx"
         assert result.error is not None
-        assert "Package not found" in result.error
+        assert "Failed to extract CV from DOCX" in result.error
 
     @patch("services.cv_extractor.Document")
     def test_python_docx_raises_value_error(self, mock_document_cls):
@@ -357,7 +357,7 @@ class TestExtractFromDocx:
         result = run(extract_from_docx(b"random-bytes"))
         assert result.success is False
         assert result.error is not None
-        assert "File is not a zip file" in result.error
+        assert "Failed to extract CV from DOCX" in result.error
 
     @patch("services.cv_extractor.Document")
     def test_python_docx_raises_key_error(self, mock_document_cls):
@@ -1394,15 +1394,16 @@ class TestErrorMessageQuality:
         assert "image" in result.error.lower() or "scanned" in result.error.lower()
 
     @patch("services.cv_extractor.bedrock_client")
-    def test_docx_error_includes_exception_detail(self, mock_bedrock):
-        """DOCX extraction error includes the specific exception message."""
+    def test_docx_error_uses_generic_message(self, mock_bedrock):
+        """DOCX extraction error uses a generic message (no internal details leaked)."""
         mock_bedrock.chat_with_document.side_effect = Exception("never called")
         # Patch Document to fail
         with patch("services.cv_extractor.Document") as mock_doc:
             mock_doc.side_effect = Exception("Corrupted ZIP archive")
             result = run(extract_from_docx(b"fake"))
         assert result.error is not None
-        assert "Corrupted ZIP archive" in result.error
+        assert "Failed to extract CV from DOCX" in result.error
+        assert "Corrupted ZIP archive" not in result.error
 
     def test_json_encoding_error_message(self):
         """JSON encoding error produces user-friendly message."""

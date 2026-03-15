@@ -7,6 +7,7 @@ import { TemplateSelector } from './features/template-selection';
 import { CVFormBuilder } from './features/form-builder';
 import { CVImportUpload, CVImportReview } from './features/cv-import';
 import { EditorScreen } from './features/editor';
+import { FeatureErrorBoundary } from './components/FeatureErrorBoundary';
 
 function App() {
   return (
@@ -16,10 +17,10 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/build/start" element={<BuildChoiceScreen />} />
         <Route path="/build" element={<TemplateSelector />} />
-        <Route path="/build/form" element={<CVFormBuilder />} />
+        <Route path="/build/form" element={<FeatureErrorBoundary><CVFormBuilder /></FeatureErrorBoundary>} />
         <Route path="/import" element={<CVImportUpload />} />
         <Route path="/import/review" element={<CVImportReview />} />
-        <Route path="/editor" element={<EditorScreen />} />
+        <Route path="/editor" element={<FeatureErrorBoundary><EditorScreen /></FeatureErrorBoundary>} />
       </Routes>
     </AppProvider>
   );

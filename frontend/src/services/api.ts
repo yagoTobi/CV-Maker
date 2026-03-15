@@ -4,6 +4,11 @@ import type { Template } from '../features/template-selection';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
+// Create axios instance with default timeout
+const axiosInstance = axiosInstance.create({
+  timeout: 30000, // 30s default
+});
+
 /**
  * Process Server-Sent Events stream and extract text chunks.
  */
@@ -55,9 +60,11 @@ async function processSSEStream(
 export const api = {
   async compileLatex(texContent: string, templateId?: string): Promise<CompileResponse> {
     try {
-      const response = await axios.post<CompileResponse>(`${API_BASE}/compile`, {
+      const response = await axiosInstance.post<CompileResponse>(`${API_BASE}/compile`, {
         tex_content: texContent,
         template_id: templateId,
+      }, {
+        timeout: 120000, // 120s for LaTeX compilation
       });
       return response.data;
     } catch (err) {
@@ -68,7 +75,7 @@ export const api = {
 
   async fetchTemplates(): Promise<Template[]> {
     try {
-      const response = await axios.get<{ templates: Template[] }>(`${API_BASE}/templates`);
+      const response = await axiosInstance.get<{ templates: Template[] }>(`${API_BASE}/templates`);
       const apiOrigin = new URL(API_BASE).origin;
       return response.data.templates.map(t => ({
         ...t,
@@ -82,7 +89,7 @@ export const api = {
 
   async loadTemplateContent(templateId: string): Promise<{ content: string; clsContent: string | null }> {
     try {
-      const response = await axios.get<{ content: string; cls_content: string | null }>(
+      const response = await axiosInstance.get<{ content: string; cls_content: string | null }>(
         `${API_BASE}/templates/${templateId}/content`
       );
       return {
@@ -145,7 +152,7 @@ export const api = {
     companyName: string
   ): Promise<MatchAnalysis | null> {
     try {
-      const response = await axios.post<MatchAnalysis>(`${API_BASE}/chat/match-analysis`, {
+      const response = await axiosInstance.post<MatchAnalysis>(`${API_BASE}/chat/match-analysis`, {
         cv_content: cvContent,
         job_description: jobDescription,
         company_name: companyName,
@@ -159,7 +166,7 @@ export const api = {
 
   async loadUserData(): Promise<UserProfile | null> {
     try {
-      const response = await axios.get<UserProfile>(`${API_BASE}/user-data`);
+      const response = await axiosInstance.get<UserProfile>(`${API_BASE}/user-data`);
       return response.data;
     } catch {
       return null;
@@ -168,7 +175,7 @@ export const api = {
 
   async saveUserData(profile: UserProfile): Promise<void> {
     try {
-      await axios.post(`${API_BASE}/user-data`, profile);
+      await axiosInstance.post(`${API_BASE}/user-data`, profile);
     } catch (err) {
       console.error('Failed to save user data:', err);
     }
@@ -176,7 +183,7 @@ export const api = {
 
   async generateLatex(formData: CVFormData): Promise<{ texContent: string; error?: string }> {
     try {
-      const response = await axios.post<{ tex_content: string }>(`${API_BASE}/generate-latex`, formData);
+      const response = await axiosInstance.post<{ tex_content: string }>(`${API_BASE}/generate-latex`, formData);
       return { texContent: response.data.tex_content };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'LaTeX generation failed';
@@ -186,7 +193,7 @@ export const api = {
 
   async listVersions(): Promise<{ versions: CVVersionWithChildren[]; ungrouped: CVVersionMeta[] }> {
     try {
-      const response = await axios.get<{ versions: CVVersionWithChildren[]; ungrouped: CVVersionMeta[] }>(`${API_BASE}/cv-versions`);
+      const response = await axiosInstance.get<{ versions: CVVersionWithChildren[]; ungrouped: CVVersionMeta[] }>(`${API_BASE}/cv-versions`);
       return response.data;
     } catch {
       return { versions: [], ungrouped: [] };
@@ -216,7 +223,7 @@ export const api = {
         match_score: data.matchScore,
         parent_version_id: data.parentVersionId,
       };
-      const response = await axios.post<CVVersion>(`${API_BASE}/cv-versions`, payload);
+      const response = await axiosInstance.post<CVVersion>(`${API_BASE}/cv-versions`, payload);
       return response.data;
     } catch (err) {
       console.error('Failed to save version:', err);
@@ -226,7 +233,7 @@ export const api = {
 
   async getVersion(id: string): Promise<CVVersion | null> {
     try {
-      const response = await axios.get<CVVersion>(`${API_BASE}/cv-versions/${id}`);
+      const response = await axiosInstance.get<CVVersion>(`${API_BASE}/cv-versions/${id}`);
       return response.data;
     } catch {
       return null;
@@ -235,7 +242,7 @@ export const api = {
 
   async deleteVersion(id: string): Promise<boolean> {
     try {
-      await axios.delete(`${API_BASE}/cv-versions/${id}`);
+      await axiosInstance.delete(`${API_BASE}/cv-versions/${id}`);
       return true;
     } catch {
       return false;
@@ -244,7 +251,7 @@ export const api = {
 
   async updateVersion(id: string, data: { parentVersionId?: string | null }): Promise<boolean> {
     try {
-      await axios.patch(`${API_BASE}/cv-versions/${id}`, {
+      await axiosInstance.patch(`${API_BASE}/cv-versions/${id}`, {
         parentVersionId: data.parentVersionId,
       });
       return true;
@@ -258,13 +265,13 @@ export const api = {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const response = await axios.post<CVImportResponse>(`${API_BASE}/cv-import`, formData, {
+      const response = await axiosInstance.post<CVImportResponse>(`${API_BASE}/cv-import`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 60000, // 60s — extraction can be slow for large PDFs
       });
       return response.data;
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.data?.detail) {
+      if (axiosInstance.isAxiosError(err) && err.response?.data?.detail) {
         return {
           success: false,
           formData: null,

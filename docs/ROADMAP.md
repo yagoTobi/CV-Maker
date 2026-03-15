@@ -13,6 +13,8 @@ CV-Maker is in **Phase 1: Nail the Creation Loop** (see [PRODUCT_STRATEGY.md](PR
 - [x] Live PDF compilation and preview
 - [x] Support for 3 LaTeX engines: pdflatex (Professional CV) and xelatex (Deedy, McDowell)
 - [x] Template-aware compiler with bundled fonts and packages
+- [x] React Router v6 navigation with URL-based routing and browser back/forward support
+- [x] AppContext centralized state management (replaced App.tsx god component)
 
 **AI Assistant**
 - [x] AI chat assistant for CV refinement (AWS Bedrock / Claude 3.5 Sonnet v2)
@@ -31,17 +33,25 @@ CV-Maker is in **Phase 1: Nail the Creation Loop** (see [PRODUCT_STRATEGY.md](PR
 **Form Builder (Build Path)**
 - [x] Structured form with 6 standard sections: Personal Info, Work Experience, Education, Skills, Projects, Awards
 - [x] Generic `additionalSections` support for custom sections (Leadership, Certifications, etc.)
+- [x] Right panel tabs: Preview (PDF) and Job Tuning (job description + AI match analysis)
 - [x] Live PDF preview alongside form with drag-to-resize panel (300-760px)
 - [x] Drag-and-drop section ordering in sidebar nav (reflected in compiled LaTeX via `sectionOrder`)
 - [x] Drag-and-drop entry ordering within sections
 - [x] Dirty indicator on Regenerate button (amber + "●" when form changed since last compile)
 - [x] JSON export/import of form data (`cv-data.json` download/upload)
+- [x] Voice interview feature (Pipecat + Amazon Nova Sonic S2S) — alpha quality
+  - [x] VoiceWidget with animated orb, transcript feed, mic controls
+  - [x] WebSocket-based voice session pipeline
+  - [x] CV data extraction from voice transcript
+  - [x] Voice profile persistence for returning users
 
 **Screen Flow & Navigation**
 - [x] Landing screen with intent-based entry: "Build my CV", "Tune for a job", "My Saved CVs"
+- [x] BuildChoiceScreen for build entry flow ("Start from scratch" | "Import existing CV")
 - [x] Template selection screen (Build path only)
 - [x] Dashboard for saved versions (grid view, load, delete)
 - [x] In-editor version switcher (save / switch between saved versions)
+- [x] React Router v6 with 8 routes: `/`, `/build/start`, `/build`, `/build/form`, `/import`, `/import/review`, `/dashboard`, `/editor`
 
 **Version Management**
 - [x] Save versions with metadata (name, template, job description, company, match score)
@@ -74,7 +84,7 @@ CV-Maker is in **Phase 1: Nail the Creation Loop** (see [PRODUCT_STRATEGY.md](PR
 See [PRODUCT_STRATEGY.md § Phase 1](PRODUCT_STRATEGY.md#phase-1--nail-the-creation-loop-current-focus) for full context.
 
 **High Priority**
-- [ ] **Job-centric version management** (in progress) — hierarchical dashboard with base CVs and job applications
+- [ ] **Job-centric version management** (mostly complete) — hierarchical dashboard with base CVs and job applications
   - [x] Backend: Add `parentVersionId` and `role` fields to CVVersion schema
   - [x] Backend: Update list endpoint to return hierarchical structure
   - [x] Backend: Add move/re-parent endpoint (`PATCH /api/cv-versions/{id}`)
@@ -90,11 +100,17 @@ See [PRODUCT_STRATEGY.md § Phase 1](PRODUCT_STRATEGY.md#phase-1--nail-the-creat
   - [x] Auto-naming logic: `{company} {role}` or `Application {date}`
   - [ ] "Tune for a job" flow: Base CV picker before opening editor
   - [ ] AI grouping suggestions for ungrouped versions (similarity hints)
+- [ ] **Voice interview improvements** (alpha → beta)
+  - [ ] Session cleanup (TTL-based expiration)
+  - [ ] Error recovery (WebSocket reconnection, audio errors)
+  - [ ] Usage tracking and rate limiting
+  - [ ] Session persistence (database storage)
 - [ ] Auto-save functionality (localStorage or backend persistence)
 - [ ] ATS optimization feedback built into match analysis (keyword gaps, formatting advice)
 - [ ] Onboarding clarity / first-run experience (tooltips, guided flow, example data)
 
 **Template Quality (Ongoing)**
+- [x] McDowell CV auto-detect header line count (fixes bullet/header overlap bug)
 - [ ] Additional template polish (consistent spacing, edge cases, date formatting)
 - [ ] Template preview images accuracy (ensure previews match actual output)
 
@@ -145,6 +161,7 @@ See [PRODUCT_STRATEGY.md § Phase 4](PRODUCT_STRATEGY.md#phase-4--platform--grow
 **Backend**
 - [ ] Request validation and sanitization improvements
 - [ ] Logging and monitoring (structured logs, error tracking)
+- [ ] Voice session cleanup (in-memory dict grows unbounded)
 
 **DevOps**
 - [ ] CI/CD pipeline (automated tests on PR, deployment automation)
@@ -153,6 +170,12 @@ See [PRODUCT_STRATEGY.md § Phase 4](PRODUCT_STRATEGY.md#phase-4--platform--grow
 **Performance**
 - [ ] LaTeX compilation caching (reduce redundant compiles for unchanged content)
 - [ ] Frontend bundle size optimization (code splitting, lazy loading)
+
+**Security**
+- [ ] Authentication system (JWT/session-based)
+- [ ] Rate limiting (API and voice endpoints)
+- [ ] LaTeX sandboxing (Docker or chroot jail)
+- [ ] Security headers (CSP, HSTS, X-Frame-Options)
 
 ---
 

@@ -3,8 +3,11 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Dict, Optional, Literal
 import json
+import logging
 
 from services.bedrock import bedrock_client
+
+logger = logging.getLogger(__name__)
 from prompts.cv_agent import get_chat_system_prompt, get_match_analysis_prompt
 
 router = APIRouter()
@@ -79,7 +82,8 @@ async def chat(request: ChatRequest):
             return ChatResponse(response=response)
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("AI service error")
+        raise HTTPException(status_code=500, detail="AI service temporarily unavailable")
 
 
 @router.post("/chat/analyze")
@@ -121,7 +125,8 @@ async def analyze_job(request: ChatRequest):
             return ChatResponse(response=response)
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("AI service error")
+        raise HTTPException(status_code=500, detail="AI service temporarily unavailable")
 
 
 @router.post("/chat/match-analysis", response_model=MatchAnalysisResponse)
@@ -185,4 +190,5 @@ Return ONLY a valid JSON object with this exact structure:
             )
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("AI service error")
+        raise HTTPException(status_code=500, detail="AI service temporarily unavailable")

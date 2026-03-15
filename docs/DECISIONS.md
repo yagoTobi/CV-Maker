@@ -435,6 +435,86 @@ Reframe versioning as a **hierarchical, job-centric model** with base CVs as par
 
 ---
 
+## ADR-017: Voice Interview Architecture (Pipecat + Nova Sonic)
+
+**Date:** 2026-03-15
+
+**Status:** Accepted
+
+**Context:**
+Users need an alternative to manual form filling. Typing structured CV data into a form is tedious and interrupts the flow of thought. Voice is a more natural modality for storytelling and biographical information. Speech-to-speech AI (S2S) enables real-time conversation without separate transcription and synthesis steps.
+
+**Decision:**
+Use Pipecat framework with Amazon Nova Sonic for speech-to-speech voice interviews.
+
+**Architecture:**
+- **WebSocket transport**: `FastAPIWebsocketTransport` with `ProtobufFrameSerializer` for binary audio frames
+- **Pipeline**: User audio → user_aggregator → Nova Sonic LLM (S2S) → assistant audio → transport output + transcript collection
+- **Sample rates**: 16kHz input (user mic), 24kHz output (Nova Sonic)
+- **Transcript collection**: Custom `TranscriptCollector` frame processor captures `TranscriptionFrame` objects to build session transcript
+- **Session storage**: In-memory dict `{session_id: [utterances]}` — cleared on restart (no persistence)
+- **CV extraction**: `POST /api/voice/extract-cv` takes full transcript and uses Bedrock (Claude) to extract structured `CVFormData`
+- **Voice profile**: Returning user detection stores name/email in `user_data/voice_profile.json` for personalized greeting
+- **Optional dependency**: `pip install 'pipecat-ai[aws]'` — app starts without it (voice feature disabled if not installed)
+
+**Rationale:**
+- **S2S over separate ASR+TTS**: Nova Sonic handles speech-to-speech natively, reducing latency and avoiding transcription errors
+- **Pipecat framework**: Provides battle-tested WebSocket transport, frame serialization, and pipeline orchestration
+- **In-memory sessions**: Simplest implementation for alpha; no database dependency
+- **Transcript-based extraction**: Allows for correction and re-extraction; more flexible than real-time streaming extraction
+- **Optional dependency**: App remains functional without Pipecat; feature is opt-in
+
+**Consequences:**
+- **Alpha quality**: No error recovery, no session persistence, no rate limiting
+- **Session cleanup needed**: In-memory dict grows unbounded; needs TTL-based cleanup for production
+- **WebSocket complexity**: Debugging WebSocket issues is harder than HTTP; requires browser dev tools network inspection
+- **Audio format constraints**: Protobuf serialization and sample rate mismatch (16kHz vs 24kHz) can cause audio quality issues
+- **Single dependency point**: If Pipecat or Nova Sonic has breaking changes, voice feature breaks
+- **Cost**: Nova Sonic usage incurs per-second charges; no usage tracking implemented
+
+---
+
+## ADR-018: McDowell Template Auto Line Detection
+
+**Date:** 2026-03-15
+
+**Status:** Accepted
+
+**Context:**
+The McDowell CV template's `cvsubsection` environment accepts an optional `[n]` parameter to specify the number of lines in the section header. This controls the vertical space adjustment between the header and the bullet points below it. The Jinja2 template (`mcdowell-cv.tex.j2`) always passed the default `[1]`, which worked for single-line headers but caused bullet points to overlap with multi-line headers (e.g., "Software Engineer" + "Google, Mountain View, CA" + "June 2020 – Present" = 3 lines).
+
+Manual calculation in Jinja2 was considered (count `\newline` commands) but rejected because:
+1. LaTeX line wrapping depends on text width, which Jinja2 cannot measure
+2. Long single lines may wrap to 2+ lines unpredictably
+3. Would require template changes for every new field or layout adjustment
+
+**Decision:**
+Modify `mcdowellcv.cls` to auto-detect the header line count using `\savebox` to measure the actual rendered height of the header content.
+
+**Implementation:**
+- Use `\savebox` to render the header into a box and measure its height
+- Compare measured height (`\ht\headerbox`) against thresholds:
+  - `< 1.5x \baselineskip` → single-line (7pt vspace)
+  - `< 2.5x \baselineskip` → double-line (5pt vspace)
+  - `≥ 2.5x \baselineskip` → multi-line (3pt vspace)
+- Thresholds use `1.5x` and `2.5x` multipliers to account for line spacing and font metrics
+- Backward compatible: optional `[n]` parameter still accepted but ignored (deprecated)
+
+**Rationale:**
+- **Accurate measurement**: LaTeX measures the actual rendered height, accounting for line wrapping and font metrics
+- **Template simplification**: Jinja2 template no longer needs to calculate line count or pass `[n]` parameter
+- **Automatic adaptation**: Works for any header content without manual tuning
+- **Single fix point**: Bug fixed in one place (`.cls` file) instead of requiring changes to Jinja2 template logic
+
+**Consequences:**
+- **Backward compatible**: Existing templates that pass `[n]` still work (parameter is ignored)
+- **`.cls` complexity**: Adds LaTeX box manipulation logic to the class file (11 lines)
+- **Threshold tuning**: The `1.5x` and `2.5x` multipliers are empirically derived; may need adjustment for different fonts
+- **Performance**: Negligible — `\savebox` is fast and runs once per section
+- **Edge cases**: Very tall headers (4+ lines) use the same vspace as 3-line headers (acceptable for typical CVs)
+
+---
+
 ## Template for New Decisions
 
 ```markdown

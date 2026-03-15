@@ -34,7 +34,12 @@ venv\Scripts\activate     # Windows
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Optional: Install voice interview feature (Pipecat + AWS dependencies)
+pip install 'pipecat-ai[aws]'
 ```
+
+**Note:** The voice interview feature is optional. The app will start and run normally without Pipecat installed; the voice feature will simply be disabled.
 
 ### Frontend Setup
 
@@ -132,14 +137,30 @@ Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 cd frontend
 npm run lint  # Lint check
 npm run build # Type check + build
+npx tsc --noEmit  # Type check without building (from frontend/ dir, not project root)
 ```
 
 ### Backend
 
 ```bash
 cd backend
-# Add test commands when tests are implemented
+
+# Run all tests
+python3 -m pytest tests/ -v
+
+# Run only fast tests (skip LaTeX compilation tests)
+pytest -m "not slow"
+
+# Run specific test file
+pytest tests/test_template_rendering.py -v
+
+# Run with coverage
+pytest --cov=routes --cov=services tests/
 ```
+
+**Test Suites:**
+- `test_template_rendering.py` — 21 Jinja2 rendering tests (fast, ~2s)
+- `test_template_compilation.py` — 18 pdflatex/xelatex compilation tests (marked `@pytest.mark.slow`, ~28s)
 
 ## Troubleshooting
 

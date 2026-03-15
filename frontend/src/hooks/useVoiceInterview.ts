@@ -10,8 +10,11 @@ import type {
   VoiceTranscriptLine,
 } from "../types";
 
-const WS_URL = `ws://${window.location.hostname}:8000/api/ws/voice-interview`;
-const API_BASE = `http://${window.location.hostname}:8000/api`;
+const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:8000/api`;
+const WS_URL = import.meta.env.VITE_WS_URL || API_BASE.replace(/^http/, 'ws').replace(/\/api$/, '/api/ws/voice-interview');
+
+// Dev-only logging
+const log = import.meta.env.DEV ? console.log.bind(console) : () => {};
 
 export interface UseVoiceInterviewResult {
   widgetState: VoiceWidgetState;
@@ -89,7 +92,7 @@ export function useVoiceInterview(
     setWidgetState("connecting");
     setTranscript([]);
     setElapsed(0);
-    console.log("[VoiceInterview] start() called, creating PipecatClient...");
+    log("[VoiceInterview] start() called, creating PipecatClient...");
 
     try {
       const client = new PipecatClient({
@@ -102,7 +105,7 @@ export function useVoiceInterview(
         enableMic: true,
         callbacks: {
           onConnected: () => {
-            console.log("[VoiceInterview] onConnected (transport layer)");
+            log("[VoiceInterview] onConnected (transport layer)");
           },
           onBotReady: () => {
             console.log(
@@ -117,14 +120,14 @@ export function useVoiceInterview(
             );
           },
           onDisconnected: () => {
-            console.log("[VoiceInterview] onDisconnected");
+            log("[VoiceInterview] onDisconnected");
             if (widgetStateRef.current !== "ending") {
               setWidgetState("idle");
               cleanup();
             }
           },
           onServerMessage: (message: unknown) => {
-            console.log("[VoiceInterview] raw server message:", message);
+            log("[VoiceInterview] raw server message:", message);
             try {
               const msg = (
                 typeof message === "string" ? JSON.parse(message) : message
@@ -164,9 +167,9 @@ export function useVoiceInterview(
       });
 
       clientRef.current = client;
-      console.log("[VoiceInterview] calling connect() to", WS_URL);
+      log("[VoiceInterview] calling connect() to", WS_URL);
       await client.connect({ wsUrl: WS_URL });
-      console.log("[VoiceInterview] connect() resolved — bot is ready");
+      log("[VoiceInterview] connect() resolved — bot is ready");
     } catch (err) {
       console.error("[VoiceInterview] failed to start:", err);
       setWidgetState("idle");

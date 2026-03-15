@@ -9,6 +9,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Voice interview feature**: Pipecat + Amazon Nova Sonic speech-to-speech pipeline
+  - VoiceWidget in CVFormBuilder sidebar with animated orb, transcript feed, mic controls
+  - WebSocket-based voice session (`WS /api/ws/voice-interview`) with Pipecat pipeline
+  - Nova Sonic LLM for natural conversation (16kHz input, 24kHz output)
+  - TranscriptCollector frame processor for session transcript aggregation
+  - CV data extraction from voice transcript (`POST /api/voice/extract-cv`)
+  - Voice profile persistence for returning users (`GET/POST /api/voice/profile`)
+  - Alpha quality: optional dependency (`pip install 'pipecat-ai[aws]'`), no session persistence, no error recovery
+- **React Router v6 navigation**: URL-based routing with browser back/forward support
+  - 8 routes: `/`, `/build/start`, `/build`, `/build/form`, `/import`, `/import/review`, `/dashboard`, `/editor`
+  - `react-router-dom` v6 with `<Routes>` and `<Route>` components in App.tsx
+  - Navigation via `useNavigate()` hook, state passed via `location.state`
+- **AppContext refactor**: Centralized state management replacing App.tsx god component
+  - `contexts/AppContext.tsx` holds all shared state (versions, formData, template selection)
+  - `useAppContext()` hook provides state and handlers to all screens
+  - App.tsx reduced to route definitions only (~25 lines)
+- **BuildChoiceScreen**: New "Build my CV" entry flow
+  - Choice screen with "Start from scratch" and "Import existing CV" options
+  - Inline file upload in "Import" card for streamlined flow
+  - Route: `/build/start`
 - **Job-centric version management**: Hierarchical dashboard with base CVs and nested job applications
   - Base CVs (e.g., "Creative CV", "Consulting CV") act as templates for job applications
   - Job applications (e.g., "Spotify Product Designer") are derived from base CVs with job-specific tailoring
@@ -45,8 +65,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Additional sections rendering in all 3 Jinja2 templates (Professional + McDowell via `section_order`, Deedy in right column)
 - Form builder UI for additional sections (add/remove sections, editable titles, full entry CRUD)
 - "Add Section" button in form builder sidebar nav
+- Custom favicon (`favicon.svg`) replacing default Vite icon
+- Page title changed to "CV Maker" in `index.html`
 
 ### Fixed
+- **McDowell CV template**: Bullet points overlapping with multi-line section headers
+  - Root cause: `cvsubsection` environment required manual `[n]` line count parameter; Jinja2 template always passed default `[1]`
+  - Solution: Auto-detect header line count using `\savebox` to measure header height in `mcdowellcv.cls`
+  - Compare measured height against `1.5x` and `2.5x` `\baselineskip` thresholds to select correct vspace (single/double/multi-line)
+  - Backward compatible: optional `[n]` parameter still accepted but ignored
+  - Eliminates need for Jinja2 template to calculate line count
 - `latex_escape` sequential-replacement bug: backslash was replaced first, causing subsequent `{`/`}` passes to re-escape `\textbackslash{}`. Rewrote as single-pass regex.
 - Deedy template: skills `\textbullet{}` separator was being mangled by `latex_escape` — fixed with `map('latex_escape')` before `join`
 - Deedy template: contact header line could have leading/trailing `\,|\,` separators when fields were missing — rebuilt with `contact_parts` array + `join`
@@ -59,12 +87,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Deedy template: removed `\lastupdated` command (was printing misleading compilation date)
 
 ### Changed
-- App initial screen changed from `template-select` to `landing`
-- `AppScreen` type expanded to `'landing' | 'dashboard' | 'template-select' | 'form-builder' | 'editor'`
+- **Navigation architecture**: Replaced screen-based state machine with React Router v6
+  - App.tsx is now route definitions only; removed `currentScreen` state
+  - Navigation via `useNavigate()` and URL changes (enables browser back/forward)
+  - State passed between routes via `location.state` object
+- **State management**: App.tsx god component pattern replaced with AppContext
+  - All shared state moved to `contexts/AppContext.tsx`
+  - Components access state via `useAppContext()` hook
+- **Form builder right panel**: Redesigned with tabs (Preview | Job Tuning)
+  - Mode passed via `location.state.mode`: 'build' | 'tune'
+  - Tune mode defaults to Job Tuning tab; Build mode defaults to Preview tab
+  - "Advanced Editor" button in preview header navigates to `/editor` escape hatch
 - CORS `allow_methods` expanded to include `DELETE`
 - Template selection screen now has a Back button (returns to landing)
 - Landing page layout: two-column (branding left, actions right), responsive collapse on mobile
 - `sectionOrder` now supports `additional-{index}` keys for dynamic additional sections
+- Form builder sidebar now includes VoiceWidget pill trigger with overlay portal
 
 ---
 
