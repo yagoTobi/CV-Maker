@@ -518,8 +518,13 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
           return;
         }
         setFormData({ ...parsed, templateId: formData.templateId });
-        lastGeneratedRef.current = null;
-        setIsDirty(false);
+        // If a PDF was previously generated, mark as dirty so the user knows
+        // they need to regenerate. Otherwise, keep clean state for fresh starts.
+        if (lastGeneratedRef.current !== null) {
+          setIsDirty(true);
+        } else {
+          setIsDirty(false);
+        }
       } catch {
         setGenerateError('Failed to parse CV data file. Ensure it is valid JSON.');
       }

@@ -22,20 +22,20 @@ export function JobInput({
   const getButtonText = () => {
     if (isAnalyzing) return 'Analyzing...';
     if (hasAnalyzed) return 'Re-analyse';
-    return 'Analyze Job Posting';
+    return 'Analyze Position';
   };
 
   return (
     <div className={styles.container}>
       <div className={styles.inputRow}>
         <div className={styles.inputGroup}>
-          <label htmlFor="company-name">Company</label>
+          <label htmlFor="company-name">Organization</label>
           <input
             id="company-name"
             type="text"
             value={companyName}
             onChange={(e) => onCompanyNameChange(e.target.value)}
-            placeholder="Company name..."
+            placeholder="Organization name..."
             maxLength={100}
           />
         </div>
@@ -46,7 +46,7 @@ export function JobInput({
           id="job-description"
           value={jobDescription}
           onChange={(e) => onJobDescriptionChange(e.target.value)}
-          placeholder="Paste the full job description here..."
+          placeholder="Paste the full position description here..."
           maxLength={50000}
         />
       </div>

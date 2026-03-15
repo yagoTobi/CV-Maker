@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { JobInput, ChatPanel, PdfPreview, MatchAnalysis } from './';
 import { VersionSwitcher } from '../dashboard';
@@ -31,6 +31,15 @@ export default function EditorScreen() {
   const handleCompile = useCallback(async () => {
     await compiler.compile(templates.content, templates.selectedId || undefined);
   }, [compiler.compile, templates.content, templates.selectedId]);
+
+  // Auto-compile when entering tune mode with content already loaded
+  const hasAutoCompiled = useRef(false);
+  useEffect(() => {
+    if (isTuneMode && templates.content && !compiler.pdfBase64 && !compiler.isCompiling && !hasAutoCompiled.current) {
+      hasAutoCompiled.current = true;
+      handleCompile();
+    }
+  }, [isTuneMode, templates.content, compiler.pdfBase64, compiler.isCompiling, handleCompile]);
 
   // Analyze job description
   const handleAnalyze = useCallback(async () => {
