@@ -10,6 +10,7 @@ import { SaveCVModal } from "../dashboard";
 import type { SaveVersionData } from "../dashboard";
 import { api } from "../../services/api";
 import type { CVFormData } from "../../types";
+import { VoiceWidget } from "../voice-widget";
 import styles from "./CVFormBuilder.module.css";
 
 // Auto-derive a display label from a URL
@@ -84,6 +85,7 @@ export default function CVFormBuilder() {
   // All hooks at top — never after a conditional return (key learning #3)
   const fb = useFormBuilder(templateId, formData || undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const navWrapperRef = useRef<HTMLDivElement>(null);
 
   // Save modal state
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -336,81 +338,84 @@ export default function CVFormBuilder() {
           </div>
         </div>
 
-        <nav className={styles.sectionNav}>
-          {/* Personal — fixed, not draggable */}
-          <button
-            className={`${styles.navItem} ${fb.activeSection === "personal" ? styles.navActive : ""}`}
-            onClick={() => fb.setActiveSection("personal")}
-          >
-            {SECTION_LABELS["personal"]}
-          </button>
+        <div ref={navWrapperRef} className={styles.navWrapper}>
+          <nav className={styles.sectionNav}>
+            {/* Personal — fixed, not draggable */}
+            <button
+              className={`${styles.navItem} ${fb.activeSection === "personal" ? styles.navActive : ""}`}
+              onClick={() => fb.setActiveSection("personal")}
+            >
+              {SECTION_LABELS["personal"]}
+            </button>
 
-          {/* Reorderable sections */}
-          {reorderableNavItems.map((section, rIdx) => {
-            // Get label for section (dynamic for additional sections)
-            const sectionLabel = section.startsWith("additional-")
-              ? fb.formData.additionalSections?.[
-                  parseInt(section.replace("additional-", ""))
-                ]?.title || "Additional Section"
-              : SECTION_LABELS[section as keyof typeof SECTION_LABELS] ||
-                section;
+            {/* Reorderable sections */}
+            {reorderableNavItems.map((section, rIdx) => {
+              // Get label for section (dynamic for additional sections)
+              const sectionLabel = section.startsWith("additional-")
+                ? fb.formData.additionalSections?.[
+                    parseInt(section.replace("additional-", ""))
+                  ]?.title || "Additional Section"
+                : SECTION_LABELS[section as keyof typeof SECTION_LABELS] ||
+                  section;
 
-            // For Deedy template, render plain nav buttons (no drag-and-drop)
-            if (isDeedyTemplate) {
+              // For Deedy template, render plain nav buttons (no drag-and-drop)
+              if (isDeedyTemplate) {
+                return (
+                  <button
+                    key={section}
+                    className={`${styles.navItem} ${fb.activeSection === section ? styles.navActive : ""}`}
+                    onClick={() => fb.setActiveSection(section)}
+                  >
+                    {sectionLabel}
+                  </button>
+                );
+              }
+
+              // For other templates, render draggable nav items
               return (
-                <button
+                <div
                   key={section}
-                  className={`${styles.navItem} ${fb.activeSection === section ? styles.navActive : ""}`}
-                  onClick={() => fb.setActiveSection(section)}
+                  data-drag-nav
+                  className={`${styles.navDraggable} ${navDragOver === rIdx && navDragFrom !== rIdx ? styles.navDragOver : ""} ${navDragFrom === rIdx ? styles.navDragging : ""}`}
+                  onDragStart={() => handleNavDragStart(rIdx)}
+                  onDragEnter={() => handleNavDragEnter(rIdx)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => handleNavDrop(rIdx)}
+                  onDragEnd={handleNavDragEnd}
                 >
-                  {sectionLabel}
-                </button>
+                  <span
+                    className={styles.navGrip}
+                    onMouseDown={(e) => {
+                      const nav = (e.currentTarget as HTMLElement).closest(
+                        "[data-drag-nav]",
+                      ) as HTMLElement | null;
+                      if (nav) nav.draggable = true;
+                    }}
+                  >
+                    <GripIcon />
+                  </span>
+                  <button
+                    className={`${styles.navItem} ${fb.activeSection === section ? styles.navActive : ""}`}
+                    onClick={() => fb.setActiveSection(section)}
+                  >
+                    {sectionLabel}
+                  </button>
+                </div>
               );
-            }
+            })}
 
-            // For other templates, render draggable nav items
-            return (
-              <div
-                key={section}
-                data-drag-nav
-                className={`${styles.navDraggable} ${navDragOver === rIdx && navDragFrom !== rIdx ? styles.navDragOver : ""} ${navDragFrom === rIdx ? styles.navDragging : ""}`}
-                onDragStart={() => handleNavDragStart(rIdx)}
-                onDragEnter={() => handleNavDragEnter(rIdx)}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={() => handleNavDrop(rIdx)}
-                onDragEnd={handleNavDragEnd}
-              >
-                <span
-                  className={styles.navGrip}
-                  onMouseDown={(e) => {
-                    const nav = (e.currentTarget as HTMLElement).closest(
-                      "[data-drag-nav]",
-                    ) as HTMLElement | null;
-                    if (nav) nav.draggable = true;
-                  }}
-                >
-                  <GripIcon />
-                </span>
-                <button
-                  className={`${styles.navItem} ${fb.activeSection === section ? styles.navActive : ""}`}
-                  onClick={() => fb.setActiveSection(section)}
-                >
-                  {sectionLabel}
-                </button>
-              </div>
-            );
-          })}
-
-          {/* Add Section button */}
-          <button
-            className={styles.addSectionBtn}
-            onClick={fb.addAdditionalSection}
-          >
-            + Add Section
-          </button>
-        </nav>
+            {/* Add Section button */}
+            <button
+              className={styles.addSectionBtn}
+              onClick={fb.addAdditionalSection}
+            >
+              + Add Section
+            </button>
+          </nav>
+        </div>
 
         <div className={styles.sidebarFooter}>
+          <VoiceWidget overlayContainer={navWrapperRef.current} />
           <div className={styles.importExport}>
             <button
               className={styles.iconBtn}
