@@ -20,7 +20,6 @@ try:
     from pipecat.frames.frames import (
         Frame,
         LLMRunFrame,
-        OutputTransportMessageFrame,
         TextFrame,
         TranscriptionFrame,
     )
@@ -90,15 +89,19 @@ def save_voice_profile(profile: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Custom Pipecat processor — collects transcript server-side, sends updates
-# to the client via OutputTransportMessageFrame (so messages flow through
-# the serializer instead of bypassing the transport).
+# Custom Pipecat processor — collects transcript server-side for the
+# extract-cv endpoint. The frontend uses RTVI callbacks for live display.
 # ---------------------------------------------------------------------------
 
 if PIPECAT_AVAILABLE:
 
     class TranscriptCollector(FrameProcessor):
-        """Accumulates transcript lines and forwards custom events to the client."""
+        """Accumulates transcript lines server-side for the extract-cv endpoint.
+
+        The frontend receives transcripts via RTVI callbacks (onUserTranscript,
+        onBotOutput) and detects the session-complete trigger phrase client-side.
+        This processor only needs to store the transcript for later extraction.
+        """
 
         def __init__(self, session_id: str):
             super().__init__()
@@ -112,43 +115,15 @@ if PIPECAT_AVAILABLE:
                 text = getattr(frame, "text", "") or getattr(frame, "transcript", "")
                 if text:
                     logger.info(
-                        "[voice] session {} — 🎤 USER: {}", self._session_id, text
+                        "[voice] session {} — USER: {}", self._session_id, text
                     )
                     _sessions[self._session_id]["transcript"].append(f"User: {text}")
-                    await self.push_frame(
-                        OutputTransportMessageFrame(
-                            message={
-                                "type": "transcript",
-                                "speaker": "user",
-                                "text": text,
-                            }
-                        ),
-                        FrameDirection.DOWNSTREAM,
-                    )
 
             elif isinstance(frame, TextFrame) and frame.text:
-                text = frame.text
-                logger.info("[voice] session {} — 🤖 AI: {}", self._session_id, text)
-                _sessions[self._session_id]["transcript"].append(f"AI: {text}")
-
-                if "generating your cv now" in text.lower():
-                    await self.push_frame(
-                        OutputTransportMessageFrame(
-                            message={"type": "session_complete"}
-                        ),
-                        FrameDirection.DOWNSTREAM,
-                    )
-                else:
-                    await self.push_frame(
-                        OutputTransportMessageFrame(
-                            message={
-                                "type": "transcript",
-                                "speaker": "ai",
-                                "text": text,
-                            }
-                        ),
-                        FrameDirection.DOWNSTREAM,
-                    )
+                logger.info(
+                    "[voice] session {} — AI: {}", self._session_id, frame.text
+                )
+                _sessions[self._session_id]["transcript"].append(f"AI: {frame.text}")
 
             await self.push_frame(frame, direction)
 
@@ -175,7 +150,9 @@ async def voice_interview_ws(websocket: WebSocket):
 
     await websocket.accept()
     _cleanup_stale_sessions()
-    session_id = str(uuid.uuid4())
+
+    # Accept client-provided session ID (query param) or generate one
+    session_id = websocket.query_params.get("session_id") or str(uuid.uuid4())
     logger.info("[voice] session {} — WebSocket accepted", session_id)
 
     try:
@@ -262,19 +239,9 @@ async def voice_interview_ws(websocket: WebSocket):
                 logger.info("[voice] session {} — on_client_ready fired", session_id)
                 await rtvi.set_bot_ready()
                 logger.info("[voice] session {} — set_bot_ready completed", session_id)
-                await task.queue_frames(
-                    [
-                        OutputTransportMessageFrame(
-                            message={
-                                "type": "session_start",
-                                "session_id": session_id,
-                            }
-                        ),
-                        LLMRunFrame(),
-                    ]
-                )
+                await task.queue_frames([LLMRunFrame()])
                 logger.info(
-                    "[voice] session {} — session_start + LLMRunFrame queued",
+                    "[voice] session {} — LLMRunFrame queued",
                     session_id,
                 )
             except Exception as e:
@@ -288,7 +255,8 @@ async def voice_interview_ws(websocket: WebSocket):
 
     except WebSocketDisconnect:
         logger.info("[voice] session {} — WebSocketDisconnect", session_id)
-        _sessions.pop(session_id, None)
+        # Don't delete session here — the extract-cv endpoint still needs the transcript.
+        # TTL cleanup handles abandoned sessions.
     except Exception as exc:
         logger.exception("[voice] session {} — pipeline error: {}", session_id, exc)
         try:

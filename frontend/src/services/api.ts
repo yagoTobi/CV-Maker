@@ -5,7 +5,7 @@ import type { Template } from '../features/template-selection';
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 // Create axios instance with default timeout
-const axiosInstance = axiosInstance.create({
+const axiosInstance = axios.create({
   timeout: 30000, // 30s default
 });
 

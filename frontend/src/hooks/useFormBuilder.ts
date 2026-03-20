@@ -86,6 +86,20 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
 
+  // Sync when imported data changes (e.g. voice interview extraction)
+  const importedRef = useRef(importedData);
+  useEffect(() => {
+    if (importedData && importedData !== importedRef.current) {
+      console.log("[FormBuilder:sync] imported data changed — updating form", {
+        name: importedData.personalInfo?.fullName,
+        workEntries: importedData.workExperience?.length,
+        templateId,
+      });
+      importedRef.current = importedData;
+      setFormData({ ...importedData, templateId });
+    }
+  }, [importedData, templateId]);
+
   // isDirty: true when formData has changed since the last generateCV() call
   const lastGeneratedRef = useRef<CVFormData | null>(null);
   const [isDirty, setIsDirty] = useState(false);

@@ -415,7 +415,7 @@ export default function CVFormBuilder() {
         </div>
 
         <div className={styles.sidebarFooter}>
-          <VoiceWidget overlayContainer={navWrapperRef.current} />
+          <VoiceWidget overlayContainerRef={navWrapperRef} />
           <div className={styles.importExport}>
             <button
               className={styles.iconBtn}

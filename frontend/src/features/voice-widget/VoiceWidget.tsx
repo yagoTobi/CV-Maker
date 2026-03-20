@@ -1,7 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { FiMic, FiMicOff, FiPhoneOff, FiChevronDown } from "react-icons/fi";
+import { FiMic, FiMicOff, FiPhoneOff, FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { useVoiceInterview } from "../../hooks/useVoiceInterview";
 import { useAppContext } from "../../contexts/AppContext";
 import type { CVFormData } from "../../types";
@@ -16,20 +16,26 @@ function formatTime(seconds: number): string {
 }
 
 interface VoiceWidgetProps {
-  /** DOM element where the expanded overlay should be rendered (via portal) */
-  overlayContainer?: HTMLDivElement | null;
+  /** Ref to the DOM element where the expanded overlay should be rendered (via portal) */
+  overlayContainerRef?: RefObject<HTMLDivElement | null>;
 }
 
-export default function VoiceWidget({ overlayContainer }: VoiceWidgetProps) {
+export default function VoiceWidget({ overlayContainerRef }: VoiceWidgetProps) {
   const navigate = useNavigate();
   const { setFormData } = useAppContext();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleFormDataReady = useCallback(
     (formData: CVFormData) => {
+      console.log("[Voice:Widget] handleFormDataReady called with keys:", Object.keys(formData));
+      console.log("[Voice:Widget] personalInfo:", formData.personalInfo?.fullName || "(no name)");
+      console.log("[Voice:Widget] work entries:", formData.workExperience?.length ?? 0);
       setFormData(formData);
       setIsExpanded(false);
-      navigate("/build", { state: { fromVoice: true } });
+      // Stay in form builder — template is already selected.
+      // Navigate to /build/form to reload with the extracted data.
+      navigate("/build/form", { state: { mode: "build" }, replace: true });
+      console.log("[Voice:Widget] navigated to /build/form");
     },
     [setFormData, navigate],
   );
@@ -42,10 +48,19 @@ export default function VoiceWidget({ overlayContainer }: VoiceWidgetProps) {
   const isEnding = widgetState === "ending";
   const isBusy = isActive || isConnecting || isEnding;
 
-  const handlePillClick = () => setIsExpanded(true);
+  const handlePillClick = () => {
+    if (isBusy) {
+      // If interview is active and minimized, expand
+      setIsExpanded(true);
+    } else {
+      // If idle, expand to show start button
+      setIsExpanded(true);
+    }
+  };
 
   const handleCollapse = () => {
-    if (!isBusy) setIsExpanded(false);
+    // Always allow collapsing — minimizes the overlay
+    setIsExpanded(false);
   };
 
   const handleEnd = () => {
@@ -55,7 +70,9 @@ export default function VoiceWidget({ overlayContainer }: VoiceWidgetProps) {
 
   const recentLines = transcript.slice(-5);
 
-  const overlayContent = (
+  // ── Expanded overlay (portaled into navWrapper) ──
+  const container = overlayContainerRef?.current;
+  const overlayContent = container ? createPortal(
     <div
       className={[styles.overlay, isExpanded && styles.overlayVisible]
         .filter(Boolean)
@@ -70,8 +87,7 @@ export default function VoiceWidget({ overlayContainer }: VoiceWidgetProps) {
         <button
           className={styles.collapseBtn}
           onClick={handleCollapse}
-          disabled={isBusy}
-          title={isBusy ? "Interview in progress" : "Collapse"}
+          title="Minimize"
         >
           <FiChevronDown size={14} />
         </button>
@@ -96,9 +112,9 @@ export default function VoiceWidget({ overlayContainer }: VoiceWidgetProps) {
       {/* Status */}
       <div className={styles.agentName}>CV Coach</div>
       <div className={styles.agentStatus}>
-        {isConnecting && "Connecting…"}
+        {isConnecting && "Connecting\u2026"}
         {isActive && "Listening"}
-        {isEnding && "Building your CV…"}
+        {isEnding && "Building your CV\u2026"}
         {!isBusy && "Ready when you are"}
       </div>
 
@@ -155,33 +171,64 @@ export default function VoiceWidget({ overlayContainer }: VoiceWidgetProps) {
           </>
         )}
       </div>
-    </div>
-  );
+    </div>,
+    container,
+  ) : null;
 
+  // ── Minimized pill (interview active but collapsed) ──
+  if (isBusy && !isExpanded) {
+    return (
+      <>
+        {overlayContent}
+        <div className={styles.pillMinimized}>
+          <button
+            className={styles.pillMinimizedMain}
+            onClick={handlePillClick}
+            title="Expand voice interview"
+          >
+            <div className={[styles.pillOrb, styles.pillOrbActive].join(" ")} />
+            <span className={styles.pillLabel}>
+              {isEnding ? "Building CV\u2026" : isConnecting ? "Connecting\u2026" : formatTime(elapsed)}
+            </span>
+            <FiChevronUp size={12} className={styles.pillExpandIcon} />
+          </button>
+          <div className={styles.pillMinimizedControls}>
+            <button
+              className={[styles.pillControlBtn, isMuted && styles.pillControlBtnMuted]
+                .filter(Boolean)
+                .join(" ")}
+              onClick={toggleMute}
+              title={isMuted ? "Unmute" : "Mute"}
+              disabled={!isActive}
+            >
+              {isMuted ? <FiMicOff size={13} /> : <FiMic size={13} />}
+            </button>
+            <button
+              className={styles.pillEndBtn}
+              onClick={handleEnd}
+              title="End interview"
+              disabled={isEnding}
+            >
+              <FiPhoneOff size={13} />
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // ── Idle pill (no interview) ──
   return (
     <>
-      {/* ── Overlay portaled into sectionNav wrapper ── */}
-      {overlayContainer
-        ? createPortal(overlayContent, overlayContainer)
-        : overlayContent}
-
-      {/* ── Pill trigger (always visible in sidebar footer) ── */}
+      {overlayContent}
       <button
-        className={[styles.pill, isBusy && styles.pillActive]
-          .filter(Boolean)
-          .join(" ")}
-        onClick={handlePillClick}
-        title="Build CV via voice"
+        className={styles.pill}
+        disabled
+        title="Coming soon"
       >
-        <div
-          className={[styles.pillOrb, isBusy && styles.pillOrbActive]
-            .filter(Boolean)
-            .join(" ")}
-        />
-        <span className={styles.pillLabel}>
-          {isEnding ? "Building CV…" : isBusy ? "In progress…" : "Voice"}
-        </span>
-        {!isBusy && <span className={styles.alphaBadge}>alpha</span>}
+        <div className={styles.pillOrb} />
+        <span className={styles.pillLabel}>Voice</span>
+        <span className={styles.alphaBadge}>alpha</span>
       </button>
     </>
   );
