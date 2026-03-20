@@ -15,6 +15,9 @@ from services.bedrock import bedrock_client
 
 logger = logging.getLogger(__name__)
 
+# Use Haiku 4.5 for CV extraction — faster than Sonnet for structured data extraction
+EXTRACTION_MODEL_ID = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+
 
 class ImportSummary(BaseModel):
     workEntries: int = 0
@@ -239,6 +242,7 @@ async def extract_from_pdf(file_bytes: bytes) -> CVImportResult:
             text_prompt=EXTRACTION_USER_PROMPT,
             system_prompt=EXTRACTION_SYSTEM_PROMPT,
             max_tokens=8192,
+            model_id=EXTRACTION_MODEL_ID,
         )
         return _parse_extraction_response(response, source="pdf")
     except Exception as e:
@@ -359,6 +363,7 @@ async def extract_from_docx(file_bytes: bytes) -> CVImportResult:
             system_prompt=EXTRACTION_SYSTEM_PROMPT,
             stream=False,
             max_tokens=8192,
+            model_id=EXTRACTION_MODEL_ID,
         )
         return _parse_extraction_response(response, source="docx")
     except Exception as e:

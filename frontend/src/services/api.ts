@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { CompileResponse, ChatRequest, UserProfile, MatchAnalysis, CVFormData, CVVersion, CVVersionMeta, CVVersionWithChildren, CVImportResponse } from '../types';
+import type { CompileResponse, ChatRequest, UserProfile, MatchAnalysis, CVFormData, CVVersion, CVVersionMeta, CVVersionWithChildren, CVImportResponse, TailorResponse } from '../types';
 import type { Template } from '../features/template-selection';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
@@ -69,7 +69,7 @@ export const api = {
       return response.data;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Compilation failed';
-      return { success: false, error: message, page_count: 0 };
+      return { success: false, error: message, page_count: 0, warnings: undefined };
     }
   },
 
@@ -200,6 +200,28 @@ export const api = {
     }
   },
 
+  async suggestTailorChanges(
+    formData: CVFormData,
+    jobDescription: string,
+    companyName?: string,
+    role?: string
+  ): Promise<TailorResponse | null> {
+    try {
+      const response = await axiosInstance.post<TailorResponse>(`${API_BASE}/tailor/suggest-changes`, {
+        form_data: formData,
+        job_description: jobDescription,
+        company_name: companyName,
+        role: role,
+      }, {
+        timeout: 60000,
+      });
+      return response.data;
+    } catch (err) {
+      console.error('Tailor suggest-changes failed:', err);
+      return null;
+    }
+  },
+
   async saveVersion(data: {
     name: string;
     templateId: string;
@@ -209,6 +231,7 @@ export const api = {
     companyName?: string;
     role?: string;
     matchScore?: number;
+    baselineMatchScore?: number;
     parentVersionId?: string | null;
   }): Promise<CVVersion | null> {
     try {
@@ -221,6 +244,7 @@ export const api = {
         company_name: data.companyName,
         role: data.role,
         match_score: data.matchScore,
+        baseline_match_score: data.baselineMatchScore,
         parent_version_id: data.parentVersionId,
       };
       const response = await axiosInstance.post<CVVersion>(`${API_BASE}/cv-versions`, payload);

@@ -1,7 +1,8 @@
-import boto3
 import json
 import os
-from typing import Generator, List, Dict, Any
+from typing import Any, Dict, Generator, List
+
+import boto3
 
 
 class BedrockClient:
@@ -9,7 +10,7 @@ class BedrockClient:
         region = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
         self.client = boto3.client("bedrock-runtime", region_name=region)
         # Use cross-region inference profile for Claude 3.5 Sonnet v2
-        self.model_id = "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
+        self.model_id = "us.anthropic.claude-3-5-haiku-20241022-v1:0"
 
     def chat(
         self,
@@ -17,6 +18,7 @@ class BedrockClient:
         system_prompt: str,
         stream: bool = True,
         max_tokens: int = 4096,
+        model_id: str | None = None,
     ) -> Generator[str, None, None] | str:
         """
         Send a chat request to Bedrock Claude.
@@ -33,28 +35,30 @@ class BedrockClient:
         # Convert messages to Bedrock format
         bedrock_messages = []
         for msg in messages:
-            bedrock_messages.append({
-                "role": msg["role"],
-                "content": [{"type": "text", "text": msg["content"]}]
-            })
+            bedrock_messages.append(
+                {
+                    "role": msg["role"],
+                    "content": [{"type": "text", "text": msg["content"]}],
+                }
+            )
 
         request_body = {
             "anthropic_version": "bedrock-2023-05-31",
             "max_tokens": max_tokens,
             "system": system_prompt,
-            "messages": bedrock_messages
+            "messages": bedrock_messages,
         }
+
+        effective_model = model_id or self.model_id
 
         if stream:
             response = self.client.invoke_model_with_response_stream(
-                modelId=self.model_id,
-                body=json.dumps(request_body)
+                modelId=effective_model, body=json.dumps(request_body)
             )
             return self._stream_response(response)
         else:
             response = self.client.invoke_model(
-                modelId=self.model_id,
-                body=json.dumps(request_body)
+                modelId=effective_model, body=json.dumps(request_body)
             )
             response_body = json.loads(response["body"].read())
             return response_body["content"][0]["text"]
@@ -68,7 +72,6 @@ class BedrockClient:
                 if delta.get("type") == "text_delta":
                     yield delta.get("text", "")
 
-
     def chat_with_document(
         self,
         document_bytes: bytes,
@@ -76,6 +79,7 @@ class BedrockClient:
         text_prompt: str,
         system_prompt: str,
         max_tokens: int = 4096,
+        model_id: str | None = None,
     ) -> str:
         """
         Send a message with a document attachment to Claude.
@@ -85,23 +89,25 @@ class BedrockClient:
 
         document_base64 = base64.b64encode(document_bytes).decode("utf-8")
 
-        messages = [{
-            "role": "user",
-            "content": [
-                {
-                    "type": "document",
-                    "source": {
-                        "type": "base64",
-                        "media_type": document_media_type,
-                        "data": document_base64,
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "document",
+                        "source": {
+                            "type": "base64",
+                            "media_type": document_media_type,
+                            "data": document_base64,
+                        },
                     },
-                },
-                {
-                    "type": "text",
-                    "text": text_prompt,
-                },
-            ],
-        }]
+                    {
+                        "type": "text",
+                        "text": text_prompt,
+                    },
+                ],
+            }
+        ]
 
         request_body = {
             "anthropic_version": "bedrock-2023-05-31",
@@ -110,8 +116,10 @@ class BedrockClient:
             "messages": messages,
         }
 
+        effective_model = model_id or self.model_id
+
         response = self.client.invoke_model(
-            modelId=self.model_id,
+            modelId=effective_model,
             body=json.dumps(request_body),
         )
         response_body = json.loads(response["body"].read())

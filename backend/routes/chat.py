@@ -6,9 +6,17 @@ import json
 import logging
 
 from services.bedrock import bedrock_client
+from services.json_utils import strip_markdown_json
 
 logger = logging.getLogger(__name__)
 from prompts.cv_agent import get_chat_system_prompt, get_match_analysis_prompt
+
+
+async def _stream_chat(messages, system_prompt):
+    """Shared SSE streaming generator for chat endpoints."""
+    for chunk in bedrock_client.chat(messages, system_prompt, stream=True):
+        yield f"data: {json.dumps({'text': chunk})}\n\n"
+    yield "data: [DONE]\n\n"
 
 router = APIRouter()
 
@@ -64,13 +72,8 @@ async def chat(request: ChatRequest):
         messages = [{"role": m.role, "content": m.content} for m in request.messages]
 
         if request.stream:
-            async def generate():
-                for chunk in bedrock_client.chat(messages, system_prompt, stream=True):
-                    yield f"data: {json.dumps({'text': chunk})}\n\n"
-                yield "data: [DONE]\n\n"
-
             return StreamingResponse(
-                generate(),
+                _stream_chat(messages, system_prompt),
                 media_type="text/event-stream",
                 headers={
                     "Cache-Control": "no-cache",
@@ -107,13 +110,8 @@ async def analyze_job(request: ChatRequest):
         }]
 
         if request.stream:
-            async def generate():
-                for chunk in bedrock_client.chat(messages, system_prompt, stream=True):
-                    yield f"data: {json.dumps({'text': chunk})}\n\n"
-                yield "data: [DONE]\n\n"
-
             return StreamingResponse(
-                generate(),
+                _stream_chat(messages, system_prompt),
                 media_type="text/event-stream",
                 headers={
                     "Cache-Control": "no-cache",
@@ -164,13 +162,7 @@ Return ONLY a valid JSON object with this exact structure:
         # Parse JSON from response
         try:
             # Try to extract JSON from the response
-            response_text = response.strip()
-            # Handle case where response might have markdown code blocks
-            if "```json" in response_text:
-                response_text = response_text.split("```json")[1].split("```")[0].strip()
-            elif "```" in response_text:
-                response_text = response_text.split("```")[1].split("```")[0].strip()
-
+            response_text = strip_markdown_json(response)
             data = json.loads(response_text)
             return MatchAnalysisResponse(
                 requirements=data.get("requirements", []),

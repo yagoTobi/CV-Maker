@@ -3,9 +3,8 @@ import os
 import time
 import uuid
 from datetime import date
-from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from loguru import logger
 from prompts.voice_interview import (
     VOICE_EXTRACTION_PROMPT,
@@ -14,6 +13,10 @@ from prompts.voice_interview import (
 )
 from pydantic import BaseModel
 from services.bedrock import bedrock_client
+from services.json_utils import parse_markdown_json
+from services.storage import StorageBackend
+from services.storage_factory import get_storage
+from dependencies import get_current_user
 
 # Optional Pipecat import — the app still starts if pipecat isn't installed
 try:
@@ -66,26 +69,7 @@ def _cleanup_stale_sessions():
         logger.info("[voice] Cleaning up stale session %s", sid)
         del _sessions[sid]
 
-PROFILE_PATH = Path("user_data/voice_profile.json")
 
-
-# ---------------------------------------------------------------------------
-# Profile helpers
-# ---------------------------------------------------------------------------
-
-
-def load_voice_profile() -> dict | None:
-    if PROFILE_PATH.exists():
-        try:
-            return json.loads(PROFILE_PATH.read_text())
-        except Exception:
-            return None
-    return None
-
-
-def save_voice_profile(profile: dict) -> None:
-    PROFILE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    PROFILE_PATH.write_text(json.dumps(profile, indent=2))
 
 
 # ---------------------------------------------------------------------------
@@ -151,12 +135,14 @@ async def voice_interview_ws(websocket: WebSocket):
     await websocket.accept()
     _cleanup_stale_sessions()
 
-    # Accept client-provided session ID (query param) or generate one
+    # Accept client-provided session ID and user ID (query params)
     session_id = websocket.query_params.get("session_id") or str(uuid.uuid4())
+    user_id = websocket.query_params.get("user_id") or "local"
     logger.info("[voice] session {} — WebSocket accepted", session_id)
 
     try:
-        profile = load_voice_profile()
+        storage = get_storage()
+        profile = await storage.get_voice_profile(user_id)
         system_prompt = get_voice_system_prompt(profile)
 
         # --- Transport (now with serializer!) ---
@@ -277,7 +263,11 @@ class ExtractCVRequest(BaseModel):
 
 
 @router.post("/voice/extract-cv")
-async def extract_cv(request: ExtractCVRequest):
+async def extract_cv(
+    request: ExtractCVRequest,
+    user_id: str = Depends(get_current_user),
+    storage: StorageBackend = Depends(get_storage),
+):
     session_data = _sessions.get(request.session_id)
     transcript_lines = session_data["transcript"] if session_data else []
     if not transcript_lines:
@@ -303,7 +293,7 @@ async def extract_cv(request: ExtractCVRequest):
         max_tokens=4096,
     )
 
-    form_data = _parse_json_response(result)
+    form_data = parse_markdown_json(result)
     if form_data is None:
         logger.error("[voice] session %s — failed to parse CV JSON from transcript", request.session_id)
         raise HTTPException(
@@ -323,10 +313,10 @@ async def extract_cv(request: ExtractCVRequest):
             stream=False,
             max_tokens=1024,
         )
-        profile_data = _parse_json_response(profile_result)
+        profile_data = parse_markdown_json(profile_result)
         if profile_data:
             profile_data["last_updated"] = date.today().isoformat()
-            save_voice_profile(profile_data)
+            await storage.save_voice_profile(user_id, profile_data)
     except Exception:
         pass
 
@@ -340,34 +330,20 @@ async def extract_cv(request: ExtractCVRequest):
 
 
 @router.get("/voice/profile")
-async def get_voice_profile():
-    return {"profile": load_voice_profile()}
+async def get_voice_profile_endpoint(
+    user_id: str = Depends(get_current_user),
+    storage: StorageBackend = Depends(get_storage),
+):
+    profile = await storage.get_voice_profile(user_id)
+    return {"profile": profile}
 
 
 @router.post("/voice/profile")
-async def post_voice_profile(profile: dict):
-    save_voice_profile(profile)
+async def post_voice_profile(
+    profile: dict,
+    user_id: str = Depends(get_current_user),
+    storage: StorageBackend = Depends(get_storage),
+):
+    await storage.save_voice_profile(user_id, profile)
     return {"ok": True}
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _parse_json_response(text: str) -> dict | None:
-    """Strip markdown fences and parse JSON from a Bedrock response."""
-    clean = text.strip()
-    if clean.startswith("```"):
-        parts = clean.split("```")
-        for part in parts[1:]:
-            part = part.strip()
-            if part.startswith("json"):
-                part = part[4:].strip()
-            if part:
-                clean = part
-                break
-    try:
-        return json.loads(clean)
-    except json.JSONDecodeError:
-        return None

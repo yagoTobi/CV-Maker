@@ -18,6 +18,7 @@ class CompileResult:
     pdf_base64: str | None = None
     error: str | None = None
     page_count: int = 0
+    warnings: list[str] | None = None
 
 
 class LaTeXCompiler:
@@ -121,6 +122,10 @@ class LaTeXCompiler:
                     error_msg = self._extract_error(log_path, result.stdout + result.stderr)
                     return CompileResult(success=False, error=error_msg)
 
+            # Check for overflow warnings in log
+            log_path = os.path.join(temp_dir, "document.log")
+            warnings = self._extract_overflow_warnings(log_path)
+
             # Read the generated PDF
             pdf_path = os.path.join(temp_dir, "document.pdf")
             if os.path.exists(pdf_path):
@@ -133,7 +138,8 @@ class LaTeXCompiler:
                 return CompileResult(
                     success=True,
                     pdf_base64=pdf_base64,
-                    page_count=page_count
+                    page_count=page_count,
+                    warnings=warnings or None,
                 )
             else:
                 return CompileResult(success=False, error="PDF file was not generated")
@@ -202,6 +208,25 @@ class LaTeXCompiler:
                 full_error = full_error[:2000] + "\n... (truncated)"
             return full_error
         return "Unknown compilation error. Check LaTeX syntax."
+
+    def _extract_overflow_warnings(self, log_path: str) -> list[str]:
+        """Parse LaTeX log for Overfull hbox warnings (text overflow)."""
+        warnings = []
+        if not os.path.exists(log_path):
+            return warnings
+        try:
+            with open(log_path, "r", errors="ignore") as f:
+                for line in f:
+                    if line.startswith("Overfull \\hbox"):
+                        # e.g. "Overfull \hbox (12.3pt too wide) in paragraph at lines 45--47"
+                        warnings.append(line.strip())
+        except Exception:
+            pass
+        if warnings:
+            count = len(warnings)
+            summary = f"{count} line{'s' if count > 1 else ''} overflow{'s' if count == 1 else ''} the page margin — some text may be cut off"
+            return [summary]
+        return []
 
     def _get_engine_path(self, template_id: str = None) -> str:
         """Get the appropriate LaTeX engine path for a template."""

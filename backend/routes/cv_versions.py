@@ -1,16 +1,16 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
-import json
 import logging
-import os
 import uuid
 from datetime import datetime, timezone
 
+from dependencies import get_current_user
+from services.storage import StorageBackend
+from services.storage_factory import get_storage
+
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-VERSIONS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "user_data", "versions")
 
 
 def _validate_version_id(version_id: str):
@@ -107,6 +107,7 @@ class CVVersionCreate(BaseModel):
     company_name: Optional[str] = None
     role: Optional[str] = None  # Job role/title (e.g., "Senior Product Designer")
     match_score: Optional[float] = None
+    baseline_match_score: Optional[float] = None
     parent_version_id: Optional[str] = None  # ID of base CV this application derives from
 
 
@@ -120,6 +121,7 @@ class CVVersion(BaseModel):
     companyName: Optional[str] = None
     role: Optional[str] = None
     matchScore: Optional[float] = None
+    baselineMatchScore: Optional[float] = None
     parentVersionId: Optional[str] = None
     createdAt: str
 
@@ -132,25 +134,20 @@ class CVVersionMeta(BaseModel):
     companyName: Optional[str] = None
     role: Optional[str] = None
     matchScore: Optional[float] = None
+    baselineMatchScore: Optional[float] = None
     parentVersionId: Optional[str] = None
     createdAt: str
 
 
 # --- Helpers ---
 
-def _version_path(version_id: str) -> str:
-    return os.path.join(VERSIONS_DIR, f"{version_id}.json")
-
-
-def _load_version(version_id: str) -> dict:
-    path = _version_path(version_id)
-    if not os.path.exists(path):
-        raise HTTPException(status_code=404, detail=f"Version {version_id} not found")
-    with open(path, "r") as f:
-        return json.load(f)
-
-
-def _validate_no_circular_reference(version_id: str, new_parent_id: str, visited: Optional[set] = None) -> None:
+async def _validate_no_circular_reference(
+    storage: StorageBackend,
+    user_id: str,
+    version_id: str,
+    new_parent_id: str,
+    visited: Optional[set] = None,
+) -> None:
     """
     Validate that setting new_parent_id as parent of version_id won't create a circular reference.
     Walks up the parent chain from new_parent_id to ensure version_id isn't encountered.
@@ -163,51 +160,43 @@ def _validate_no_circular_reference(version_id: str, new_parent_id: str, visited
 
     visited.add(new_parent_id)
 
-    try:
-        parent_data = _load_version(new_parent_id)
-        parent_of_parent = parent_data.get("parentVersionId")
+    parent_data = await storage.get_version(user_id, new_parent_id)
+    if parent_data is None:
+        return  # Parent doesn't exist — OK for this validation
 
-        if parent_of_parent == version_id:
-            raise HTTPException(status_code=400, detail="Circular parent reference detected")
+    parent_of_parent = parent_data.get("parentVersionId")
+    if parent_of_parent == version_id:
+        raise HTTPException(status_code=400, detail="Circular parent reference detected")
 
-        if parent_of_parent:
-            _validate_no_circular_reference(version_id, parent_of_parent, visited)
-    except HTTPException as e:
-        if e.status_code == 404:
-            # Parent doesn't exist, but that's OK for this validation
-            pass
-        else:
-            raise
+    if parent_of_parent:
+        await _validate_no_circular_reference(storage, user_id, version_id, parent_of_parent, visited)
 
 
 # --- Endpoints ---
 
 @router.get("/cv-versions")
-async def list_versions():
+async def list_versions(
+    user_id: str = Depends(get_current_user),
+    storage: StorageBackend = Depends(get_storage),
+):
     """List all saved CV versions in hierarchical structure (base CVs with nested job applications)."""
-    os.makedirs(VERSIONS_DIR, exist_ok=True)
-    all_versions = []
+    all_versions_raw = await storage.list_versions(user_id)
 
-    # Load all versions
-    for fname in os.listdir(VERSIONS_DIR):
-        if not fname.endswith(".json"):
-            continue
-        try:
-            with open(os.path.join(VERSIONS_DIR, fname), "r") as f:
-                data = json.load(f)
-            all_versions.append({
-                "id": data["id"],
-                "name": data["name"],
-                "templateId": data["templateId"],
-                "jobDescription": data.get("jobDescription"),
-                "companyName": data.get("companyName"),
-                "role": data.get("role"),
-                "matchScore": data.get("matchScore"),
-                "parentVersionId": data.get("parentVersionId"),
-                "createdAt": data["createdAt"],
-            })
-        except Exception:
-            continue
+    # Extract metadata only
+    all_versions = []
+    for data in all_versions_raw:
+        all_versions.append({
+            "id": data["id"],
+            "name": data["name"],
+            "templateId": data["templateId"],
+            "jobDescription": data.get("jobDescription"),
+            "companyName": data.get("companyName"),
+            "role": data.get("role"),
+            "matchScore": data.get("matchScore"),
+            "baselineMatchScore": data.get("baselineMatchScore"),
+            "parentVersionId": data.get("parentVersionId"),
+            "createdAt": data["createdAt"],
+        })
 
     # Separate base CVs (parentVersionId = null) from job applications
     base_cvs = [v for v in all_versions if not v.get("parentVersionId")]
@@ -237,10 +226,12 @@ async def list_versions():
 
 
 @router.post("/cv-versions")
-async def create_version(payload: CVVersionCreate):
+async def create_version(
+    payload: CVVersionCreate,
+    user_id: str = Depends(get_current_user),
+    storage: StorageBackend = Depends(get_storage),
+):
     """Save a new CV version."""
-    os.makedirs(VERSIONS_DIR, exist_ok=True)
-
     # Auto-generate name if empty and job details provided
     name = payload.name
     if not name.strip():
@@ -256,8 +247,8 @@ async def create_version(payload: CVVersionCreate):
     # Validate parent exists if specified
     if payload.parent_version_id:
         _validate_version_id(payload.parent_version_id)
-        parent_path = _version_path(payload.parent_version_id)
-        if not os.path.exists(parent_path):
+        parent = await storage.get_version(user_id, payload.parent_version_id)
+        if parent is None:
             raise HTTPException(status_code=400, detail=f"Parent version {payload.parent_version_id} not found")
 
     version_id = str(uuid.uuid4())
@@ -273,50 +264,43 @@ async def create_version(payload: CVVersionCreate):
         "companyName": payload.company_name,
         "role": payload.role,
         "matchScore": payload.match_score,
+        "baselineMatchScore": payload.baseline_match_score,
         "parentVersionId": payload.parent_version_id,
         "createdAt": created_at,
     }
 
-    with open(_version_path(version_id), "w") as f:
-        json.dump(version_data, f, indent=2)
-
+    await storage.create_version(user_id, version_data)
     return version_data
 
 
 @router.get("/cv-versions/{version_id}")
-async def get_version(version_id: str):
+async def get_version(
+    version_id: str,
+    user_id: str = Depends(get_current_user),
+    storage: StorageBackend = Depends(get_storage),
+):
     """Get full CV version including tex content."""
     _validate_version_id(version_id)
-    return _load_version(version_id)
+    data = await storage.get_version(user_id, version_id)
+    if data is None:
+        raise HTTPException(status_code=404, detail=f"Version {version_id} not found")
+    return data
 
 
 @router.delete("/cv-versions/{version_id}")
-async def delete_version(version_id: str):
+async def delete_version(
+    version_id: str,
+    user_id: str = Depends(get_current_user),
+    storage: StorageBackend = Depends(get_storage),
+):
     """Delete a saved CV version. Orphan any child versions (set their parentVersionId to null)."""
     _validate_version_id(version_id)
-    path = _version_path(version_id)
-    if not os.path.exists(path):
+    data = await storage.get_version(user_id, version_id)
+    if data is None:
         raise HTTPException(status_code=404, detail=f"Version {version_id} not found")
 
-    # Find all children and orphan them
-    os.makedirs(VERSIONS_DIR, exist_ok=True)
-    for fname in os.listdir(VERSIONS_DIR):
-        if not fname.endswith(".json"):
-            continue
-        try:
-            child_path = os.path.join(VERSIONS_DIR, fname)
-            with open(child_path, "r") as f:
-                child_data = json.load(f)
-
-            if child_data.get("parentVersionId") == version_id:
-                # Orphan this child
-                child_data["parentVersionId"] = None
-                with open(child_path, "w") as f:
-                    json.dump(child_data, f, indent=2)
-        except Exception:
-            continue
-
-    os.remove(path)
+    await storage.update_children_of_deleted_parent(user_id, version_id)
+    await storage.delete_version(user_id, version_id)
     return {"status": "deleted"}
 
 
@@ -325,10 +309,17 @@ class UpdateVersionPayload(BaseModel):
 
 
 @router.patch("/cv-versions/{version_id}")
-async def update_version(version_id: str, payload: UpdateVersionPayload):
+async def update_version(
+    version_id: str,
+    payload: UpdateVersionPayload,
+    user_id: str = Depends(get_current_user),
+    storage: StorageBackend = Depends(get_storage),
+):
     """Update a CV version (currently supports re-parenting only)."""
     _validate_version_id(version_id)
-    version_data = _load_version(version_id)
+    version_data = await storage.get_version(user_id, version_id)
+    if version_data is None:
+        raise HTTPException(status_code=404, detail=f"Version {version_id} not found")
 
     # Update parent relationship
     if "parentVersionId" in payload.model_dump(exclude_unset=True):
@@ -337,8 +328,8 @@ async def update_version(version_id: str, payload: UpdateVersionPayload):
         # Validate new parent exists (if not null)
         if new_parent_id:
             _validate_version_id(new_parent_id)
-            parent_path = _version_path(new_parent_id)
-            if not os.path.exists(parent_path):
+            parent = await storage.get_version(user_id, new_parent_id)
+            if parent is None:
                 raise HTTPException(status_code=400, detail=f"Parent version {new_parent_id} not found")
 
             # Prevent self-parenting
@@ -346,16 +337,12 @@ async def update_version(version_id: str, payload: UpdateVersionPayload):
                 raise HTTPException(status_code=400, detail="A version cannot be its own parent")
 
             # Prevent circular references
-            _validate_no_circular_reference(version_id, new_parent_id)
+            await _validate_no_circular_reference(storage, user_id, version_id, new_parent_id)
 
-        version_data["parentVersionId"] = new_parent_id
-
-        # Save updated version
-        with open(_version_path(version_id), "w") as f:
-            json.dump(version_data, f, indent=2)
+        await storage.update_version(user_id, version_id, {"parentVersionId": new_parent_id})
 
     return {
         "id": version_id,
-        "parentVersionId": version_data.get("parentVersionId"),
+        "parentVersionId": payload.parentVersionId,
         "message": "Version updated successfully"
     }

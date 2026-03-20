@@ -4,18 +4,20 @@ import styles from './LandingScreen.module.css';
 
 export default function LandingScreen() {
   const navigate = useNavigate();
-  const { savedVersions, setFormData, templates } = useAppContext();
+  const { savedVersions, setFormData } = useAppContext();
 
   const handleBuildCV = () => {
     setFormData(null);
     navigate('/build/start');
   };
 
-  const handleTuneForJob = async () => {
-    const success = await templates.selectTemplate('med-length-proff-cv');
-    if (success) {
-      setFormData(null);
-      navigate('/editor', { state: { mode: 'tune' } });
+  const handleTuneForJob = () => {
+    if (savedVersions.length > 0) {
+      // Has saved CVs — go to dashboard to pick one, then "Apply to Job"
+      navigate('/dashboard');
+    } else {
+      // No saved CVs — build one first
+      navigate('/build/start');
     }
   };
 

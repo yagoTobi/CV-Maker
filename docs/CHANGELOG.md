@@ -9,6 +9,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Storage abstraction layer**: Pluggable storage backends for user data persistence
+  - `StorageBackend` Protocol with 11-method async interface (`services/storage.py`)
+  - `FileStorage` implementation wraps existing JSON file I/O — zero behavior change (`services/file_storage.py`)
+  - `DynamoStorage` implementation for DynamoDB single-table design (`services/dynamo_storage.py`)
+  - `get_storage()` FastAPI dependency reads `STORAGE_BACKEND` env var (defaults to `file`)
+  - `get_current_user()` dependency reads `X-User-Id` header (defaults to `"local"`)
+  - DynamoDB table creation script (`backend/scripts/create_table.py`)
+  - Migration script from FileStorage to DynamoDB (`backend/scripts/migrate_to_dynamodb.py`)
+  - `STORAGE_BACKEND`, `DYNAMODB_TABLE_NAME`, `DYNAMODB_ENDPOINT_URL` environment variables
+  - DynamoDB Local service in `docker-compose.yml`
+
+### Changed
+- **CV Import workflow simplification**: Merged import review into form builder
+  - Removed dedicated `/import/review` screen (~965 lines)
+  - Import path now goes: upload → template selector → form builder (with inline indicators)
+  - New `ImportBanner` component displays source badge, confidence indicator, warnings at top of form
+  - Field-level confidence badges show amber left border + "Needs review" badge for low-confidence fields
+  - Banner auto-dismisses on first successful PDF generation
+  - Import state cleanup on form builder unmount via `cvImport.reset()`
+- **CV extraction optimization**: Switched from Sonnet 3.5 to Haiku 4.5 for PDF/DOCX extraction (faster, cheaper)
+- **Storage migration**: All routes now use `StorageBackend` abstraction
+  - `routes/cv_versions.py`, `routes/user_data.py`, `routes/voice_interview.py` refactored to use storage dependency
+  - Voice profile storage consolidated into main `user_data/` directory (was split to `backend/user_data/` previously)
+  - `X-User-Id` header added to CORS `allow_headers` in `main.py`
+- **Docker compose**: Consolidated to single data volume `cv-maker-data` (removed `cv-maker-voice-data`), added DynamoDB Local service
+
+### Added
 - **Voice interview feature**: Pipecat + Amazon Nova Sonic speech-to-speech pipeline
   - VoiceWidget in CVFormBuilder sidebar with animated orb, transcript feed, mic controls
   - WebSocket-based voice session (`WS /api/ws/voice-interview`) with Pipecat pipeline
@@ -18,7 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Voice profile persistence for returning users (`GET/POST /api/voice/profile`)
   - Alpha quality: optional dependency (`pip install 'pipecat-ai[aws]'`), no session persistence, no error recovery
 - **React Router v6 navigation**: URL-based routing with browser back/forward support
-  - 8 routes: `/`, `/build/start`, `/build`, `/build/form`, `/import`, `/import/review`, `/dashboard`, `/editor`
+  - 7 routes: `/`, `/build/start`, `/build`, `/build/form`, `/import`, `/dashboard`, `/editor`
   - `react-router-dom` v6 with `<Routes>` and `<Route>` components in App.tsx
   - Navigation via `useNavigate()` hook, state passed via `location.state`
 - **AppContext refactor**: Centralized state management replacing App.tsx god component

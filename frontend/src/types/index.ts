@@ -20,6 +20,7 @@ export interface CompileResponse {
   pdf_base64?: string;
   error?: string;
   page_count: number;
+  warnings?: string[];
 }
 
 export interface ChatRequest {
@@ -177,6 +178,22 @@ export interface CVFormData {
   additionalSections?: AdditionalSection[];
 }
 
+export interface TailorChange {
+  id: string;
+  fieldPath: string;           // e.g. "workExperience[0].bullets[2]"
+  section: string;             // Human-readable: "Work Experience", "Skills"
+  description: string;         // "Added 'data pipeline' keyword to bullet #2"
+  currentValue: string | string[];
+  newValue: string | string[];
+  changeType: 'modify' | 'add' | 'remove';
+}
+
+export interface TailorResponse {
+  changes: TailorChange[];
+  estimatedScore: number;
+  summary: string;
+}
+
 export interface CVVersion {
   id: string;
   name: string;
@@ -187,6 +204,7 @@ export interface CVVersion {
   companyName?: string;
   role?: string;
   matchScore?: number;
+  baselineMatchScore?: number;
   parentVersionId?: string | null;
   createdAt: string;
 }

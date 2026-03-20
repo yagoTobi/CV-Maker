@@ -21,6 +21,7 @@ class CompileResponse(BaseModel):
     pdf_base64: str | None = None
     error: str | None = None
     page_count: int = 0
+    warnings: list[str] | None = None
 
 
 @router.post("/compile", response_model=CompileResponse)
@@ -37,7 +38,8 @@ async def compile_latex(request: CompileRequest):
             success=result.success,
             pdf_base64=result.pdf_base64,
             error=result.error,
-            page_count=result.page_count
+            page_count=result.page_count,
+            warnings=result.warnings,
         )
 
     except Exception as e:

@@ -43,7 +43,7 @@
 
 (% if awards %)
 \section{Awards}
-\begin{tabular}{rll}
+\begin{tabular}{r p{0.75\linewidth}}
 (% for award in awards %)
 (( award.year | latex_escape )) & (( award.title | latex_escape ))(% if award.description %): (( award.description | latex_escape ))(% endif %) \\
 (% endfor %)

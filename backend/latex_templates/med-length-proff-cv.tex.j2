@@ -74,7 +74,7 @@
 
 (% elif _sec == 'skills' and skills %)
 \begin{rSection}{Skills}
-    \begin{tabular}{@{} >{\bfseries}l @{\hspace{2ex}} l @{}}
+    \begin{tabular}{@{} >{\bfseries}l @{\hspace{2ex}} p{\dimexpr\textwidth-4.5cm\relax} @{}}
 (% for cat in skills %)
         (( cat.category | latex_escape )): & (( cat.skills | join(', ') | latex_escape )) \\
 (% endfor %)
@@ -100,7 +100,7 @@
 
 (% elif _sec == 'awards' and awards %)
 \begin{rSection}{Awards}
-    \begin{tabular}{@{} l @{\hspace{2ex}} l @{}}
+    \begin{tabular}{@{} l @{\hspace{2ex}} p{\dimexpr\textwidth-3cm\relax} @{}}
 (% for award in awards %)
         (( award.year | latex_escape )) & (( award.title | latex_escape ))(% if award.description %): (( award.description | latex_escape ))(% endif %) \\
 (% endfor %)

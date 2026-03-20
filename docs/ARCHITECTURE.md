@@ -54,13 +54,12 @@ React Router v6 Routes:
 /build           → TemplateSelector
 /build/form      → CVFormBuilder
 /import          → CVImportUpload
-/import/review   → CVImportReview
 /dashboard       → Dashboard
 /editor          → EditorScreen
 
 landing (/)
   ├── "Build my CV"       → /build/start → "Start from scratch" → /build → /build/form → /editor
-  │                                     → "Import existing CV" → /import → /import/review → /build → /build/form
+  │                                     → "Import existing CV" → /import → /build → /build/form (with ImportBanner + confidence badges)
   ├── "Tune for a job"    → /build/form (mode:'tune', Job Tuning tab default in right panel)
   ├── "My CVs & Applications" → /dashboard  [always shown; shows recent apps inline if versions exist]
   └── Recent Applications → inline cards grouped by base CV (3 most recent)
@@ -84,6 +83,8 @@ editor (/editor)
 build/form (/build/form) — CVFormBuilder
   ├── Right panel tabs: "Preview" (PDF) | "Job Tuning" (job description + AI match analysis)
   ├── Mode passed via location.state.mode: 'build' | 'tune'
+  ├── ImportBanner (when coming from import path) — source badge, confidence indicator, warnings, dismissible
+  ├── Field-level confidence badges — amber border + badge on low/medium confidence fields
   ├── "Advanced Editor" button in preview header → /editor (escape hatch for power users)
   └── VoiceWidget (overlay pill in sidebar) → voice interview session
 ```
@@ -173,11 +174,11 @@ frontend/src/
 | `LandingScreen.tsx` | landing | Intent-based entry screen (Build / Tune / Import / My CVs) |
 | `BuildChoiceScreen.tsx` | build-choice | Build entry choice ("Start from scratch" \| "Import existing CV") |
 | `TemplateSelector.tsx` | template-selection | Template selection (Build path + Import path) |
-| `CVFormBuilder.tsx` | form-builder | Structured form with 7 sections + right panel tabs (Preview \| Job Tuning) + DnD reordering |
+| `CVFormBuilder.tsx` | form-builder | Structured form with 7 sections + right panel tabs (Preview \| Job Tuning) + DnD reordering + inline import indicators |
+| `ImportBanner.tsx` | form-builder | Dismissible import summary banner (source, confidence, warnings) shown at top of form builder when coming from import |
 | `JobTuningPanel.tsx` | form-builder | Job description input + AI match analysis (right panel tab in form builder) |
 | `VoiceWidget.tsx` | voice-widget | Voice interview overlay with animated orb, transcript feed, mic controls |
-| `CVImportUpload.tsx` | cv-import | Drag-and-drop file upload (PDF, DOCX, JSON) with progress indicator |
-| `CVImportReview.tsx` | cv-import | Review and edit extracted CV data with confidence indicators and field-level warnings |
+| `CVImportUpload.tsx` | cv-import | Drag-and-drop file upload (PDF, DOCX, JSON) with progress indicator + direct navigation to template selector on success |
 | `Dashboard.tsx` | dashboard | Hierarchical CV management — base CVs with nested job applications, move/re-parent actions, AI grouping suggestions |
 | `VersionSwitcher.tsx` | dashboard | In-editor save / switch between saved versions, save modal with base CV picker |
 | `EditorScreen.tsx` | editor | Advanced LaTeX editor screen (power-user escape hatch) |
@@ -196,7 +197,7 @@ frontend/src/
 | `useTemplates` | Selected template, content fetch, `setTemplateId` (set without fetch) |
 | `useCompiler` | Compile request, PDF state, markChanged |
 | `useChat` | AI messages, analyzeJob, applyEdit, undo |
-| `useImport` | CV import file upload (PDF/DOCX/JSON), AI extraction via Bedrock, progress tracking, confidence scoring, validation warnings |
+| `useImport` | CV import file upload (PDF/DOCX/JSON), AI extraction via Bedrock, progress tracking, confidence scoring, validation warnings, import state reset |
 | `useVoiceInterview` | Voice interview WebSocket connection, transcript collection, mic controls, session management |
 
 ### State Management (AppContext.tsx)
@@ -237,22 +238,83 @@ Navigation handled by React Router v6 with browser history (back/forward support
 | `/api/voice/profile` | GET/POST | Get/save returning user's voice profile |
 | `/api/health` | GET | Health check |
 
+### Storage Layer
+
+All user data persistence (CV versions, profiles, voice profiles) is abstracted behind a `StorageBackend` Protocol, enabling multiple storage implementations without changing business logic.
+
+**Architecture:**
+
+```
+Routes (cv_versions, user_data, voice_interview)
+    ↓
+get_storage() dependency (storage_factory.py)
+    ↓
+StorageBackend Protocol (11 async methods)
+    ↓
+┌─────────────────┬──────────────────┐
+│  FileStorage    │  DynamoStorage   │
+│  (JSON files)   │  (single table)  │
+└─────────────────┴──────────────────┘
+```
+
+**StorageBackend Protocol** (`services/storage.py`):
+- 11-method async interface for all user data operations
+- Python Protocol (structural typing, no base class)
+- Methods: `list_versions`, `get_version`, `create_version`, `update_version`, `delete_version`, `update_children_of_deleted_parent`, `get_profile`, `save_profile`, `delete_profile`, `get_voice_profile`, `save_voice_profile`
+
+**FileStorage** (`services/file_storage.py`):
+- Wraps existing JSON file I/O — zero behavior change from previous implementation
+- `user_id="local"` maps to flat `user_data/` directory for backward compatibility
+- Other user IDs get namespaced subdirectories: `user_data/{user_id}/`
+- Versions: `user_data/{user_id}/versions/{uuid}.json`
+- Profile: `user_data/{user_id}/profile.json`
+- Voice profile: `user_data/{user_id}/voice_profile.json`
+
+**DynamoStorage** (`services/dynamo_storage.py`):
+- Single-table design with composite keys: `PK=USER#{user_id}`, `SK=VERSION#{version_id} | PROFILE | VOICE_PROFILE`
+- PAY_PER_REQUEST billing mode (no provisioned throughput)
+- No GSIs needed (all queries by user_id)
+- Table name from `DYNAMODB_TABLE_NAME` env var (default: `cv-maker`)
+- Endpoint URL configurable via `DYNAMODB_ENDPOINT_URL` (for DynamoDB Local)
+
+**Storage Factory** (`services/storage_factory.py`):
+- `get_storage()` FastAPI dependency reads `STORAGE_BACKEND` env var (`file` | `dynamodb`)
+- Singleton instance via `@lru_cache`
+- Defaults to FileStorage for local development
+
+**User ID Dependency** (`backend/dependencies.py`):
+- `get_current_user()` reads `X-User-Id` header
+- Defaults to `"local"` for single-user local tool
+- Required for all routes that access user data
+- CORS allows `X-User-Id` header
+
+**Key Design Decisions:**
+- Storage abstraction uses Protocol (no runtime base class overhead)
+- `user_id="local"` preserves backward compatibility with existing file structure
+- DynamoDB single-table design keeps queries simple (no cross-table joins)
+- WebSocket handler uses storage singleton directly (FastAPI `Depends` doesn't work in WS handlers)
+
 ### Services & Routes
 
 | File | Purpose |
 |------|---------|
 | `routes/compile.py` | LaTeX → PDF compilation (pdflatex / xelatex) |
 | `routes/generate_latex.py` | CVFormData → LaTeX via Jinja2, `latex_escape` filter (all special chars), `latex_url_escape` filter (URLs: `%` and `#` only), `_build_personal_items` |
-| `routes/cv_versions.py` | Version CRUD + all shared Pydantic models (PersonalInfo, WorkEntry, CVFormData, …) |
+| `routes/cv_versions.py` | Version CRUD + all shared Pydantic models (PersonalInfo, WorkEntry, CVFormData, …); uses StorageBackend |
 | `routes/cv_import.py` | CV import upload endpoint (PDF/DOCX/JSON) |
-| `routes/voice_interview.py` | Voice interview WebSocket endpoint + transcript extraction + profile management |
+| `routes/voice_interview.py` | Voice interview WebSocket endpoint + transcript extraction + profile management; uses StorageBackend |
 | `routes/chat.py` | AI chat streaming |
 | `routes/templates.py` | Template listing and file serving |
-| `routes/user_data.py` | JSON-file user profile |
+| `routes/user_data.py` | User profile CRUD; uses StorageBackend |
+| `services/storage.py` | StorageBackend Protocol (11-method async interface) |
+| `services/file_storage.py` | FileStorage implementation (JSON files) |
+| `services/dynamo_storage.py` | DynamoStorage implementation (DynamoDB single-table) |
+| `services/storage_factory.py` | `get_storage()` dependency, reads `STORAGE_BACKEND` env var |
 | `services/bedrock.py` | AWS Bedrock client wrapper |
 | `services/cv_analyzer.py` | CV analysis and match scoring |
 | `services/cv_extractor.py` | AI-powered CV extraction via Bedrock (PDF multimodal, DOCX text, JSON direct) |
 | `services/latex_compiler.py` | pdflatex / xelatex subprocess wrapper |
+| `dependencies.py` | `get_current_user()` dependency, reads `X-User-Id` header |
 | `prompts/cv_agent.py` | AI prompt templates |
 | `prompts/voice_interview.py` | Voice interview system prompt and extraction prompt |
 
@@ -414,8 +476,8 @@ src/
 │   ├── landing/                # LandingScreen.tsx, .module.css, index.ts
 │   ├── build-choice/           # BuildChoiceScreen.tsx, .module.css, index.ts
 │   ├── template-selection/     # TemplateSelector.tsx, .css, index.ts
-│   ├── form-builder/           # CVFormBuilder.tsx, JobTuningPanel.tsx, .module.css, index.ts
-│   ├── cv-import/              # CVImportUpload.tsx, CVImportReview.tsx, .module.css, index.ts
+│   ├── form-builder/           # CVFormBuilder.tsx, JobTuningPanel.tsx, ImportBanner.tsx, .module.css, index.ts
+│   ├── cv-import/              # CVImportUpload.tsx, .module.css, index.ts
 │   ├── voice-widget/           # VoiceWidget.tsx, .module.css, index.ts
 │   ├── editor/                 # EditorScreen.tsx, LatexEditor, PdfPreview, ChatPanel, JobInput, MatchAnalysis
 │   ├── dashboard/              # Dashboard.tsx, VersionSwitcher.tsx, .module.css, index.ts
@@ -458,6 +520,10 @@ backend/
 │   ├── mcdowell-cv.tex.j2
 │   └── deedy-resume.tex.j2
 ├── services/
+│   ├── storage.py              # StorageBackend Protocol (11-method interface)
+│   ├── file_storage.py         # FileStorage implementation (JSON files)
+│   ├── dynamo_storage.py       # DynamoStorage implementation (DynamoDB)
+│   ├── storage_factory.py      # get_storage() dependency
 │   ├── bedrock.py
 │   ├── cv_analyzer.py
 │   ├── cv_extractor.py         # AI extraction (PDF/DOCX/JSON)
@@ -467,14 +533,18 @@ backend/
 │   └── voice_interview.py      # Voice interview system prompt + extraction prompt
 ├── config/
 │   └── templates.py            # TemplateConfig entries (3 templates)
+├── scripts/
+│   ├── create_table.py         # DynamoDB table creation script
+│   └── migrate_to_dynamodb.py  # Migration script (FileStorage → DynamoDB)
 ├── tests/
 │   ├── __init__.py
 │   ├── test_template_rendering.py    # Jinja2 rendering tests (21 tests, fast)
 │   └── test_template_compilation.py  # pdflatex/xelatex compilation tests (18 tests, ~28s)
 ├── user_data/
-│   ├── profile.json            # User profile
-│   ├── voice_profile.json      # Voice interview returning user data
-│   └── versions/               # Saved CV versions ({uuid}.json)
+│   ├── profile.json            # User profile (local user)
+│   ├── voice_profile.json      # Voice interview returning user data (local user)
+│   └── versions/               # Saved CV versions ({uuid}.json) (local user)
+├── dependencies.py             # get_current_user() dependency
 ├── pytest.ini                  # pytest config (slow marker)
 └── main.py                     # FastAPI app + router registration
 ```
@@ -522,11 +592,13 @@ CV Maker uses a Zed-inspired light theme — soft, professional, minimal.
 
 ## Security Considerations
 
-- CORS restricted to `localhost` origins; exact methods (`GET POST PUT DELETE`) specified
+- CORS restricted to `localhost` origins; exact methods (`GET POST PUT DELETE`) specified; `X-User-Id` header allowed
 - LaTeX input sanitised before compilation: `\write18`, `\openin`, `\catcode` and shell-escape patterns blocked
 - AWS credentials via environment / IAM (never in source)
-- No authentication — single-user local tool; multi-user requires auth + per-user data isolation
-- User data stored as local JSON files — not suitable for production multi-user deployment
+- No authentication — relies on `X-User-Id` header (trusted client); multi-user production requires auth + signed user ID
+- User data isolation: all storage operations scoped by `user_id`
+- DynamoDB access via IAM roles (no hardcoded credentials)
+- Local development defaults to `user_id="local"` for backward compatibility
 
 ---
 

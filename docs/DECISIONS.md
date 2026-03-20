@@ -515,6 +515,93 @@ Modify `mcdowellcv.cls` to auto-detect the header line count using `\savebox` to
 
 ---
 
+## ADR-019: Storage Abstraction Layer with Protocol-Based Architecture
+
+**Date:** 2026-03-20
+
+**Status:** Accepted
+
+**Context:**
+
+The app originally used direct file I/O (JSON files in `user_data/`) for all persistence. This approach worked for local single-user development but had limitations:
+1. Not suitable for multi-user production deployments
+2. No cloud-native storage option for scaling
+3. All routes had file I/O logic tightly coupled to business logic
+4. Testing required real filesystem operations
+5. Adding new storage backends (DynamoDB, S3, Postgres) would require refactoring every route
+
+The codebase needed to support both local file-based storage (for development) and cloud storage (for production) without changing business logic in routes.
+
+**Decision:**
+
+Implement a storage abstraction layer using Python's Protocol (structural typing) with pluggable backends.
+
+**Architecture:**
+1. **StorageBackend Protocol** (`services/storage.py`): 11-method async interface defining all user data operations
+   - CV versions: `list_versions`, `get_version`, `create_version`, `update_version`, `delete_version`, `update_children_of_deleted_parent`
+   - User profile: `get_profile`, `save_profile`, `delete_profile`
+   - Voice profile: `get_voice_profile`, `save_voice_profile`
+2. **FileStorage** (`services/file_storage.py`): Wraps existing JSON file I/O with zero behavior change
+   - `user_id="local"` maps to flat `user_data/` directory (backward compatible)
+   - Other user IDs get namespaced: `user_data/{user_id}/`
+3. **DynamoStorage** (`services/dynamo_storage.py`): DynamoDB single-table implementation
+   - Composite keys: `PK=USER#{user_id}`, `SK=VERSION#{version_id} | PROFILE | VOICE_PROFILE`
+   - PAY_PER_REQUEST billing, no GSIs needed
+4. **Storage Factory** (`services/storage_factory.py`): `get_storage()` dependency
+   - Reads `STORAGE_BACKEND` env var (`file` | `dynamodb`)
+   - Singleton via `@lru_cache`
+5. **User ID dependency** (`dependencies.py`): `get_current_user()` reads `X-User-Id` header, defaults to `"local"`
+
+**Rationale:**
+
+- **Protocol over ABC**: Python's Protocol uses structural typing (duck typing) — implementations don't need to inherit from a base class. This is more Pythonic and avoids runtime overhead.
+- **Zero behavior change for FileStorage**: Wraps existing file I/O code exactly as-is, ensuring no regression in local development workflow.
+- **Backward compatibility**: `user_id="local"` preserves existing flat file structure (`user_data/versions/`, `user_data/profile.json`).
+- **Single-table DynamoDB design**: All user data in one table with composite keys keeps queries simple (no cross-table joins or GSIs).
+- **FastAPI dependency injection**: `get_storage()` uses FastAPI's `Depends()` to inject storage backend into routes, making testing easy (can swap in mock storage).
+- **Environment-based selection**: `STORAGE_BACKEND` env var allows runtime selection without code changes.
+- **WebSocket exception**: WebSocket handlers can't use `Depends()`, so they access storage singleton directly via `get_storage()`.
+
+**Consequences:**
+
+**Positive:**
+- Routes are now storage-agnostic — business logic separated from persistence
+- Can swap storage backends without changing route code
+- Easy to add new backends (Postgres, S3, Redis) by implementing Protocol
+- Testing is simpler — can use in-memory mock storage
+- Production-ready cloud storage option (DynamoDB) available
+- Maintains local file-based workflow for development
+
+**Negative:**
+- Added abstraction layer increases codebase complexity (4 new files)
+- All storage operations are now async (requires `await` in routes)
+- DynamoDB requires AWS credentials and table setup
+- Migration from FileStorage to DynamoDB requires running migration script
+- Two storage backends to maintain (FileStorage + DynamoDB)
+
+**Neutral:**
+- User ID is now required for all storage operations (passed via `X-User-Id` header)
+- WebSocket handlers use storage singleton directly (can't use dependency injection)
+- Voice profile storage consolidated into main `user_data/` directory (was split before)
+
+**Alternatives Considered:**
+
+1. **Abstract base class (ABC)** — rejected; Protocol is more Pythonic and doesn't require inheritance
+2. **Repository pattern with classes** — rejected; Protocol achieves same goal with less boilerplate
+3. **Direct DynamoDB integration without abstraction** — rejected; would make local development harder and lock us into DynamoDB
+4. **SQLAlchemy ORM** — rejected; too heavy for simple key-value storage needs
+5. **Keeping file storage only** — rejected; doesn't scale for production multi-user deployment
+
+**Migration Path:**
+
+Existing users on FileStorage (`user_id="local"`) continue working with zero changes. For DynamoDB:
+1. Set `STORAGE_BACKEND=dynamodb` in environment
+2. Run `python backend/scripts/create_table.py` to create DynamoDB table
+3. Run `python backend/scripts/migrate_to_dynamodb.py` to copy data from file storage
+4. Frontend sends `X-User-Id` header (from auth system in production)
+
+---
+
 ## Template for New Decisions
 
 ```markdown

@@ -84,14 +84,61 @@
 .jobPostingSection {
   background: var(--bg-secondary);
   border-radius: var(--radius);
-  padding: 1.25rem;
   flex-shrink: 0;
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 
-.jobPostingSection h2,
-.aiSection h2,
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1.25rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sectionHeader h2 {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.collapseToggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.collapseToggle:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.jobPostingBody {
+  padding: 0 1.25rem 1.25rem;
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              padding-bottom 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.chatSection h2,
 .previewSection h2 {
   font-size: 0.75rem;
   font-weight: 600;
@@ -101,8 +148,8 @@
   margin-bottom: 0.875rem;
 }
 
-/* AI Section */
-.aiSection {
+/* Chat Section — takes all remaining space */
+.chatSection {
   flex: 1;
   min-height: 0;
   display: flex;
@@ -112,52 +159,6 @@
   overflow: hidden;
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-sm);
-}
-
-.aiSectionHeader {
-  padding: 1rem 1.25rem;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
-}
-
-.aiTabs {
-  display: flex;
-  gap: 0.25rem;
-  background: var(--bg-primary);
-  padding: 0.25rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-color);
-}
-
-.aiTabBtn {
-  flex: 1;
-  padding: 0.5rem 1rem;
-  background: transparent;
-  color: var(--text-secondary);
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: 0.8125rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.aiTabBtn:hover {
-  color: var(--text-primary);
-  background: var(--bg-secondary);
-}
-
-.aiTabBtn.active {
-  background: var(--bg-secondary);
-  color: var(--accent);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border-color);
-}
-
-.aiContent {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
 }
 
 /* Preview Section */
@@ -312,9 +313,5 @@
 
   .previewTabs {
     justify-content: center;
-  }
-
-  .aiTabs {
-    flex-direction: column;
   }
 }

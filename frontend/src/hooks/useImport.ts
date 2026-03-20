@@ -1,31 +1,7 @@
 import { useState, useCallback } from 'react';
 import { api } from '../services/api';
 import type { CVFormData, CVImportResponse, ImportConfidence, ImportSummary } from '../types';
-
-// Auto-derive a display label from a URL (copied from CVFormBuilder)
-function deriveLinkLabel(url: string): string {
-  const PLATFORMS: Array<[RegExp, string]> = [
-    [/github\.com/i, 'GitHub'],
-    [/linkedin\.com/i, 'LinkedIn'],
-    [/twitter\.com|x\.com/i, 'Twitter'],
-    [/gitlab\.com/i, 'GitLab'],
-    [/kaggle\.com/i, 'Kaggle'],
-    [/medium\.com/i, 'Medium'],
-    [/stackoverflow\.com/i, 'Stack Overflow'],
-    [/scholar\.google/i, 'Google Scholar'],
-    [/researchgate\.net/i, 'ResearchGate'],
-    [/orcid\.org/i, 'ORCID'],
-  ];
-  for (const [pattern, label] of PLATFORMS) {
-    if (pattern.test(url)) return label;
-  }
-  try {
-    const normalized = url.startsWith('http') ? url : `https://${url}`;
-    return new URL(normalized).hostname.replace(/^www\./, '');
-  } catch {
-    return url;
-  }
-}
+import { deriveLinkLabel } from '../utils/deriveLinkLabel';
 
 export interface ImportProgress {
   message: string;
@@ -83,13 +59,14 @@ export function useImport(): UseImportReturn {
           rest.personalInfo.links = rest.personalInfo.links.map((link: any) => {
             if (!link || typeof link !== 'object') return link;
 
-            // If label is empty, equals URL, or looks like a URL, derive it
+            // If label is empty, equals URL, or looks like a URL/domain, derive it
+            const lbl = (link.label || '').trim();
             const shouldDerive = (
-              !link.label ||
-              link.label.trim() === '' ||
-              link.label === link.url ||
-              link.label.startsWith('http://') ||
-              link.label.startsWith('https://')
+              !lbl ||
+              lbl === link.url ||
+              lbl.startsWith('http://') ||
+              lbl.startsWith('https://') ||
+              (lbl.includes('.') && !lbl.includes(' '))
             );
 
             if (shouldDerive && link.url) {

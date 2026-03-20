@@ -16,6 +16,8 @@ interface VersionSwitcherProps {
   isSaving: boolean;
   onDashboard: () => void;
   defaultCompanyName?: string;
+  defaultRole?: string;
+  forceJobApp?: boolean;
 }
 
 export default function VersionSwitcher({
@@ -27,6 +29,8 @@ export default function VersionSwitcher({
   isSaving,
   onDashboard,
   defaultCompanyName,
+  defaultRole,
+  forceJobApp,
 }: VersionSwitcherProps) {
   const [showModal, setShowModal] = useState(false);
 
@@ -78,6 +82,8 @@ export default function VersionSwitcher({
         activeVersion={activeVersion}
         baseCvs={baseCvs}
         defaultCompanyName={defaultCompanyName}
+        defaultRole={defaultRole}
+        forceJobApp={forceJobApp}
       />
     </div>
   );

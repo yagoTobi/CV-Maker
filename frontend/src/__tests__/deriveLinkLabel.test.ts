@@ -1,40 +1,5 @@
-/**
- * Tests for deriveLinkLabel — the pure function that auto-derives a display
- * label from a URL (e.g., "GitHub" from "https://github.com/user").
- *
- * This function is duplicated in:
- *   - features/form-builder/CVFormBuilder.tsx
- *   - hooks/useImport.ts
- *
- * We extract and test the canonical logic here. Both copies must be in sync.
- */
 import { describe, it, expect } from 'vitest';
-
-// Re-implement the function identically to test the algorithm.
-// We cannot import it directly because it's a local function in each file.
-function deriveLinkLabel(url: string): string {
-  const PLATFORMS: Array<[RegExp, string]> = [
-    [/github\.com/i, 'GitHub'],
-    [/linkedin\.com/i, 'LinkedIn'],
-    [/twitter\.com|x\.com/i, 'Twitter'],
-    [/gitlab\.com/i, 'GitLab'],
-    [/kaggle\.com/i, 'Kaggle'],
-    [/medium\.com/i, 'Medium'],
-    [/stackoverflow\.com/i, 'Stack Overflow'],
-    [/scholar\.google/i, 'Google Scholar'],
-    [/researchgate\.net/i, 'ResearchGate'],
-    [/orcid\.org/i, 'ORCID'],
-  ];
-  for (const [pattern, label] of PLATFORMS) {
-    if (pattern.test(url)) return label;
-  }
-  try {
-    const normalized = url.startsWith('http') ? url : `https://${url}`;
-    return new URL(normalized).hostname.replace(/^www\./, '');
-  } catch {
-    return url;
-  }
-}
+import { deriveLinkLabel } from '../utils/deriveLinkLabel';
 
 describe('deriveLinkLabel', () => {
   describe('known platform detection', () => {

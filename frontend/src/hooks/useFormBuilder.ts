@@ -76,12 +76,27 @@ function initialFormData(templateId: string): CVFormData {
   };
 }
 
-export function useFormBuilder(templateId: string, importedData?: CVFormData) {
-  const [formData, setFormData] = useState<CVFormData>(() =>
-    importedData
-      ? { ...importedData, templateId }
-      : initialFormData(templateId)
+// Valid section keys for sectionOrder — "personal" is handled separately by the nav
+const VALID_SECTION_KEYS = new Set(['work', 'education', 'skills', 'projects', 'awards']);
+
+function sanitizeSectionOrder(order: string[] | undefined, additionalSections?: AdditionalSection[]): string[] {
+  if (!order) return [...DEFAULT_SECTION_ORDER];
+  const additionalCount = additionalSections?.length ?? 0;
+  return order.filter(key =>
+    VALID_SECTION_KEYS.has(key) ||
+    (key.startsWith('additional-') && parseInt(key.replace('additional-', '')) < additionalCount)
   );
+}
+
+export function useFormBuilder(templateId: string, importedData?: CVFormData) {
+  const [formData, setFormData] = useState<CVFormData>(() => {
+    if (!importedData) return initialFormData(templateId);
+    return {
+      ...importedData,
+      templateId,
+      sectionOrder: sanitizeSectionOrder(importedData.sectionOrder, importedData.additionalSections),
+    };
+  });
   const [activeSection, setActiveSection] = useState<FormSection>('personal');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
@@ -96,7 +111,11 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
         templateId,
       });
       importedRef.current = importedData;
-      setFormData({ ...importedData, templateId });
+      setFormData({
+        ...importedData,
+        templateId,
+        sectionOrder: sanitizeSectionOrder(importedData.sectionOrder, importedData.additionalSections),
+      });
     }
   }, [importedData, templateId]);
 
@@ -521,31 +540,6 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
     URL.revokeObjectURL(url);
   }, [formData]);
 
-  const importFormData = useCallback((file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const parsed = JSON.parse(e.target?.result as string);
-        const required = ['templateId', 'personalInfo', 'workExperience', 'education', 'skills'];
-        if (!required.every(k => k in parsed)) {
-          setGenerateError('Invalid CV data file: missing required fields.');
-          return;
-        }
-        setFormData({ ...parsed, templateId: formData.templateId });
-        // If a PDF was previously generated, mark as dirty so the user knows
-        // they need to regenerate. Otherwise, keep clean state for fresh starts.
-        if (lastGeneratedRef.current !== null) {
-          setIsDirty(true);
-        } else {
-          setIsDirty(false);
-        }
-      } catch {
-        setGenerateError('Failed to parse CV data file. Ensure it is valid JSON.');
-      }
-    };
-    reader.readAsText(file);
-  }, [formData.templateId]);
-
   // Full ordered section list for the nav (personal is always first, not reorderable)
   const navSectionOrder: FormSection[] = [
     'personal',
@@ -620,6 +614,5 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
     // Actions
     generateCV,
     exportFormData,
-    importFormData,
   };
 }

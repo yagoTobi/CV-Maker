@@ -2,8 +2,10 @@ import styles from './JobInput.module.css';
 
 interface JobInputProps {
   companyName: string;
+  roleName?: string;
   jobDescription: string;
   onCompanyNameChange: (value: string) => void;
+  onRoleNameChange?: (value: string) => void;
   onJobDescriptionChange: (value: string) => void;
   onAnalyze: () => void;
   isAnalyzing: boolean;
@@ -12,8 +14,10 @@ interface JobInputProps {
 
 export function JobInput({
   companyName,
+  roleName,
   jobDescription,
   onCompanyNameChange,
+  onRoleNameChange,
   onJobDescriptionChange,
   onAnalyze,
   isAnalyzing,
@@ -39,6 +43,19 @@ export function JobInput({
             maxLength={100}
           />
         </div>
+        {onRoleNameChange && (
+          <div className={styles.inputGroup}>
+            <label htmlFor="role-name">Role</label>
+            <input
+              id="role-name"
+              type="text"
+              value={roleName || ''}
+              onChange={(e) => onRoleNameChange(e.target.value)}
+              placeholder="e.g. Senior SWE"
+              maxLength={100}
+            />
+          </div>
+        )}
       </div>
       <div className={`${styles.inputGroup} ${styles.descriptionGroup}`}>
         <label htmlFor="job-description">Description</label>

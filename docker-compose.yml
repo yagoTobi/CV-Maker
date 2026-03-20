@@ -1,0 +1,44 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cv-maker-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - cv-maker-data:/app/user_data
+    environment:
+      - CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - STORAGE_BACKEND=${STORAGE_BACKEND:-file}
+      - DYNAMODB_TABLE_NAME=${DYNAMODB_TABLE_NAME:-cv-maker}
+      - DYNAMODB_ENDPOINT_URL=${DYNAMODB_ENDPOINT_URL:-http://dynamodb-local:8000}
+    env_file:
+      - path: .env
+        required: false
+    depends_on:
+      dynamodb-local:
+        condition: service_healthy
+    restart: unless-stopped
+
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    container_name: cv-maker-dynamodb
+    ports:
+      - "8100:8000"
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /data"
+    volumes:
+      - dynamodb-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:8000 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  cv-maker-data:
+  dynamodb-data:

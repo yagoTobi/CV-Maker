@@ -1,14 +1,14 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
-import json
 import logging
-import os
+
+from dependencies import get_current_user
+from services.storage import StorageBackend
+from services.storage_factory import get_storage
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-USER_DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "user_data", "profile.json")
 
 
 class AdditionalExperience(BaseModel):
@@ -32,58 +32,62 @@ def get_default_profile() -> dict:
 
 
 @router.get("/user-data")
-async def get_user_data():
+async def get_user_data(
+    user_id: str = Depends(get_current_user),
+    storage: StorageBackend = Depends(get_storage),
+):
     """Load saved user profile."""
     try:
-        if os.path.exists(USER_DATA_PATH):
-            with open(USER_DATA_PATH, "r") as f:
-                data = json.load(f)
-            return data
-        return get_default_profile()
-    except json.JSONDecodeError:
-        return get_default_profile()
-    except Exception as e:
+        profile = await storage.get_profile(user_id)
+        return profile if profile is not None else get_default_profile()
+    except Exception:
         logger.exception("User data operation failed")
         raise HTTPException(status_code=500, detail="An internal error occurred")
 
 
 @router.post("/user-data")
-async def save_user_data(profile: UserProfile):
+async def save_user_data(
+    profile: UserProfile,
+    user_id: str = Depends(get_current_user),
+    storage: StorageBackend = Depends(get_storage),
+):
     """Save user profile."""
     try:
-        os.makedirs(os.path.dirname(USER_DATA_PATH), exist_ok=True)
-        with open(USER_DATA_PATH, "w") as f:
-            json.dump(profile.model_dump(), f, indent=2)
+        await storage.save_profile(user_id, profile.model_dump())
         return {"status": "saved"}
-    except Exception as e:
+    except Exception:
         logger.exception("User data operation failed")
         raise HTTPException(status_code=500, detail="An internal error occurred")
 
 
 @router.post("/user-data/experience")
-async def add_experience(experience: AdditionalExperience):
+async def add_experience(
+    experience: AdditionalExperience,
+    user_id: str = Depends(get_current_user),
+    storage: StorageBackend = Depends(get_storage),
+):
     """Add a single experience to the profile."""
     try:
-        profile = await get_user_data()
+        profile = await storage.get_profile(user_id)
+        if profile is None:
+            profile = get_default_profile()
         profile["additional_experiences"].append(experience.model_dump())
-
-        os.makedirs(os.path.dirname(USER_DATA_PATH), exist_ok=True)
-        with open(USER_DATA_PATH, "w") as f:
-            json.dump(profile, f, indent=2)
-
+        await storage.save_profile(user_id, profile)
         return {"status": "added", "profile": profile}
-    except Exception as e:
+    except Exception:
         logger.exception("User data operation failed")
         raise HTTPException(status_code=500, detail="An internal error occurred")
 
 
 @router.delete("/user-data")
-async def clear_user_data():
+async def clear_user_data(
+    user_id: str = Depends(get_current_user),
+    storage: StorageBackend = Depends(get_storage),
+):
     """Clear all user data."""
     try:
-        if os.path.exists(USER_DATA_PATH):
-            os.remove(USER_DATA_PATH)
+        await storage.delete_profile(user_id)
         return {"status": "cleared"}
-    except Exception as e:
+    except Exception:
         logger.exception("User data operation failed")
         raise HTTPException(status_code=500, detail="An internal error occurred")

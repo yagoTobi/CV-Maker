@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   useFormBuilder,
@@ -11,32 +11,10 @@ import type { SaveVersionData } from "../dashboard";
 import { api } from "../../services/api";
 import type { CVFormData } from "../../types";
 import { VoiceWidget } from "../voice-widget";
+import { generateCVFilename } from "../../utils/cvFilename";
+import ImportBanner from "./ImportBanner";
+import { deriveLinkLabel } from "../../utils/deriveLinkLabel";
 import styles from "./CVFormBuilder.module.css";
-
-// Auto-derive a display label from a URL
-function deriveLinkLabel(url: string): string {
-  const PLATFORMS: Array<[RegExp, string]> = [
-    [/github\.com/i, "GitHub"],
-    [/linkedin\.com/i, "LinkedIn"],
-    [/twitter\.com|x\.com/i, "Twitter"],
-    [/gitlab\.com/i, "GitLab"],
-    [/kaggle\.com/i, "Kaggle"],
-    [/medium\.com/i, "Medium"],
-    [/stackoverflow\.com/i, "Stack Overflow"],
-    [/scholar\.google/i, "Google Scholar"],
-    [/researchgate\.net/i, "ResearchGate"],
-    [/orcid\.org/i, "ORCID"],
-  ];
-  for (const [pattern, label] of PLATFORMS) {
-    if (pattern.test(url)) return label;
-  }
-  try {
-    const normalized = url.startsWith("http") ? url : `https://${url}`;
-    return new URL(normalized).hostname.replace(/^www\./, "");
-  } catch {
-    return url;
-  }
-}
 
 const SECTION_LABELS: Record<FormSection, string> = {
   personal: "Personal Info",
@@ -76,20 +54,23 @@ export default function CVFormBuilder() {
     templates,
     handleSaveVersion,
     savedVersions,
+    setSavedVersions,
     activeVersion,
     isSavingVersion,
+    cvImport,
   } = useAppContext();
 
   const templateId = selectedTemplateForBuild || "med-length-proff-cv";
 
   // All hooks at top — never after a conditional return (key learning #3)
   const fb = useFormBuilder(templateId, formData || undefined);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const navWrapperRef = useRef<HTMLDivElement>(null);
 
   // Save modal state
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [tuneAfterSave, setTuneAfterSave] = useState(false);
+  const [saveFlash, setSaveFlash] = useState(false);
+  const saveFlashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const baseCvs = savedVersions.filter((v) => !v.parentVersionId);
 
   // PDF preview state
@@ -97,6 +78,8 @@ export default function CVFormBuilder() {
   const [isCompiling, setIsCompiling] = useState(false);
   const [generatedTex, setGeneratedTex] = useState<string | null>(null);
   const [compileError, setCompileError] = useState<string | null>(null);
+  const [compileWarnings, setCompileWarnings] = useState<string[]>([]);
+  const [pageCount, setPageCount] = useState(0);
 
   // Resizable preview panel
   const [previewWidth, setPreviewWidth] = useState(520);
@@ -106,6 +89,47 @@ export default function CVFormBuilder() {
   const resizeStartXRef = useRef(0);
   const resizeStartWidthRef = useRef(0);
   const rafIdRef = useRef<number | null>(null); // Persist RAF ID across calls
+
+  // --- Import awareness ---
+  const importMeta = cvImport.importResult;
+  const [importDismissed, setImportDismissed] = useState(false);
+  const [reviewedFields, setReviewedFields] = useState<Set<string>>(new Set());
+
+  const getFieldConfidence = useCallback(
+    (path: string): 'low' | 'medium' | undefined => {
+      if (!importMeta || importDismissed) return undefined;
+      if (reviewedFields.has(path)) return undefined;
+      const level = importMeta.confidence?.fields[path];
+      if (level === 'low' || level === 'medium') return level;
+      return undefined;
+    },
+    [importMeta, importDismissed, reviewedFields],
+  );
+
+  const markFieldReviewed = useCallback((path: string) => {
+    setReviewedFields((prev) => {
+      if (prev.has(path)) return prev;
+      const next = new Set(prev);
+      next.add(path);
+      return next;
+    });
+  }, []);
+
+  const importCtx =
+    importMeta && !importDismissed
+      ? { getConfidence: getFieldConfidence, markReviewed: markFieldReviewed }
+      : undefined;
+
+  // Cleanup import state when leaving the form builder
+  useEffect(() => {
+    return () => {
+      if (cvImport.importResult) {
+        cvImport.reset();
+      }
+    };
+    // Only run on unmount — intentionally omit deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Sidebar section drag state
   const [navDragFrom, setNavDragFrom] = useState<number | null>(null);
@@ -208,7 +232,7 @@ export default function CVFormBuilder() {
     setNavDragOver(null);
   };
 
-  const handleGenerate = async () => {
+  const handleGenerate = useCallback(async () => {
     setCompileError(null);
     const { texContent, error } = await fb.generateCV();
     if (error || !texContent) return;
@@ -219,26 +243,17 @@ export default function CVFormBuilder() {
 
     const result = await api.compileLatex(texContent, templateId);
     setIsCompiling(false);
+    setCompileWarnings(result.warnings ?? []);
+    setPageCount(result.page_count);
 
     if (result.success && result.pdf_base64) {
       setPdfBase64(result.pdf_base64);
+      // Auto-dismiss import indicators on first successful PDF generation
+      if (importMeta && !importDismissed) setImportDismissed(true);
     } else {
       setCompileError(result.error || "Compilation failed");
     }
-  };
-
-  const handleOpenEditor = async () => {
-    // Generate LaTeX from current form data
-    const { texContent, error } = await fb.generateCV();
-    if (error || !texContent) return;
-
-    // Store in templates context
-    templates.updateContent(texContent);
-    templates.setTemplateId(templateId);
-
-    // Navigate to editor
-    navigate("/editor");
-  };
+  }, [fb, templateId, importMeta, importDismissed]);
 
   const handleRegenerate = async () => {
     if (!generatedTex) return;
@@ -246,6 +261,8 @@ export default function CVFormBuilder() {
     setCompileError(null);
     const result = await api.compileLatex(generatedTex, templateId);
     setIsCompiling(false);
+    setCompileWarnings(result.warnings ?? []);
+    setPageCount(result.page_count);
     if (result.success && result.pdf_base64) setPdfBase64(result.pdf_base64);
     else setCompileError(result.error || "Compilation failed");
   };
@@ -257,60 +274,105 @@ export default function CVFormBuilder() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${fb.formData.personalInfo.fullName || "cv"}.pdf`;
+    a.download = generateCVFilename({ fullName: fb.formData.personalInfo.fullName });
     a.click();
     URL.revokeObjectURL(url);
   }, [pdfBase64, fb.formData.personalInfo.fullName]);
 
-  const handleSaveCV = () => {
-    setTuneAfterSave(false);
-    setShowSaveModal(true);
-  };
-
-  const handleTuneForRole = () => {
-    setTuneAfterSave(true);
-    setShowSaveModal(true);
-  };
-
-  const handleSaveComplete = useCallback(
-    async (data: SaveVersionData) => {
-      // Sync form data to AppContext before saving
-      setFormData(fb.formData);
-
-      // Ensure we have LaTeX content for the save
-      if (!generatedTex) {
-        const { texContent } = await fb.generateCV();
-        if (texContent) {
-          templates.updateContent(texContent);
-          templates.setTemplateId(templateId);
-        }
-      } else {
-        templates.updateContent(generatedTex);
+  // Shared helper: sync form data + LaTeX to AppContext before any save
+  const prepareForSave = useCallback(async () => {
+    setFormData(fb.formData);
+    if (!generatedTex) {
+      const { texContent } = await fb.generateCV();
+      if (texContent) {
+        templates.updateContent(texContent);
         templates.setTemplateId(templateId);
       }
+    } else {
+      templates.updateContent(generatedTex);
+      templates.setTemplateId(templateId);
+    }
+  }, [fb, generatedTex, templateId, templates, setFormData]);
 
-      // Save the version
-      await handleSaveVersion(data);
+  // Quick-save: overwrite existing version (save new, delete old)
+  const doQuickSave = useCallback(async () => {
+    if (!activeVersion) return null;
+    await prepareForSave();
+    const oldId = activeVersion.id;
+    const saved = await handleSaveVersion({
+      name: activeVersion.name,
+      isBaseCV: !activeVersion.parentVersionId,
+      parentVersionId: activeVersion.parentVersionId,
+      role: activeVersion.role || undefined,
+      companyName: activeVersion.companyName || undefined,
+    });
+    if (saved) {
+      await api.deleteVersion(oldId);
+      setSavedVersions(prev => prev.filter(v => v.id !== oldId));
+    }
+    return saved;
+  }, [activeVersion, prepareForSave, handleSaveVersion, setSavedVersions]);
 
-      // If tuning, navigate to editor in tune mode
+  const triggerSaveFlash = useCallback(() => {
+    setSaveFlash(true);
+    if (saveFlashTimer.current) clearTimeout(saveFlashTimer.current);
+    saveFlashTimer.current = setTimeout(() => setSaveFlash(false), 1500);
+  }, []);
+
+  const handleSaveCV = useCallback(async () => {
+    if (activeVersion) {
+      // Existing version — quick-save without modal
+      const saved = await doQuickSave();
+      if (saved) triggerSaveFlash();
+    } else {
+      // New CV — show modal to enter name
+      setTuneAfterSave(false);
+      setShowSaveModal(true);
+    }
+  }, [activeVersion, doQuickSave, triggerSaveFlash]);
+
+  const handleTuneForRole = useCallback(async () => {
+    if (activeVersion) {
+      // Already saved — quick-save then navigate to editor in tune mode
+      const saved = await doQuickSave();
+      if (saved) navigate("/editor", { state: { mode: "tune" } });
+    } else {
+      // New CV — show modal, then navigate after save
+      setTuneAfterSave(true);
+      setShowSaveModal(true);
+    }
+  }, [activeVersion, doQuickSave, navigate]);
+
+  // Modal save callback (only used for first-time saves)
+  const handleSaveComplete = useCallback(
+    async (data: SaveVersionData) => {
+      await prepareForSave();
+      const saved = await handleSaveVersion(data);
+      if (!saved) return;
+
       if (tuneAfterSave) {
         navigate("/editor", { state: { mode: "tune" } });
+      } else {
+        triggerSaveFlash();
       }
     },
-    [
-      fb,
-      generatedTex,
-      templateId,
-      templates,
-      setFormData,
-      handleSaveVersion,
-      tuneAfterSave,
-      navigate,
-    ],
+    [prepareForSave, handleSaveVersion, tuneAfterSave, navigate, triggerSaveFlash],
   );
 
   const isGenerateDisabled = fb.isGenerating || isCompiling;
   const showDirty = pdfBase64 !== null && fb.isDirty;
+
+  // Cmd+Enter / Ctrl+Enter to compile
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !isGenerateDisabled) {
+        e.preventDefault();
+        handleGenerate();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isGenerateDisabled, handleGenerate]);
 
   return (
     <div className={styles.container}>
@@ -438,36 +500,6 @@ export default function CVFormBuilder() {
               </svg>
               Export
             </button>
-            <button
-              className={styles.iconBtn}
-              onClick={() => fileInputRef.current?.click()}
-              title="Import CV data from JSON"
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="17 8 12 3 7 8" />
-                <line x1="12" y1="3" x2="12" y2="15" />
-              </svg>
-              Import
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json"
-              className={styles.hiddenInput}
-              onChange={(e) => {
-                if (e.target.files?.[0]) fb.importFormData(e.target.files[0]);
-              }}
-            />
           </div>
 
           {fb.generateError && (
@@ -528,9 +560,19 @@ export default function CVFormBuilder() {
 
       {/* ── Form area ── */}
       <main className={styles.formArea}>
-        {fb.activeSection === "personal" && <PersonalSection fb={fb} />}
-        {fb.activeSection === "work" && <WorkSection fb={fb} />}
-        {fb.activeSection === "education" && <EducationSection fb={fb} />}
+        {importMeta && !importDismissed && importMeta.confidence && importMeta.summary && (
+          <ImportBanner
+            source={importMeta.source}
+            confidence={importMeta.confidence}
+            summary={importMeta.summary}
+            backendWarnings={importMeta.warnings}
+            formData={fb.formData}
+            onDismiss={() => setImportDismissed(true)}
+          />
+        )}
+        {fb.activeSection === "personal" && <PersonalSection fb={fb} importCtx={importCtx} />}
+        {fb.activeSection === "work" && <WorkSection fb={fb} importCtx={importCtx} />}
+        {fb.activeSection === "education" && <EducationSection fb={fb} importCtx={importCtx} />}
         {fb.activeSection === "skills" && <SkillsSection fb={fb} />}
         {fb.activeSection === "projects" && <ProjectsSection fb={fb} />}
         {fb.activeSection === "awards" && <AwardsSection fb={fb} />}
@@ -560,16 +602,7 @@ export default function CVFormBuilder() {
                 onClick={handleDownloadPDF}
                 title="Download PDF"
               >
-                <svg
-                  width="13"
-                  height="13"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                   <polyline points="7 10 12 15 17 10" />
                   <line x1="12" y1="15" x2="12" y2="3" />
@@ -577,45 +610,67 @@ export default function CVFormBuilder() {
                 Download
               </button>
               <button
-                className={styles.actionBtn}
+                className={`${styles.actionBtn} ${saveFlash ? styles.actionBtnSaved : ""}`}
                 onClick={handleSaveCV}
-                title="Save as a version"
+                disabled={isSavingVersion}
+                title={activeVersion ? "Save changes" : "Save as a new CV"}
               >
-                <svg
-                  width="13"
-                  height="13"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-                  <polyline points="17 21 17 13 7 13 7 21" />
-                  <polyline points="7 3 7 8 15 8" />
-                </svg>
-                Save
+                {saveFlash ? (
+                  <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    Saved!
+                  </>
+                ) : (
+                  <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                      <polyline points="17 21 17 13 7 13 7 21" />
+                      <polyline points="7 3 7 8 15 8" />
+                    </svg>
+                    {isSavingVersion ? "Saving..." : "Save"}
+                  </>
+                )}
               </button>
-              <button
-                className={`${styles.actionBtn} ${styles.actionBtnPrimary}`}
-                onClick={handleTuneForRole}
-                title="Save and tune for a specific role"
-              >
-                <svg
-                  width="13"
-                  height="13"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+              {activeVersion ? (
+                <>
+                  <button
+                    className={styles.actionBtn}
+                    onClick={() => navigate("/dashboard")}
+                    title="Go to Dashboard"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+                      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                    </svg>
+                    Dashboard
+                  </button>
+                  <button
+                    className={`${styles.actionBtn} ${styles.actionBtnPrimary}`}
+                    onClick={handleTuneForRole}
+                    disabled={isSavingVersion}
+                    title="Tailor this CV for a specific job"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                    </svg>
+                    Tune for a Job
+                  </button>
+                </>
+              ) : (
+                <button
+                  className={`${styles.actionBtn} ${styles.actionBtnPrimary}`}
+                  onClick={handleTuneForRole}
+                  disabled={isSavingVersion}
+                  title="Save and tune for a specific role"
                 >
-                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-                </svg>
-                Tune for a Role
-              </button>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                  </svg>
+                  Tune for a Role
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -682,17 +737,20 @@ export default function CVFormBuilder() {
           )}
         </div>
 
-        {/* Open in Advanced Editor — subtle link */}
-        {pdfBase64 && (
-          <div className={styles.previewFooter}>
-            <button
-              className={styles.previewFooterLink}
-              onClick={handleOpenEditor}
-            >
-              Open in Advanced Editor →
-            </button>
+        {/* Compile feedback: page count + overflow warnings */}
+        {pdfBase64 && (pageCount > 1 || compileWarnings.length > 0) && (
+          <div className={styles.compileFeedback}>
+            {pageCount > 1 && (
+              <p className={styles.pageCountWarning}>
+                Your CV is {pageCount} pages — most recruiters prefer a single page.
+              </p>
+            )}
+            {compileWarnings.map((w, i) => (
+              <p key={i} className={styles.overflowWarning}>{w}</p>
+            ))}
           </div>
         )}
+
       </aside>
 
       {/* Save modal (shared between Save CV and Tune for Role) */}
@@ -703,7 +761,7 @@ export default function CVFormBuilder() {
         isSaving={isSavingVersion}
         activeVersion={activeVersion}
         baseCvs={baseCvs}
-        forceBaseCV={tuneAfterSave}
+        forceBaseCV
       />
     </div>
   );
@@ -713,6 +771,11 @@ export default function CVFormBuilder() {
 // Pure render components — drag state is local to each (key learning #3: hooks only inside component bodies, never after conditionals)
 
 type FB = ReturnType<typeof useFormBuilder>;
+
+interface ImportCtx {
+  getConfidence: (path: string) => 'low' | 'medium' | undefined;
+  markReviewed: (path: string) => void;
+}
 
 function useDrag(onReorder: (from: number, to: number) => void) {
   const dragFromRef = useRef<number | null>(null);
@@ -775,49 +838,60 @@ const PERSONAL_FIELD_META: Record<string, { label: string }> = {
   links: { label: "Links" },
 };
 
-function PersonalSection({ fb }: { fb: FB }) {
+function PersonalSection({ fb, importCtx }: { fb: FB; importCtx?: ImportCtx }) {
   const p = fb.formData.personalInfo;
   const personalOrder = (p.personalOrder ?? DEFAULT_PERSONAL_ORDER) as string[];
   const headerDrag = useDrag(fb.reorderPersonalFields);
+
+  const gc = importCtx?.getConfidence;
+  const mr = importCtx?.markReviewed;
 
   return (
     <section className={styles.section}>
       <h3 className={styles.sectionTitle}>Personal Information</h3>
       <div className={styles.formGrid}>
-        <Field label="Full Name" required>
+        <Field label="Full Name" required confidence={gc?.('personalInfo.fullName')}>
           <input
             className={styles.input}
             value={p.fullName}
-            onChange={(e) =>
-              fb.updatePersonalInfo({ fullName: e.target.value })
-            }
+            onChange={(e) => {
+              fb.updatePersonalInfo({ fullName: e.target.value });
+              mr?.('personalInfo.fullName');
+            }}
             placeholder="Jane Smith"
           />
         </Field>
-        <Field label="Email" required>
+        <Field label="Email" required confidence={gc?.('personalInfo.email')}>
           <input
             className={styles.input}
             type="email"
             value={p.email}
-            onChange={(e) => fb.updatePersonalInfo({ email: e.target.value })}
+            onChange={(e) => {
+              fb.updatePersonalInfo({ email: e.target.value });
+              mr?.('personalInfo.email');
+            }}
             placeholder="jane@example.com"
           />
         </Field>
-        <Field label="Phone">
+        <Field label="Phone" confidence={gc?.('personalInfo.phone')}>
           <input
             className={styles.input}
             value={p.phone}
-            onChange={(e) => fb.updatePersonalInfo({ phone: e.target.value })}
+            onChange={(e) => {
+              fb.updatePersonalInfo({ phone: e.target.value });
+              mr?.('personalInfo.phone');
+            }}
             placeholder="+44 7700 000000"
           />
         </Field>
-        <Field label="Location">
+        <Field label="Location" confidence={gc?.('personalInfo.location')}>
           <input
             className={styles.input}
             value={p.location}
-            onChange={(e) =>
-              fb.updatePersonalInfo({ location: e.target.value })
-            }
+            onChange={(e) => {
+              fb.updatePersonalInfo({ location: e.target.value });
+              mr?.('personalInfo.location');
+            }}
             placeholder="London, UK"
           />
         </Field>
@@ -900,7 +974,7 @@ function PersonalSection({ fb }: { fb: FB }) {
               placeholder="https://github.com/username"
             />
             <span className={styles.linkLabelBadge}>
-              {link.label || deriveLinkLabel(link.url)}
+              {deriveLinkLabel(link.url)}
             </span>
             <button
               className={styles.removeBtn}
@@ -932,6 +1006,7 @@ interface WorkEntryCardProps {
   total: number;
   fb: FB;
   dragState: ReturnType<typeof useDrag>;
+  importCtx?: ImportCtx;
 }
 
 function WorkEntryCard({
@@ -940,7 +1015,10 @@ function WorkEntryCard({
   total,
   fb,
   dragState: drag,
+  importCtx,
 }: WorkEntryCardProps) {
+  const gc = importCtx?.getConfidence;
+  const mr = importCtx?.markReviewed;
   const bulletDrag = useDrag((from, to) => fb.reorderBullets(i, from, to));
 
   return (
@@ -960,9 +1038,12 @@ function WorkEntryCard({
         >
           <GripIcon />
         </span>
-        <span className={styles.cardLabel}>
-          {job.company || `Position ${i + 1}`}
-        </span>
+        <input
+          className={`${styles.input} ${styles.cardLabelInput}`}
+          value={job.company}
+          onChange={(e) => { fb.updateWorkEntry(i, { company: e.target.value }); mr?.(`workExperience[${i}].company`); }}
+          placeholder={`Company ${i + 1}`}
+        />
         {total > 1 && (
           <button
             className={styles.removeBtn}
@@ -983,48 +1064,36 @@ function WorkEntryCard({
         )}
       </div>
       <div className={styles.formGrid}>
-        <Field label="Company" required>
-          <input
-            className={styles.input}
-            value={job.company}
-            onChange={(e) => fb.updateWorkEntry(i, { company: e.target.value })}
-            placeholder="Acme Corp"
-          />
-        </Field>
-        <Field label="Title" required>
+        <Field label="Title" required confidence={gc?.(`workExperience[${i}].title`)}>
           <input
             className={styles.input}
             value={job.title}
-            onChange={(e) => fb.updateWorkEntry(i, { title: e.target.value })}
+            onChange={(e) => { fb.updateWorkEntry(i, { title: e.target.value }); mr?.(`workExperience[${i}].title`); }}
             placeholder="Software Engineer"
           />
         </Field>
-        <Field label="Start Date">
-          <input
-            className={styles.input}
-            value={job.startDate}
-            onChange={(e) =>
-              fb.updateWorkEntry(i, { startDate: e.target.value })
-            }
-            placeholder="Jan 2022"
-          />
-        </Field>
-        <Field label="End Date">
-          <input
-            className={styles.input}
-            value={job.endDate}
-            onChange={(e) => fb.updateWorkEntry(i, { endDate: e.target.value })}
-            placeholder="Present"
-          />
-        </Field>
-        <Field label="Location">
+        <Field label="Location" confidence={gc?.(`workExperience[${i}].location`)}>
           <input
             className={styles.input}
             value={job.location}
-            onChange={(e) =>
-              fb.updateWorkEntry(i, { location: e.target.value })
-            }
+            onChange={(e) => { fb.updateWorkEntry(i, { location: e.target.value }); mr?.(`workExperience[${i}].location`); }}
             placeholder="London, UK"
+          />
+        </Field>
+        <Field label="Start Date" confidence={gc?.(`workExperience[${i}].startDate`)}>
+          <input
+            className={styles.input}
+            value={job.startDate}
+            onChange={(e) => { fb.updateWorkEntry(i, { startDate: e.target.value }); mr?.(`workExperience[${i}].startDate`); }}
+            placeholder="Jan 2022"
+          />
+        </Field>
+        <Field label="End Date" confidence={gc?.(`workExperience[${i}].endDate`)}>
+          <input
+            className={styles.input}
+            value={job.endDate}
+            onChange={(e) => { fb.updateWorkEntry(i, { endDate: e.target.value }); mr?.(`workExperience[${i}].endDate`); }}
+            placeholder="Present"
           />
         </Field>
       </div>
@@ -1085,7 +1154,7 @@ function WorkEntryCard({
   );
 }
 
-function WorkSection({ fb }: { fb: FB }) {
+function WorkSection({ fb, importCtx }: { fb: FB; importCtx?: ImportCtx }) {
   const drag = useDrag(fb.reorderWorkEntries);
   return (
     <section className={styles.section}>
@@ -1103,6 +1172,7 @@ function WorkSection({ fb }: { fb: FB }) {
           total={fb.formData.workExperience.length}
           fb={fb}
           dragState={drag}
+          importCtx={importCtx}
         />
       ))}
     </section>
@@ -1115,6 +1185,7 @@ interface EducationEntryCardProps {
   total: number;
   fb: FB;
   dragState: ReturnType<typeof useDrag>;
+  importCtx?: ImportCtx;
 }
 
 function EducationEntryCard({
@@ -1123,7 +1194,10 @@ function EducationEntryCard({
   total,
   fb,
   dragState: drag,
+  importCtx,
 }: EducationEntryCardProps) {
+  const gc = importCtx?.getConfidence;
+  const mr = importCtx?.markReviewed;
   const detailDrag = useDrag((from, to) => fb.reorderEduDetails(i, from, to));
 
   return (
@@ -1143,9 +1217,12 @@ function EducationEntryCard({
         >
           <GripIcon />
         </span>
-        <span className={styles.cardLabel}>
-          {edu.school || `Institution ${i + 1}`}
-        </span>
+        <input
+          className={`${styles.input} ${styles.cardLabelInput}`}
+          value={edu.school}
+          onChange={(e) => { fb.updateEducationEntry(i, { school: e.target.value }); mr?.(`education[${i}].school`); }}
+          placeholder={`Institution ${i + 1}`}
+        />
         {total > 1 && (
           <button
             className={styles.removeBtn}
@@ -1166,64 +1243,44 @@ function EducationEntryCard({
         )}
       </div>
       <div className={styles.formGrid}>
-        <Field label="School / University" required>
-          <input
-            className={styles.input}
-            value={edu.school}
-            onChange={(e) =>
-              fb.updateEducationEntry(i, { school: e.target.value })
-            }
-            placeholder="University of Oxford"
-          />
-        </Field>
-        <Field label="Degree" required>
+        <Field label="Degree" required confidence={gc?.(`education[${i}].degree`)}>
           <input
             className={styles.input}
             value={edu.degree}
-            onChange={(e) =>
-              fb.updateEducationEntry(i, { degree: e.target.value })
-            }
+            onChange={(e) => { fb.updateEducationEntry(i, { degree: e.target.value }); mr?.(`education[${i}].degree`); }}
             placeholder="BSc Computer Science"
           />
         </Field>
-        <Field label="Start Date">
-          <input
-            className={styles.input}
-            value={edu.startDate}
-            onChange={(e) =>
-              fb.updateEducationEntry(i, { startDate: e.target.value })
-            }
-            placeholder="Sep 2019"
-          />
-        </Field>
-        <Field label="End Date">
-          <input
-            className={styles.input}
-            value={edu.endDate}
-            onChange={(e) =>
-              fb.updateEducationEntry(i, { endDate: e.target.value })
-            }
-            placeholder="Jun 2023"
-          />
-        </Field>
-        <Field label="Location">
-          <input
-            className={styles.input}
-            value={edu.location}
-            onChange={(e) =>
-              fb.updateEducationEntry(i, { location: e.target.value })
-            }
-            placeholder="Oxford, UK"
-          />
-        </Field>
-        <Field label="GPA">
+        <Field label="GPA" confidence={gc?.(`education[${i}].gpa`)}>
           <input
             className={styles.input}
             value={edu.gpa || ""}
-            onChange={(e) =>
-              fb.updateEducationEntry(i, { gpa: e.target.value })
-            }
+            onChange={(e) => { fb.updateEducationEntry(i, { gpa: e.target.value }); mr?.(`education[${i}].gpa`); }}
             placeholder="3.8 / 4.0"
+          />
+        </Field>
+        <Field label="Start Date" confidence={gc?.(`education[${i}].startDate`)}>
+          <input
+            className={styles.input}
+            value={edu.startDate}
+            onChange={(e) => { fb.updateEducationEntry(i, { startDate: e.target.value }); mr?.(`education[${i}].startDate`); }}
+            placeholder="Sep 2019"
+          />
+        </Field>
+        <Field label="End Date" confidence={gc?.(`education[${i}].endDate`)}>
+          <input
+            className={styles.input}
+            value={edu.endDate}
+            onChange={(e) => { fb.updateEducationEntry(i, { endDate: e.target.value }); mr?.(`education[${i}].endDate`); }}
+            placeholder="Jun 2023"
+          />
+        </Field>
+        <Field label="Location" confidence={gc?.(`education[${i}].location`)}>
+          <input
+            className={styles.input}
+            value={edu.location}
+            onChange={(e) => { fb.updateEducationEntry(i, { location: e.target.value }); mr?.(`education[${i}].location`); }}
+            placeholder="Oxford, UK"
           />
         </Field>
       </div>
@@ -1281,7 +1338,7 @@ function EducationEntryCard({
   );
 }
 
-function EducationSection({ fb }: { fb: FB }) {
+function EducationSection({ fb, importCtx }: { fb: FB; importCtx?: ImportCtx }) {
   const drag = useDrag(fb.reorderEducationEntries);
   return (
     <section className={styles.section}>
@@ -1299,6 +1356,7 @@ function EducationSection({ fb }: { fb: FB }) {
           total={fb.formData.education.length}
           fb={fb}
           dragState={drag}
+          importCtx={importCtx}
         />
       ))}
     </section>
@@ -1336,9 +1394,14 @@ function SkillsSection({ fb }: { fb: FB }) {
             >
               <GripIcon />
             </span>
-            <span className={styles.cardLabel}>
-              {cat.category || `Category ${i + 1}`}
-            </span>
+            <input
+              className={`${styles.input} ${styles.cardLabelInput}`}
+              value={cat.category}
+              onChange={(e) =>
+                fb.updateSkillCategory(i, { category: e.target.value })
+              }
+              placeholder={`Category ${i + 1}`}
+            />
             {fb.formData.skills.length > 1 && (
               <button
                 className={styles.removeBtn}
@@ -1358,26 +1421,14 @@ function SkillsSection({ fb }: { fb: FB }) {
               </button>
             )}
           </div>
-          <div className={styles.formGrid}>
-            <Field label="Category Name">
-              <input
-                className={styles.input}
-                value={cat.category}
-                onChange={(e) =>
-                  fb.updateSkillCategory(i, { category: e.target.value })
-                }
-                placeholder="Programming Languages"
-              />
-            </Field>
-            <Field label="Skills (comma-separated)">
-              <input
-                className={styles.input}
-                value={cat.skills.join(", ")}
-                onChange={(e) => fb.updateSkillsText(i, e.target.value)}
-                placeholder="Python, TypeScript, Go"
-              />
-            </Field>
-          </div>
+          <Field label="Skills (comma-separated)">
+            <input
+              className={styles.input}
+              value={cat.skills.join(", ")}
+              onChange={(e) => fb.updateSkillsText(i, e.target.value)}
+              placeholder="Python, TypeScript, Go"
+            />
+          </Field>
         </div>
       ))}
     </section>
@@ -1418,9 +1469,12 @@ function ProjectEntryCard({
         >
           <GripIcon />
         </span>
-        <span className={styles.cardLabel}>
-          {proj.name || `Project ${i + 1}`}
-        </span>
+        <input
+          className={`${styles.input} ${styles.cardLabelInput}`}
+          value={proj.name}
+          onChange={(e) => fb.updateProject(i, { name: e.target.value })}
+          placeholder={`Project ${i + 1}`}
+        />
         <button
           className={styles.removeBtn}
           onClick={() => fb.removeProject(i)}
@@ -1439,14 +1493,6 @@ function ProjectEntryCard({
         </button>
       </div>
       <div className={styles.formGrid}>
-        <Field label="Project Name">
-          <input
-            className={styles.input}
-            value={proj.name}
-            onChange={(e) => fb.updateProject(i, { name: e.target.value })}
-            placeholder="My Awesome App"
-          />
-        </Field>
         <Field label="Year">
           <input
             className={styles.input}
@@ -1607,9 +1653,12 @@ function AwardsSection({ fb }: { fb: FB }) {
             >
               <GripIcon />
             </span>
-            <span className={styles.cardLabel}>
-              {award.title || `Award ${i + 1}`}
-            </span>
+            <input
+              className={`${styles.input} ${styles.cardLabelInput}`}
+              value={award.title}
+              onChange={(e) => fb.updateAward(i, { title: e.target.value })}
+              placeholder={`Award ${i + 1}`}
+            />
             <button
               className={styles.removeBtn}
               onClick={() => fb.removeAward(i)}
@@ -1634,14 +1683,6 @@ function AwardsSection({ fb }: { fb: FB }) {
                 value={award.year}
                 onChange={(e) => fb.updateAward(i, { year: e.target.value })}
                 placeholder="2023"
-              />
-            </Field>
-            <Field label="Title" required>
-              <input
-                className={styles.input}
-                value={award.title}
-                onChange={(e) => fb.updateAward(i, { title: e.target.value })}
-                placeholder="Best Paper Award"
               />
             </Field>
             <Field label="Description">
@@ -1681,9 +1722,16 @@ function AdditionalEntryCard({
   return (
     <div className={styles.card}>
       <div className={styles.cardHeader}>
-        <span className={styles.cardLabel}>
-          {entry.title || `Entry ${ei + 1}`}
-        </span>
+        <input
+          className={`${styles.input} ${styles.cardLabelInput}`}
+          value={entry.title}
+          onChange={(e) =>
+            fb.updateAdditionalEntry(sectionIndex, ei, {
+              title: e.target.value,
+            })
+          }
+          placeholder={`Entry ${ei + 1}`}
+        />
         <button
           className={styles.removeBtn}
           onClick={() => fb.removeAdditionalEntry(sectionIndex, ei)}
@@ -1703,18 +1751,6 @@ function AdditionalEntryCard({
       </div>
 
       <div className={styles.formGrid}>
-        <Field label="Title" required>
-          <input
-            className={styles.input}
-            value={entry.title}
-            onChange={(e) =>
-              fb.updateAdditionalEntry(sectionIndex, ei, {
-                title: e.target.value,
-              })
-            }
-            placeholder="Entry title"
-          />
-        </Field>
         <Field label="Subtitle">
           <input
             className={styles.input}
@@ -1919,17 +1955,25 @@ function AdditionalSectionView({
 function Field({
   label,
   required,
+  confidence,
   children,
 }: {
   label: string;
   required?: boolean;
+  confidence?: 'low' | 'medium';
   children: React.ReactNode;
 }) {
   return (
-    <div className={styles.field}>
+    <div className={`${styles.field} ${confidence === 'low' ? styles.confidenceLow : ''}`}>
       <label className={styles.label}>
         {label}
         {required && <span className={styles.required}>*</span>}
+        {confidence === 'low' && (
+          <span className={styles.needsReview} title="This field was unclear in the source — please verify">Needs review</span>
+        )}
+        {confidence === 'medium' && (
+          <span className={styles.pleaseReview} title="We had to infer this value — please review">Please review</span>
+        )}
       </label>
       {children}
     </div>

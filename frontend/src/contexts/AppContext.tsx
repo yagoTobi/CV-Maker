@@ -7,13 +7,11 @@ import type { SaveVersionData } from '../features/dashboard/VersionSwitcher';
 import type { UserProfile, CVFormData, CVVersion, CVVersionMeta } from '../types';
 
 interface AppContextValue {
-  // UI tabs
-  aiTab: 'chat' | 'match';
-  setAiTab: (tab: 'chat' | 'match') => void;
-
   // Job input state
   companyName: string;
   setCompanyName: (name: string) => void;
+  roleName: string;
+  setRoleName: (name: string) => void;
   jobDescription: string;
   setJobDescription: (desc: string) => void;
 
@@ -42,7 +40,7 @@ interface AppContextValue {
 
   // Version handlers
   handleVersionLoad: (version: CVVersion) => void;
-  handleSaveVersion: (data: SaveVersionData) => Promise<void>;
+  handleSaveVersion: (data: SaveVersionData) => Promise<CVVersion | null>;
   handleSwitchVersion: (id: string) => Promise<void>;
 }
 
@@ -61,11 +59,9 @@ interface AppProviderProps {
 }
 
 export function AppProvider({ children }: AppProviderProps) {
-  // UI tabs
-  const [aiTab, setAiTab] = useState<'chat' | 'match'>('match');
-
   // Job input state
   const [companyName, setCompanyName] = useState('');
+  const [roleName, setRoleName] = useState('');
   const [jobDescription, setJobDescription] = useState('');
 
   // User profile
@@ -129,10 +125,11 @@ export function AppProvider({ children }: AppProviderProps) {
     if (version.formData) setFormData(version.formData);
     if (version.jobDescription) setJobDescription(version.jobDescription);
     if (version.companyName) setCompanyName(version.companyName);
+    if (version.role) setRoleName(version.role);
     setActiveVersion(version);
   }, [templates.updateContent, templates.setTemplateId]);
 
-  const handleSaveVersion = useCallback(async (data: SaveVersionData) => {
+  const handleSaveVersion = useCallback(async (data: SaveVersionData): Promise<CVVersion | null> => {
     setIsSavingVersion(true);
     const saved = await api.saveVersion({
       name: data.name,
@@ -161,6 +158,7 @@ export function AppProvider({ children }: AppProviderProps) {
       setSavedVersions(prev => [meta, ...prev]);
     }
     setIsSavingVersion(false);
+    return saved;
   }, [templates.selectedId, templates.content, formData, jobDescription, chat.matchAnalysis]);
 
   const handleSwitchVersion = useCallback(async (id: string) => {
@@ -169,10 +167,10 @@ export function AppProvider({ children }: AppProviderProps) {
   }, [handleVersionLoad]);
 
   const value = useMemo(() => ({
-    aiTab,
-    setAiTab,
     companyName,
     setCompanyName,
+    roleName,
+    setRoleName,
     jobDescription,
     setJobDescription,
     userProfile,
@@ -194,8 +192,8 @@ export function AppProvider({ children }: AppProviderProps) {
     handleSaveVersion,
     handleSwitchVersion,
   }), [
-    aiTab,
     companyName,
+    roleName,
     jobDescription,
     userProfile,
     activeVersion,

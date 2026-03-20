@@ -61,8 +61,3 @@ TEMPLATES: dict[str, TemplateConfig] = {
 def get_template(template_id: str) -> Optional[TemplateConfig]:
     """Get template config by ID."""
     return TEMPLATES.get(template_id)
-
-
-def get_all_templates() -> list[TemplateConfig]:
-    """Get all template configs."""
-    return list(TEMPLATES.values())

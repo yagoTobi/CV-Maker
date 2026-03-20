@@ -28,12 +28,17 @@ export default function BuildChoiceScreen() {
   const [localError, setLocalError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Navigate to review when import completes successfully
+  // On successful import, push data into shared context and go to template selector
   useEffect(() => {
-    if (cvImport.importResult?.success) {
-      navigate('/import/review');
+    if (!cvImport.importResult?.success) return;
+
+    setFormData(cvImport.importResult.formData);
+    if (cvImport.importResult.source === 'json') {
+      // JSON is trusted — clear import metadata so no review indicators show
+      cvImport.reset();
     }
-  }, [cvImport.importResult, navigate]);
+    navigate('/build');
+  }, [cvImport.importResult, navigate, setFormData, cvImport]);
 
   const handleFile = useCallback((file: File) => {
     setLocalError(null);
