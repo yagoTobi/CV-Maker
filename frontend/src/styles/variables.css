@@ -27,6 +27,7 @@
   /* Borders */
   --border-color: #E2E8F0;
   --border-strong: #CBD5E1;
+  --grid-color: rgba(226, 232, 240, 0.45);
 
   /* Status colors */
   --success: #10B981;
@@ -53,6 +54,8 @@ body {
   color: var(--text-primary);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Scrollbar Styling */

@@ -1,32 +1,18 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../contexts/AppContext';
+import { useFileUpload } from '../shared/useFileUpload';
 import styles from './BuildChoiceScreen.module.css';
-
-const VALID_EXTENSIONS = ['.pdf', '.docx', '.json'];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-
-function validateFile(file: File): string | null {
-  const fileName = file.name.toLowerCase();
-  const hasValidExtension = VALID_EXTENSIONS.some(ext => fileName.endsWith(ext));
-
-  if (!hasValidExtension) {
-    return 'Unsupported file type. Please upload a PDF, DOCX, or JSON file.';
-  }
-
-  if (file.size > MAX_FILE_SIZE) {
-    return 'File is too large. Maximum size is 10MB.';
-  }
-
-  return null;
-}
 
 export default function BuildChoiceScreen() {
   const navigate = useNavigate();
   const { setFormData, setSelectedTemplateForBuild, cvImport } = useAppContext();
-  const [isDragOver, setIsDragOver] = useState(false);
-  const [localError, setLocalError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const onValidFile = useCallback((file: File) => {
+    cvImport.handleFileSelected(file);
+  }, [cvImport]);
+
+  const upload = useFileUpload(onValidFile, cvImport.isImporting);
 
   // On successful import, push data into shared context and go to template selector
   useEffect(() => {
@@ -34,57 +20,10 @@ export default function BuildChoiceScreen() {
 
     setFormData(cvImport.importResult.formData);
     if (cvImport.importResult.source === 'json') {
-      // JSON is trusted — clear import metadata so no review indicators show
       cvImport.reset();
     }
     navigate('/build');
   }, [cvImport.importResult, navigate, setFormData, cvImport]);
-
-  const handleFile = useCallback((file: File) => {
-    setLocalError(null);
-    const validationError = validateFile(file);
-    if (validationError) {
-      setLocalError(validationError);
-      return;
-    }
-    cvImport.handleFileSelected(file);
-  }, [cvImport]);
-
-  const onDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(true);
-  }, []);
-
-  const onDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(false);
-  }, []);
-
-  const onDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(false);
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0) {
-      handleFile(files[0]);
-    }
-  }, [handleFile]);
-
-  const onFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      handleFile(files[0]);
-    }
-    e.target.value = '';
-  }, [handleFile]);
-
-  const openFilePicker = useCallback(() => {
-    if (fileInputRef.current && !cvImport.isImporting) {
-      fileInputRef.current.click();
-    }
-  }, [cvImport.isImporting]);
 
   const handleStartFromScratch = () => {
     setFormData(null);
@@ -94,11 +33,11 @@ export default function BuildChoiceScreen() {
 
   const dropZoneClasses = [
     styles.dropZone,
-    isDragOver && styles.dragOver,
+    upload.isDragOver && styles.dragOver,
     cvImport.isImporting && styles.uploading,
   ].filter(Boolean).join(' ');
 
-  const displayError = cvImport.importError || localError;
+  const displayError = cvImport.importError || upload.localError;
 
   return (
     <div className={styles.container}>
@@ -118,10 +57,10 @@ export default function BuildChoiceScreen() {
 
         <div
           className={dropZoneClasses}
-          onDragOver={onDragOver}
-          onDragLeave={onDragLeave}
-          onDrop={onDrop}
-          onClick={openFilePicker}
+          onDragOver={upload.onDragOver}
+          onDragLeave={upload.onDragLeave}
+          onDrop={upload.onDrop}
+          onClick={upload.openFilePicker}
         >
           {cvImport.isImporting ? (
             <div className={styles.loadingState}>
@@ -209,11 +148,11 @@ export default function BuildChoiceScreen() {
         </button>
 
         <input
-          ref={fileInputRef}
+          ref={upload.fileInputRef}
           type="file"
           hidden
           accept=".pdf,.docx,.json"
-          onChange={onFileInputChange}
+          onChange={upload.onFileInputChange}
           disabled={cvImport.isImporting}
         />
       </div>

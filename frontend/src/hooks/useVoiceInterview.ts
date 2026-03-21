@@ -74,10 +74,10 @@ export function useVoiceInterview(
     if (extractingRef.current) return;
     extractingRef.current = true;
 
-    console.log("[Voice:1] session_complete — starting extraction");
+    log("[Voice:1] session_complete — starting extraction");
     setWidgetState("ending");
     const sessionId = sessionIdRef.current;
-    console.log("[Voice:2] sessionId:", sessionId);
+    log("[Voice:2] sessionId:", sessionId);
 
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -92,27 +92,27 @@ export function useVoiceInterview(
     }
 
     try {
-      console.log("[Voice:3] calling POST /voice/extract-cv...");
+      log("[Voice:3] calling POST /voice/extract-cv...");
       const res = await fetch(`${API_BASE}/voice/extract-cv`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ session_id: sessionId }),
       });
-      console.log("[Voice:4] extract-cv response status:", res.status);
+      log("[Voice:4] extract-cv response status:", res.status);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      console.log("[Voice:5] extracted formData:", data.formData ? Object.keys(data.formData) : "MISSING");
+      log("[Voice:5] extracted formData:", data.formData ? Object.keys(data.formData) : "MISSING");
       if (!data.formData) {
         console.error("[Voice:5] backend returned no formData — full response:", data);
         return;
       }
-      console.log("[Voice:6] calling onFormDataReady...");
+      log("[Voice:6] calling onFormDataReady...");
       onFormDataReadyRef.current(data.formData);
-      console.log("[Voice:7] onFormDataReady complete — form should now update");
+      log("[Voice:7] onFormDataReady complete — form should now update");
     } catch (err) {
       console.error("[Voice:ERR] extract-cv failed:", err);
     } finally {
-      console.log("[Voice:8] cleanup — disconnecting WebSocket");
+      log("[Voice:8] cleanup — disconnecting WebSocket");
       cleanup();
       setWidgetState("idle");
     }
@@ -145,7 +145,7 @@ export function useVoiceInterview(
             log("[VoiceInterview] onConnected (transport layer)");
           },
           onBotReady: () => {
-            console.log("[VoiceInterview] onBotReady — transitioning to active");
+            log("[VoiceInterview] onBotReady — transitioning to active");
             setWidgetState("active");
             timerRef.current = setInterval(
               () => setElapsed((s) => s + 1),
@@ -183,7 +183,7 @@ export function useVoiceInterview(
                   .toLowerCase()
                   .includes(SESSION_COMPLETE_PHRASE)
               ) {
-                console.log("[VoiceInterview] trigger phrase detected — ending session");
+                log("[VoiceInterview] trigger phrase detected — ending session");
                 botTextBufferRef.current = "";
                 handleSessionComplete();
               }

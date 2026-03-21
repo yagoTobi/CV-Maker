@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { api } from '../services/api';
 
 export function useCompiler() {
@@ -7,12 +7,28 @@ export function useCompiler() {
   const [isCompiling, setIsCompiling] = useState(false);
   const [pageCount, setPageCount] = useState(0);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Abort in-flight compilation on unmount
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
 
   const compile = useCallback(async (texContent: string, templateId?: string) => {
+    // Cancel previous compilation
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setIsCompiling(true);
     setError(null);
 
-    const result = await api.compileLatex(texContent, templateId);
+    const result = await api.compileLatex(texContent, templateId, controller.signal);
+
+    // Ignore result if aborted
+    if (controller.signal.aborted) return false;
 
     setIsCompiling(false);
 
@@ -50,7 +66,7 @@ export function useCompiler() {
     setHasUnsavedChanges(false);
   }, []);
 
-  return {
+  return useMemo(() => ({
     pdfBase64,
     error,
     isCompiling,
@@ -60,5 +76,15 @@ export function useCompiler() {
     markChanged,
     clearPdf,
     reset,
-  };
+  }), [
+    pdfBase64,
+    error,
+    isCompiling,
+    pageCount,
+    hasUnsavedChanges,
+    compile,
+    markChanged,
+    clearPdf,
+    reset,
+  ]);
 }

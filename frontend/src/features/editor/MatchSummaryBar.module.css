@@ -1,11 +1,8 @@
-/* Match Summary Bar */
+/* Match Summary Bar — sits inside chatSection panel */
 .wrapper {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
   flex-shrink: 0;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .bar {
@@ -95,9 +92,27 @@
   transform: rotate(180deg);
 }
 
+.progress {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.progressComplete {
+  color: var(--success);
+}
+
 .details {
   border-top: 1px solid var(--border-color);
-  max-height: 400px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.detailsOpen {
+  max-height: 200px;
   overflow-y: auto;
 }
 
@@ -126,6 +141,7 @@
   font-size: 0.75rem;
   color: var(--text-primary);
   line-height: 1.45;
+  user-select: text;
 }
 
 .bannerText strong {

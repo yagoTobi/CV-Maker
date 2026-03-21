@@ -15,7 +15,8 @@ const axiosInstance = axios.create({
 async function processSSEStream(
   response: Response,
   onChunk: (text: string) => void,
-  onComplete: () => void
+  onComplete: () => void,
+  signal?: AbortSignal
 ): Promise<void> {
   const reader = response.body?.getReader();
   if (!reader) throw new Error('No response body');
@@ -25,6 +26,10 @@ async function processSSEStream(
   let completed = false;
 
   while (true) {
+    if (signal?.aborted) {
+      reader.cancel();
+      return;
+    }
     const { done, value } = await reader.read();
     if (done) break;
 
@@ -58,13 +63,14 @@ async function processSSEStream(
 }
 
 export const api = {
-  async compileLatex(texContent: string, templateId?: string): Promise<CompileResponse> {
+  async compileLatex(texContent: string, templateId?: string, signal?: AbortSignal): Promise<CompileResponse> {
     try {
       const response = await axiosInstance.post<CompileResponse>(`${API_BASE}/compile`, {
         tex_content: texContent,
         template_id: templateId,
       }, {
         timeout: 120000, // 120s for LaTeX compilation
+        signal,
       });
       return response.data;
     } catch (err) {
@@ -105,19 +111,21 @@ export const api = {
   async streamChat(
     request: ChatRequest,
     onChunk: (text: string) => void,
-    onComplete: () => void
+    onComplete: () => void,
+    signal?: AbortSignal
   ): Promise<void> {
     const response = await fetch(`${API_BASE}/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...request, stream: true }),
+      signal,
     });
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    await processSSEStream(response, onChunk, onComplete);
+    await processSSEStream(response, onChunk, onComplete, signal);
   },
 
   async analyzeJob(
@@ -125,7 +133,8 @@ export const api = {
     jobDescription: string,
     companyName: string,
     onChunk: (text: string) => void,
-    onComplete: () => void
+    onComplete: () => void,
+    signal?: AbortSignal
   ): Promise<void> {
     const response = await fetch(`${API_BASE}/chat/analyze`, {
       method: 'POST',
@@ -137,26 +146,28 @@ export const api = {
         company_name: companyName,
         stream: true,
       }),
+      signal,
     });
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    await processSSEStream(response, onChunk, onComplete);
+    await processSSEStream(response, onChunk, onComplete, signal);
   },
 
   async getMatchAnalysis(
     cvContent: string,
     jobDescription: string,
-    companyName: string
+    companyName: string,
+    signal?: AbortSignal
   ): Promise<MatchAnalysis | null> {
     try {
       const response = await axiosInstance.post<MatchAnalysis>(`${API_BASE}/chat/match-analysis`, {
         cv_content: cvContent,
         job_description: jobDescription,
         company_name: companyName,
-      });
+      }, { signal });
       return response.data;
     } catch (err) {
       console.error('Match analysis failed:', err);
@@ -204,7 +215,8 @@ export const api = {
     formData: CVFormData,
     jobDescription: string,
     companyName?: string,
-    role?: string
+    role?: string,
+    signal?: AbortSignal
   ): Promise<TailorResponse | null> {
     try {
       const response = await axiosInstance.post<TailorResponse>(`${API_BASE}/tailor/suggest-changes`, {
@@ -214,6 +226,7 @@ export const api = {
         role: role,
       }, {
         timeout: 60000,
+        signal,
       });
       return response.data;
     } catch (err) {
@@ -285,13 +298,14 @@ export const api = {
     }
   },
 
-  async importCV(file: File): Promise<CVImportResponse> {
+  async importCV(file: File, signal?: AbortSignal): Promise<CVImportResponse> {
     try {
       const formData = new FormData();
       formData.append('file', file);
       const response = await axiosInstance.post<CVImportResponse>(`${API_BASE}/cv-import`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 60000, // 60s — extraction can be slow for large PDFs
+        signal,
       });
       return response.data;
     } catch (err) {

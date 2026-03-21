@@ -16,14 +16,31 @@ function PendingCard({
   change,
   onAccept,
   onSkip,
+  onEdit,
   isApplying,
 }: {
   change: TailorChange;
   onAccept: (id: string) => void;
   onSkip: (id: string) => void;
+  onEdit: (id: string, newValue: string | string[]) => void;
   isApplying: boolean;
 }) {
   const [showDiff, setShowDiff] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState('');
+
+  const handleStartEdit = () => {
+    setEditValue(formatValue(change.newValue));
+    setEditing(true);
+  };
+
+  const handleSaveEdit = () => {
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== formatValue(change.newValue)) {
+      onEdit(change.id, Array.isArray(change.newValue) ? trimmed.split(', ') : trimmed);
+    }
+    setEditing(false);
+  };
 
   return (
     <div className={styles.card}>
@@ -35,14 +52,28 @@ function PendingCard({
           </span>
         </div>
         <div className={styles.cardDesc}>{change.description}</div>
-        <button className={styles.diffToggle} onClick={() => setShowDiff(!showDiff)}>
-          {showDiff ? 'Hide diff' : 'Show diff'}
-        </button>
-        {showDiff && (
+        <div className={styles.cardToggles}>
+          <button className={styles.diffToggle} onClick={() => setShowDiff(!showDiff)}>
+            {showDiff ? 'Hide diff' : 'Show diff'}
+          </button>
+          <button className={styles.diffToggle} onClick={editing ? handleSaveEdit : handleStartEdit}>
+            {editing ? 'Save edit' : 'Edit'}
+          </button>
+        </div>
+        {showDiff && !editing && (
           <div className={styles.diffView}>
             <div className={styles.diffOld}>- {formatValue(change.currentValue)}</div>
             <div className={styles.diffNew}>+ {formatValue(change.newValue)}</div>
           </div>
+        )}
+        {editing && (
+          <textarea
+            className={styles.editArea}
+            value={editValue}
+            onChange={e => setEditValue(e.target.value)}
+            rows={3}
+            autoFocus
+          />
         )}
         <div className={styles.cardActions}>
           <button
@@ -61,50 +92,64 @@ function PendingCard({
   );
 }
 
-function AppliedCard({
+function ReviewedCard({
   change,
+  status,
   onUndo,
   isApplying,
 }: {
   change: TailorChange;
+  status: 'applied' | 'skipped';
   onUndo: (id: string) => void;
   isApplying: boolean;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const isApplied = status === 'applied';
+
+  const truncatedDesc = change.description.length > 60
+    ? change.description.slice(0, 60) + '...'
+    : change.description;
+
+  if (!expanded) {
+    return (
+      <div
+        className={`${styles.compactCard} ${styles[status]}`}
+        onClick={() => setExpanded(true)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setExpanded(true); }}
+      >
+        <span className={styles.compactIcon}>{isApplied ? '\u2713' : '\u2013'}</span>
+        <span className={styles.compactSection}>{change.section}</span>
+        <span className={styles.compactDesc}>{truncatedDesc}</span>
+        <svg className={styles.compactChevron} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="m6 9 6 6 6-6"/>
+        </svg>
+      </div>
+    );
+  }
+
   return (
-    <div className={`${styles.card} ${styles.applied}`}>
+    <div className={`${styles.card} ${styles[status]}`}>
       <div className={styles.cardBody}>
         <div className={styles.cardHeader}>
           <span className={styles.sectionBadge}>{change.section}</span>
-          <span className={`${styles.statusBadge} ${styles.appliedBadge}`}>Applied</span>
-        </div>
-        <div className={styles.cardDesc}>{change.description}</div>
-        <div className={styles.cardActions}>
-          <button className={styles.undoBtn} onClick={() => onUndo(change.id)} disabled={isApplying}>
-            Undo
+          <span className={`${styles.statusBadge} ${isApplied ? styles.appliedBadge : styles.skippedBadge}`}>
+            {isApplied ? 'Applied' : 'Skipped'}
+          </span>
+          <button
+            className={styles.collapseBtn}
+            onClick={e => { e.stopPropagation(); setExpanded(false); }}
+            title="Collapse"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m18 15-6-6-6 6"/>
+            </svg>
           </button>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function SkippedCard({
-  change,
-  onUndo,
-}: {
-  change: TailorChange;
-  onUndo: (id: string) => void;
-}) {
-  return (
-    <div className={`${styles.card} ${styles.skipped}`}>
-      <div className={styles.cardBody}>
-        <div className={styles.cardHeader}>
-          <span className={styles.sectionBadge}>{change.section}</span>
-          <span className={`${styles.statusBadge} ${styles.skippedBadge}`}>Skipped</span>
-        </div>
         <div className={styles.cardDesc}>{change.description}</div>
         <div className={styles.cardActions}>
-          <button className={styles.undoBtn} onClick={() => onUndo(change.id)}>
+          <button className={styles.undoBtn} onClick={() => onUndo(change.id)} disabled={isApplied && isApplying}>
             Undo
           </button>
         </div>
@@ -126,6 +171,7 @@ export function TailorPanel({ tailor, hasFormData }: TailorPanelProps) {
     skipChange,
     undoChange,
     acceptAllRemaining,
+    editChangeValue,
   } = tailor;
 
   // No formData warning
@@ -205,10 +251,8 @@ export function TailorPanel({ tailor, hasFormData }: TailorPanelProps) {
         </div>
         <div className={styles.cardList}>
           {tailorResponse.changes.map(change => {
-            if (appliedChanges.has(change.id)) {
-              return <AppliedCard key={change.id} change={change} onUndo={undoChange} isApplying={isApplying} />;
-            }
-            return <SkippedCard key={change.id} change={change} onUndo={undoChange} />;
+            const status = appliedChanges.has(change.id) ? 'applied' as const : 'skipped' as const;
+            return <ReviewedCard key={change.id} change={change} status={status} onUndo={undoChange} isApplying={isApplying} />;
           })}
         </div>
         <div className={styles.footer}>
@@ -234,10 +278,10 @@ export function TailorPanel({ tailor, hasFormData }: TailorPanelProps) {
       <div className={styles.cardList}>
         {tailorResponse.changes.map(change => {
           if (appliedChanges.has(change.id)) {
-            return <AppliedCard key={change.id} change={change} onUndo={undoChange} isApplying={isApplying} />;
+            return <ReviewedCard key={change.id} change={change} status="applied" onUndo={undoChange} isApplying={isApplying} />;
           }
           if (skippedChanges.has(change.id)) {
-            return <SkippedCard key={change.id} change={change} onUndo={undoChange} />;
+            return <ReviewedCard key={change.id} change={change} status="skipped" onUndo={undoChange} isApplying={isApplying} />;
           }
           return (
             <PendingCard
@@ -245,6 +289,7 @@ export function TailorPanel({ tailor, hasFormData }: TailorPanelProps) {
               change={change}
               onAccept={acceptChange}
               onSkip={skipChange}
+              onEdit={editChangeValue}
               isApplying={isApplying}
             />
           );

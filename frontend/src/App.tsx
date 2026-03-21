@@ -1,26 +1,32 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AppProvider } from './contexts/AppContext';
-import { LandingScreen } from './features/landing';
-import { Dashboard } from './features/dashboard';
-import { BuildChoiceScreen } from './features/build-choice';
-import { TemplateSelector } from './features/template-selection';
-import { CVFormBuilder } from './features/form-builder';
-import { CVImportUpload } from './features/cv-import';
-import { EditorScreen } from './features/editor';
 import { FeatureErrorBoundary } from './components/FeatureErrorBoundary';
+
+const LandingScreen = lazy(() => import('./features/landing/LandingScreen'));
+const Dashboard = lazy(() => import('./features/dashboard/Dashboard'));
+const BuildChoiceScreen = lazy(() => import('./features/build-choice/BuildChoiceScreen'));
+const TemplateSelector = lazy(() => import('./features/template-selection/TemplateSelector').then(m => ({ default: m.TemplateSelector })));
+const CVFormBuilder = lazy(() => import('./features/form-builder/CVFormBuilder'));
+const CVImportUpload = lazy(() => import('./features/cv-import/CVImportUpload'));
+const EditorScreen = lazy(() => import('./features/editor/EditorScreen'));
+const ApplyToJobScreen = lazy(() => import('./features/apply-to-job/ApplyToJobScreen'));
 
 function App() {
   return (
     <AppProvider>
-      <Routes>
-        <Route path="/" element={<LandingScreen />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/build/start" element={<BuildChoiceScreen />} />
-        <Route path="/build" element={<TemplateSelector />} />
-        <Route path="/build/form" element={<FeatureErrorBoundary><CVFormBuilder /></FeatureErrorBoundary>} />
-        <Route path="/import" element={<CVImportUpload />} />
-        <Route path="/editor" element={<FeatureErrorBoundary><EditorScreen /></FeatureErrorBoundary>} />
-      </Routes>
+      <Suspense fallback={null}>
+        <Routes>
+          <Route path="/" element={<LandingScreen />} />
+          <Route path="/dashboard" element={<FeatureErrorBoundary><Dashboard /></FeatureErrorBoundary>} />
+          <Route path="/build/start" element={<FeatureErrorBoundary><BuildChoiceScreen /></FeatureErrorBoundary>} />
+          <Route path="/build" element={<TemplateSelector />} />
+          <Route path="/build/form" element={<FeatureErrorBoundary><CVFormBuilder /></FeatureErrorBoundary>} />
+          <Route path="/import" element={<FeatureErrorBoundary><CVImportUpload /></FeatureErrorBoundary>} />
+          <Route path="/apply" element={<FeatureErrorBoundary><ApplyToJobScreen /></FeatureErrorBoundary>} />
+          <Route path="/editor" element={<FeatureErrorBoundary><EditorScreen /></FeatureErrorBoundary>} />
+        </Routes>
+      </Suspense>
     </AppProvider>
   );
 }

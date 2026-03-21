@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../services/api';
 import type { Template } from '../features/template-selection';
 
@@ -54,7 +54,7 @@ export function useTemplates() {
     setContent('');
   }, []);
 
-  return {
+  return useMemo(() => ({
     templates,
     isLoading,
     selectedId,
@@ -63,5 +63,14 @@ export function useTemplates() {
     setTemplateId,
     updateContent,
     reset,
-  };
+  }), [
+    templates,
+    isLoading,
+    selectedId,
+    content,
+    selectTemplate,
+    setTemplateId,
+    updateContent,
+    reset,
+  ]);
 }

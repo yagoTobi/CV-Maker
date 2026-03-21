@@ -33,6 +33,7 @@
   font-size: 0.8125rem;
   color: var(--text-secondary);
   min-width: 0;
+  user-select: text;
 }
 
 .confidenceBadge {
@@ -95,6 +96,7 @@
   padding-left: 1rem;
   font-size: 0.8125rem;
   color: var(--text-secondary);
+  user-select: text;
 }
 
 .warningList li {

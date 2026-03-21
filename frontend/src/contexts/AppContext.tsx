@@ -1,11 +1,14 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import type { ReactNode } from 'react';
+import { JobProvider, useJobContext } from './JobContext';
+import { CVProvider, useCVContext } from './CVContext';
+import { ToolsProvider, useToolsContext } from './ToolsContext';
 import { useTemplates, useCompiler, useChat } from '../hooks';
 import { useImport } from '../hooks/useImport';
-import { api } from '../services/api';
 import type { SaveVersionData } from '../features/dashboard/VersionSwitcher';
 import type { UserProfile, CVFormData, CVVersion, CVVersionMeta } from '../types';
 
+// Full interface kept for backwards compatibility
 interface AppContextValue {
   // Job input state
   companyName: string;
@@ -44,171 +47,30 @@ interface AppContextValue {
   handleSwitchVersion: (id: string) => Promise<void>;
 }
 
-const AppContext = createContext<AppContextValue | null>(null);
-
-export function useAppContext() {
-  const context = useContext(AppContext);
-  if (!context) {
-    throw new Error('useAppContext must be used within AppProvider');
-  }
-  return context;
+/**
+ * Compatibility shim — merges all three domain contexts into the original flat shape.
+ * Existing consumers can continue using useAppContext() unchanged.
+ * New consumers should prefer useJobContext(), useCVContext(), or useToolsContext() directly.
+ */
+export function useAppContext(): AppContextValue {
+  const job = useJobContext();
+  const cv = useCVContext();
+  const tools = useToolsContext();
+  return useMemo(() => ({
+    ...job,
+    ...cv,
+    ...tools,
+  }), [job, cv, tools]);
 }
 
-interface AppProviderProps {
-  children: ReactNode;
-}
-
-export function AppProvider({ children }: AppProviderProps) {
-  // Job input state
-  const [companyName, setCompanyName] = useState('');
-  const [roleName, setRoleName] = useState('');
-  const [jobDescription, setJobDescription] = useState('');
-
-  // User profile
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-
-  // Version state
-  const [activeVersion, setActiveVersion] = useState<CVVersion | null>(null);
-  const [formData, setFormData] = useState<CVFormData | null>(null);
-  const [savedVersions, setSavedVersions] = useState<CVVersionMeta[]>([]);
-  const [isSavingVersion, setIsSavingVersion] = useState(false);
-
-  // Track which template was selected in template-select step (for build flow)
-  const [selectedTemplateForBuild, setSelectedTemplateForBuild] = useState<string | null>(null);
-
-  // Hooks
-  const templates = useTemplates();
-  const cvImport = useImport();
-  const compiler = useCompiler();
-
-  const chatOptions = useMemo(() => ({
-    onContentChanged: (newContent: string) => {
-      templates.updateContent(newContent);
-      compiler.clearPdf();
-    },
-  }), [templates.updateContent, compiler.clearPdf]);
-
-  const chat = useChat(
-    templates.content,
-    jobDescription,
-    companyName,
-    userProfile,
-    chatOptions
+export function AppProvider({ children }: { children: ReactNode }) {
+  return (
+    <JobProvider>
+      <CVProvider>
+        <ToolsProvider>
+          {children}
+        </ToolsProvider>
+      </CVProvider>
+    </JobProvider>
   );
-
-  // Load user profile and saved versions on mount
-  useEffect(() => {
-    let mounted = true;
-
-    Promise.all([
-      api.loadUserData(),
-      api.listVersions(),
-    ]).then(([profile, { versions, ungrouped }]) => {
-      if (!mounted) return;
-      if (profile) setUserProfile(profile);
-      // Flatten for now - will properly handle hierarchy in Phase 2
-      const allVersions = [
-        ...versions,
-        ...versions.flatMap(v => v.children || []),
-        ...ungrouped
-      ];
-      setSavedVersions(allVersions);
-    });
-
-    return () => { mounted = false; };
-  }, []);
-
-  // Version loaded from dashboard or switcher
-  const handleVersionLoad = useCallback((version: CVVersion) => {
-    templates.updateContent(version.texContent);
-    templates.setTemplateId(version.templateId);
-    if (version.formData) setFormData(version.formData);
-    if (version.jobDescription) setJobDescription(version.jobDescription);
-    if (version.companyName) setCompanyName(version.companyName);
-    if (version.role) setRoleName(version.role);
-    setActiveVersion(version);
-  }, [templates.updateContent, templates.setTemplateId]);
-
-  const handleSaveVersion = useCallback(async (data: SaveVersionData): Promise<CVVersion | null> => {
-    setIsSavingVersion(true);
-    const saved = await api.saveVersion({
-      name: data.name,
-      templateId: templates.selectedId || 'med-length-proff-cv',
-      texContent: templates.content,
-      formData: formData || undefined,
-      jobDescription: data.isBaseCV ? undefined : (jobDescription || undefined),
-      companyName: data.companyName || undefined,
-      role: data.role || undefined,
-      matchScore: data.isBaseCV ? undefined : chat.matchAnalysis?.match_score,
-      parentVersionId: data.parentVersionId,
-    });
-    if (saved) {
-      setActiveVersion(saved);
-      const meta: CVVersionMeta = {
-        id: saved.id,
-        name: saved.name,
-        templateId: saved.templateId,
-        jobDescription: saved.jobDescription,
-        companyName: saved.companyName,
-        role: saved.role,
-        matchScore: saved.matchScore,
-        parentVersionId: saved.parentVersionId,
-        createdAt: saved.createdAt,
-      };
-      setSavedVersions(prev => [meta, ...prev]);
-    }
-    setIsSavingVersion(false);
-    return saved;
-  }, [templates.selectedId, templates.content, formData, jobDescription, chat.matchAnalysis]);
-
-  const handleSwitchVersion = useCallback(async (id: string) => {
-    const version = await api.getVersion(id);
-    if (version) handleVersionLoad(version);
-  }, [handleVersionLoad]);
-
-  const value = useMemo(() => ({
-    companyName,
-    setCompanyName,
-    roleName,
-    setRoleName,
-    jobDescription,
-    setJobDescription,
-    userProfile,
-    setUserProfile,
-    activeVersion,
-    setActiveVersion,
-    formData,
-    setFormData,
-    savedVersions,
-    setSavedVersions,
-    isSavingVersion,
-    selectedTemplateForBuild,
-    setSelectedTemplateForBuild,
-    templates,
-    cvImport,
-    compiler,
-    chat,
-    handleVersionLoad,
-    handleSaveVersion,
-    handleSwitchVersion,
-  }), [
-    companyName,
-    roleName,
-    jobDescription,
-    userProfile,
-    activeVersion,
-    formData,
-    savedVersions,
-    isSavingVersion,
-    selectedTemplateForBuild,
-    templates,
-    cvImport,
-    compiler,
-    chat,
-    handleVersionLoad,
-    handleSaveVersion,
-    handleSwitchVersion,
-  ]);
-
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

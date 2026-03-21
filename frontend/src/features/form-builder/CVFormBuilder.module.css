@@ -241,6 +241,7 @@
   border-radius: var(--radius-sm);
   padding: 0.5rem 0.625rem;
   line-height: 1.4;
+  user-select: text;
 }
 
 /* ─── Form area (middle) ──────────────────────── */
@@ -783,6 +784,7 @@
   text-align: left;
   width: 100%;
   color: var(--error);
+  user-select: text;
 }
 
 .retryBtn {

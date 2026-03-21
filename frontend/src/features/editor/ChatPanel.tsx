@@ -19,6 +19,16 @@ export function ChatPanel({ messages, onSendMessage, onApplyEdit, onUndoEdit, is
   const [failedEdits, setFailedEdits] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const failedEditTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clean up failed-edit timer on unmount
+  useEffect(() => {
+    return () => {
+      if (failedEditTimerRef.current !== null) {
+        clearTimeout(failedEditTimerRef.current);
+      }
+    };
+  }, []);
 
   const adjustTextareaHeight = useCallback(() => {
     const textarea = textareaRef.current;
@@ -71,7 +81,8 @@ export function ChatPanel({ messages, onSendMessage, onApplyEdit, onUndoEdit, is
       setAppliedEdits(prev => new Set(prev).add(editKey));
     } else {
       setFailedEdits(prev => new Set(prev).add(editKey));
-      setTimeout(() => {
+      failedEditTimerRef.current = setTimeout(() => {
+        failedEditTimerRef.current = null;
         setFailedEdits(prev => {
           const newSet = new Set(prev);
           newSet.delete(editKey);

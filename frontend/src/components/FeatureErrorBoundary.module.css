@@ -6,8 +6,8 @@
   padding: 2rem;
   background: var(--bg-primary);
   background-image:
-    linear-gradient(var(--border-color) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border-color) 1px, transparent 1px);
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
@@ -46,6 +46,7 @@
   font-size: 0.875rem;
   color: var(--text-muted);
   line-height: 1.6;
+  user-select: text;
 }
 
 .actions {

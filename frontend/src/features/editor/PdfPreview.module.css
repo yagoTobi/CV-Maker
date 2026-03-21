@@ -90,6 +90,7 @@
 
 .error {
   color: var(--error);
+  user-select: text;
 }
 
 .error pre {
@@ -104,6 +105,7 @@
   border: 1px solid var(--border-color);
   font-family: 'IBM Plex Mono', monospace;
   box-shadow: var(--shadow-sm);
+  user-select: text;
 }
 
 .retryBtn {

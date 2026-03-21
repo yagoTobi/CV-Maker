@@ -3,17 +3,20 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../../services/api';
 import { useAppContext } from '../../contexts/AppContext';
 import { applyTailorChanges } from '../../utils/formDataPatch';
-import { generateCVFilename } from '../../utils/cvFilename';
 import type { CVVersion, MatchAnalysis, TailorResponse, TailorChange, CVVersionMeta } from '../../types';
 import styles from './ApplyToJobScreen.module.css';
 
 type Step = 1 | 2 | 3 | 'success';
 
+interface LocationState {
+  baseVersionId?: string;
+}
+
 export default function ApplyToJobScreen() {
   const navigate = useNavigate();
   const location = useLocation();
   const appCtx = useAppContext();
-  const baseVersionId = (location.state as any)?.baseVersionId as string | undefined;
+  const baseVersionId = (location.state as LocationState)?.baseVersionId;
 
   // Base version
   const [baseVersion, setBaseVersion] = useState<CVVersion | null>(null);

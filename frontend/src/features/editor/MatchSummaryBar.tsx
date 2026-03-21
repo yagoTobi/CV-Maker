@@ -12,6 +12,8 @@ interface MatchSummaryBarProps {
   estimatedScore?: number;
   companyName?: string;
   roleName?: string;
+  reviewedCount?: number;
+  totalChanges?: number;
 }
 
 function getScoreColor(score: number) {
@@ -30,7 +32,7 @@ function getScoreLabel(score: number) {
 
 const LOW_MATCH_THRESHOLD = 40;
 
-export function MatchSummaryBar({ analysis, isLoading, onReanalyze, hasJobDescription, estimatedScore, companyName, roleName }: MatchSummaryBarProps) {
+export function MatchSummaryBar({ analysis, isLoading, onReanalyze, hasJobDescription, estimatedScore, companyName, roleName, reviewedCount = 0, totalChanges = 0 }: MatchSummaryBarProps) {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
@@ -66,6 +68,14 @@ export function MatchSummaryBar({ analysis, isLoading, onReanalyze, hasJobDescri
             <span className={styles.matches}>{matchCount} matched</span>
           )}
         </span>
+        {totalChanges > 0 && (
+          <>
+            <span className={styles.separator} />
+            <span className={`${styles.progress} ${reviewedCount === totalChanges ? styles.progressComplete : ''}`}>
+              {reviewedCount}/{totalChanges}
+            </span>
+          </>
+        )}
         <svg
           className={`${styles.chevron} ${expanded ? styles.chevronUp : ''}`}
           width="14"
@@ -80,16 +90,14 @@ export function MatchSummaryBar({ analysis, isLoading, onReanalyze, hasJobDescri
           <path d="m6 9 6 6 6-6"/>
         </svg>
       </button>
-      {expanded && (
-        <div className={styles.details}>
-          <MatchAnalysis
-            analysis={analysis}
-            isLoading={isLoading}
-            onAnalyze={onReanalyze}
-            hasJobDescription={hasJobDescription}
-          />
-        </div>
-      )}
+      <div className={`${styles.details} ${expanded ? styles.detailsOpen : ''}`}>
+        <MatchAnalysis
+          analysis={analysis}
+          isLoading={isLoading}
+          onAnalyze={onReanalyze}
+          hasJobDescription={hasJobDescription}
+        />
+      </div>
       {showNewBaseBanner && (
         <div className={styles.newBaseBanner}>
           <div className={styles.bannerContent}>

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { api } from '../services/api';
 import type { Message, UserProfile, MatchAnalysis, CVEdit } from '../types';
 import { applyEdit } from '../types';
@@ -26,6 +26,14 @@ export function useChat(
   const [isLoadingMatch, setIsLoadingMatch] = useState(false);
 
   const streamingContentRef = useRef('');
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Abort in-flight requests on unmount
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
 
   // Memoize the callback to prevent unnecessary recreations
   const onContentChanged = options.onContentChanged;
@@ -34,6 +42,11 @@ export function useChat(
   const analyzeJob = useCallback(async () => {
     if (!jobDescription.trim()) return;
 
+    // Cancel any in-flight request
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setIsAnalyzing(true);
     setIsThinking(true);
     setStreamingContent('');
@@ -41,7 +54,7 @@ export function useChat(
     streamingContentRef.current = '';
 
     // Also trigger match analysis in background
-    api.getMatchAnalysis(texContent, jobDescription, companyName).then((result) => {
+    api.getMatchAnalysis(texContent, jobDescription, companyName, controller.signal).then((result) => {
       if (result) {
         setMatchAnalysis(result);
       }
@@ -67,9 +80,11 @@ export function useChat(
           setIsAnalyzing(false);
           setIsThinking(false);
           setHasAnalyzed(true);
-        }
+        },
+        controller.signal
       );
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
       console.error('Analysis failed:', err);
       setIsAnalyzing(false);
       setIsThinking(false);
@@ -90,6 +105,11 @@ export function useChat(
 
   // Send a follow-up message
   const sendMessage = useCallback(async (message: string) => {
+    // Cancel any in-flight request
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     const newMessages: Message[] = [...messages, { role: 'user', content: message }];
     setMessages(newMessages);
     setStreamingContent('');
@@ -121,9 +141,11 @@ export function useChat(
           }
           setIsAnalyzing(false);
           setIsThinking(false);
-        }
+        },
+        controller.signal
       );
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
       console.error('Chat failed:', err);
       setIsAnalyzing(false);
       setIsThinking(false);
@@ -157,6 +179,8 @@ export function useChat(
 
   // Reset chat state
   const reset = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
     setMessages([]);
     setStreamingContent('');
     setMatchAnalysis(null);

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { api } from '../services/api';
 import type {
   CVFormData,
@@ -105,11 +105,13 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
   const importedRef = useRef(importedData);
   useEffect(() => {
     if (importedData && importedData !== importedRef.current) {
-      console.log("[FormBuilder:sync] imported data changed — updating form", {
-        name: importedData.personalInfo?.fullName,
-        workEntries: importedData.workExperience?.length,
-        templateId,
-      });
+      if (import.meta.env.DEV) {
+        console.log("[FormBuilder:sync] imported data changed — updating form", {
+          name: importedData.personalInfo?.fullName,
+          workEntries: importedData.workExperience?.length,
+          templateId,
+        });
+      }
       importedRef.current = importedData;
       setFormData({
         ...importedData,
@@ -541,12 +543,12 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
   }, [formData]);
 
   // Full ordered section list for the nav (personal is always first, not reorderable)
-  const navSectionOrder: FormSection[] = [
+  const navSectionOrder: FormSection[] = useMemo(() => [
     'personal',
     ...((formData.sectionOrder as FormSection[]) ?? DEFAULT_SECTION_ORDER),
-  ];
+  ], [formData.sectionOrder]);
 
-  return {
+  return useMemo(() => ({
     formData,
     activeSection,
     setActiveSection,
@@ -614,5 +616,64 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
     // Actions
     generateCV,
     exportFormData,
-  };
+  }), [
+    formData,
+    activeSection,
+    setActiveSection,
+    isGenerating,
+    generateError,
+    isDirty,
+    navSectionOrder,
+    reorderSections,
+    reorderPersonalFields,
+    updatePersonalInfo,
+    addLink,
+    updateLink,
+    removeLink,
+    addWorkEntry,
+    updateWorkEntry,
+    removeWorkEntry,
+    reorderWorkEntries,
+    addBullet,
+    updateBullet,
+    removeBullet,
+    reorderBullets,
+    addEducationEntry,
+    updateEducationEntry,
+    removeEducationEntry,
+    reorderEducationEntries,
+    addEduDetail,
+    updateEduDetail,
+    removeEduDetail,
+    reorderEduDetails,
+    addSkillCategory,
+    updateSkillCategory,
+    removeSkillCategory,
+    reorderSkillCategories,
+    updateSkillsText,
+    addProject,
+    updateProject,
+    removeProject,
+    reorderProjects,
+    addProjectBullet,
+    updateProjectBullet,
+    removeProjectBullet,
+    reorderProjectBullets,
+    addAward,
+    updateAward,
+    removeAward,
+    reorderAwards,
+    addAdditionalSection,
+    removeAdditionalSection,
+    updateAdditionalSectionTitle,
+    addAdditionalEntry,
+    removeAdditionalEntry,
+    updateAdditionalEntry,
+    addAdditionalEntryBullet,
+    removeAdditionalEntryBullet,
+    updateAdditionalEntryBullet,
+    reorderAdditionalEntryBullets,
+    generateCV,
+    exportFormData,
+  ]);
 }

@@ -12,9 +12,10 @@ function parsePath(path: string): (string | number)[] {
   return segments;
 }
 
-function setAtPath(obj: any, path: string, value: any): void {
+function setAtPath(obj: Record<string, unknown>, path: string, value: unknown): void {
   const segs = parsePath(path);
-  let cur = obj;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let cur: any = obj;
   for (let i = 0; i < segs.length - 1; i++) {
     if (cur[segs[i]] == null) {
       cur[segs[i]] = typeof segs[i + 1] === 'number' ? [] : {};
@@ -33,7 +34,7 @@ export function applyTailorChanges(
   for (const change of changes) {
     if (!selectedIds.has(change.id)) continue;
     try {
-      setAtPath(patched, change.fieldPath, change.newValue);
+      setAtPath(patched as Record<string, unknown>, change.fieldPath, change.newValue);
     } catch {
       // Skip unresolvable paths
     }

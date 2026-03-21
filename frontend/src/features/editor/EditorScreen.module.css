@@ -65,8 +65,8 @@
   max-height: calc(100vh - 61px);
   overflow: hidden;
   background-image:
-    linear-gradient(var(--border-color) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border-color) 1px, transparent 1px);
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
@@ -96,7 +96,6 @@
   justify-content: space-between;
   padding: 0.875rem 1.25rem;
   cursor: pointer;
-  user-select: none;
 }
 
 .sectionHeader h2 {
@@ -133,8 +132,7 @@
 
 .jobPostingBody {
   padding: 0 1.25rem 1.25rem;
-  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-              padding-bottom 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 }
 

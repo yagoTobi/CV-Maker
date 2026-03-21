@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { api } from '../services/api';
 import { applyTailorChanges } from '../utils/formDataPatch';
 import type { CVFormData, TailorResponse, TailorChange } from '../types';
@@ -42,6 +42,14 @@ export function useTailor({ originalFormData, templateId, onApply }: UseTailorOp
   const baselineScoreRef = useRef(0);
   // Serialize accepts to prevent race conditions
   const queueRef = useRef<Promise<void>>(Promise.resolve());
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Abort in-flight requests on unmount
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
 
   const pendingChanges = tailorResponse
     ? tailorResponse.changes.filter(c => !appliedChanges.has(c.id) && !skippedChanges.has(c.id))
@@ -70,6 +78,11 @@ export function useTailor({ originalFormData, templateId, onApply }: UseTailorOp
   const fetchSuggestions = useCallback(async (
     formData: CVFormData, jobDesc: string, company: string, role: string
   ) => {
+    // Cancel previous request
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setIsLoading(true);
     setError(null);
     setAppliedChanges(new Set());
@@ -77,13 +90,15 @@ export function useTailor({ originalFormData, templateId, onApply }: UseTailorOp
     baseFormDataRef.current = structuredClone(formData);
 
     try {
-      const result = await api.suggestTailorChanges(formData, jobDesc, company, role);
+      const result = await api.suggestTailorChanges(formData, jobDesc, company, role, controller.signal);
+      if (controller.signal.aborted) return;
       if (result) {
         setTailorResponse(result);
       } else {
         setError('Failed to get tailor suggestions. Please try again.');
       }
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
       setError('Failed to get tailor suggestions. Please try again.');
     }
     setIsLoading(false);

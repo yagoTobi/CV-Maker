@@ -169,6 +169,7 @@
   line-height: 1.5;
   margin: 0;
   padding: 0 0.25rem;
+  user-select: text;
 }
 
 .transcriptLine {
@@ -181,6 +182,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 100%;
+  user-select: text;
 }
 
 .transcriptAi {

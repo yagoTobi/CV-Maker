@@ -9,8 +9,8 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(var(--border-color) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border-color) 1px, transparent 1px);
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
   background-size: 40px 40px;
   opacity: 0.5;
   pointer-events: none;
@@ -84,7 +84,6 @@
   padding: 1rem 1.25rem;
   cursor: pointer;
   transition: background 0.15s ease;
-  user-select: none;
 }
 
 .groupHeader:hover {
@@ -117,6 +116,7 @@
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.3;
+  user-select: text;
 }
 
 .renameInput {
@@ -220,6 +220,7 @@
   font-size: 0.8125rem;
   color: var(--text-muted);
   font-style: italic;
+  user-select: text;
 }
 
 /* Job application card (child of base CV) */
@@ -252,6 +253,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  user-select: text;
 }
 
 .appMeta {
@@ -485,7 +487,6 @@
   gap: 0.5rem;
   padding: 0.5rem 0;
   cursor: pointer;
-  user-select: none;
 }
 
 .ungroupedTitle {

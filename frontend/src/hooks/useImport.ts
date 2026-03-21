@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { api } from '../services/api';
 import type { CVFormData, CVImportResponse, ImportConfidence, ImportSummary } from '../types';
 import { deriveLinkLabel } from '../utils/deriveLinkLabel';
@@ -56,7 +56,7 @@ export function useImport(): UseImportReturn {
 
         // Process personalInfo.links to derive labels
         if (rest.personalInfo?.links && Array.isArray(rest.personalInfo.links) && rest.personalInfo.links.length > 0) {
-          rest.personalInfo.links = rest.personalInfo.links.map((link: any) => {
+          rest.personalInfo.links = rest.personalInfo.links.map((link: { label?: string; url?: string; [key: string]: unknown }) => {
             if (!link || typeof link !== 'object') return link;
 
             // If label is empty, equals URL, or looks like a URL/domain, derive it
@@ -150,12 +150,19 @@ export function useImport(): UseImportReturn {
     setImportResult(result);
   }, []);
 
-  return {
+  return useMemo(() => ({
     isImporting,
     importProgress,
     importError,
     importResult,
     handleFileSelected,
     reset,
-  };
+  }), [
+    isImporting,
+    importProgress,
+    importError,
+    importResult,
+    handleFileSelected,
+    reset,
+  ]);
 }

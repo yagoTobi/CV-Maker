@@ -90,6 +90,7 @@
   font-size: 0.875rem;
   line-height: 1.6;
   white-space: pre-wrap;
+  user-select: text;
 }
 
 .codeBlock {
@@ -103,6 +104,7 @@
   font-size: 0.8125rem;
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-sm);
+  user-select: text;
 }
 
 .codeLanguage {
@@ -270,6 +272,7 @@
   word-break: break-all;
   font-family: 'IBM Plex Mono', monospace;
   font-size: 0.75rem;
+  user-select: text;
 }
 
 .editAdd code {
@@ -280,6 +283,7 @@
   word-break: break-all;
   font-family: 'IBM Plex Mono', monospace;
   font-size: 0.75rem;
+  user-select: text;
 }
 
 .editActions {

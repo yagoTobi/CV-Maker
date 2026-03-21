@@ -27,15 +27,19 @@ export default function VoiceWidget({ overlayContainerRef }: VoiceWidgetProps) {
 
   const handleFormDataReady = useCallback(
     (formData: CVFormData) => {
-      console.log("[Voice:Widget] handleFormDataReady called with keys:", Object.keys(formData));
-      console.log("[Voice:Widget] personalInfo:", formData.personalInfo?.fullName || "(no name)");
-      console.log("[Voice:Widget] work entries:", formData.workExperience?.length ?? 0);
+      if (import.meta.env.DEV) {
+        console.log("[Voice:Widget] handleFormDataReady called with keys:", Object.keys(formData));
+        console.log("[Voice:Widget] personalInfo:", formData.personalInfo?.fullName || "(no name)");
+        console.log("[Voice:Widget] work entries:", formData.workExperience?.length ?? 0);
+      }
       setFormData(formData);
       setIsExpanded(false);
       // Stay in form builder — template is already selected.
       // Navigate to /build/form to reload with the extracted data.
       navigate("/build/form", { state: { mode: "build" }, replace: true });
-      console.log("[Voice:Widget] navigated to /build/form");
+      if (import.meta.env.DEV) {
+        console.log("[Voice:Widget] navigated to /build/form");
+      }
     },
     [setFormData, navigate],
   );
