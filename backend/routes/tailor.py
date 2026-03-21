@@ -7,8 +7,9 @@ from pydantic import BaseModel
 from typing import List, Optional, Union
 
 from routes.cv_versions import CVFormData
-from services.bedrock import bedrock_client
-from services.json_utils import strip_markdown_json
+from services.bedrock import bedrock_client, MODEL_SONNET
+from services import llm_cache
+from services.json_utils import strip_markdown_json, parse_json_with_retry
 from prompts.cv_agent import TAILOR_SUGGEST_PROMPT
 
 router = APIRouter()
@@ -22,19 +23,24 @@ class TailorRequest(BaseModel):
     role: Optional[str] = None
 
 
+class TailorAlternative(BaseModel):
+    label: str
+    value: Union[str, List[str]]
+
+
 class TailorChangeItem(BaseModel):
     id: str
-    field_path: str
+    fieldPath: str
     section: str
     description: str
-    current_value: Union[str, List[str], None] = ""
-    new_value: Union[str, List[str], None] = ""
-    change_type: str  # 'modify' | 'add' | 'remove'
+    currentValue: Union[str, List[str], None] = ""
+    alternatives: List[TailorAlternative]
+    changeType: str  # 'modify' | 'add' | 'remove'
 
 
 class TailorResponse(BaseModel):
     changes: List[TailorChangeItem]
-    estimated_score: int
+    estimatedScore: int
     summary: str
 
 
@@ -90,17 +96,34 @@ async def suggest_changes(payload: TailorRequest):
 
 Analyze this CV against the job description and suggest specific field-level changes."""
 
-    try:
-        response = bedrock_client.chat(
-            messages=[{"role": "user", "content": user_message}],
-            system_prompt=TAILOR_SUGGEST_PROMPT,
-            stream=False,
-            max_tokens=4096,
-        )
+    serialized_form_data = form_text
 
-        # Parse JSON from response (handle markdown code blocks)
-        text = strip_markdown_json(response)
-        parsed = json.loads(text)
+    try:
+        # Check cache first
+        cache_key = llm_cache.cache_key(serialized_form_data, payload.job_description, payload.company_name or "", payload.role or "")
+        cached = llm_cache.get(cache_key)
+        if cached:
+            try:
+                parsed = json.loads(strip_markdown_json(cached))
+            except json.JSONDecodeError:
+                parsed = None  # Cache had bad data, proceed with fresh call
+        else:
+            parsed = None
+
+        if parsed is None:
+            parsed = parse_json_with_retry(
+                lambda: bedrock_client.chat(
+                    messages=[{"role": "user", "content": user_message}],
+                    system_prompt=TAILOR_SUGGEST_PROMPT,
+                    stream=False,
+                    max_tokens=8192,
+                    model_id=MODEL_SONNET,
+                    temperature=0.5,
+                ),
+                max_retries=1,
+            )
+            # Cache the raw response for future hits
+            llm_cache.put(cache_key, json.dumps(parsed))
 
         changes = []
         for item in parsed.get("changes", []):
@@ -109,19 +132,39 @@ Analyze this CV against the job description and suggest specific field-level cha
             if not _resolve_path(form_dict, field_path):
                 logger.warning(f"Skipping unresolvable path: {field_path}")
                 continue
+            # Parse alternatives array, with fallback for flat new_value
+            raw_alts = item.get("alternatives")
+            if isinstance(raw_alts, list) and len(raw_alts) > 0:
+                alternatives = [
+                    TailorAlternative(label=a.get("label", "Option"), value=a.get("value", ""))
+                    for a in raw_alts if isinstance(a, dict) and a.get("value")
+                ]
+            else:
+                alternatives = []
+
+            # Fallback: wrap flat new_value as single alternative
+            if not alternatives:
+                flat_value = item.get("new_value") or ""
+                if flat_value:
+                    alternatives = [TailorAlternative(label="Suggested", value=flat_value)]
+
+            if not alternatives:
+                logger.warning(f"Skipping change with no alternatives: {field_path}")
+                continue
+
             changes.append(TailorChangeItem(
                 id=str(uuid.uuid4()),
-                field_path=field_path,
+                fieldPath=field_path,
                 section=item.get("section", ""),
                 description=item.get("description", ""),
-                current_value=item.get("current_value") or "",
-                new_value=item.get("new_value") or "",
-                change_type=item.get("change_type", "modify"),
+                currentValue=item.get("current_value") or "",
+                alternatives=alternatives,
+                changeType=item.get("change_type", "modify"),
             ))
 
         return TailorResponse(
             changes=changes,
-            estimated_score=parsed.get("estimated_score", 0),
+            estimatedScore=parsed.get("estimated_score", 0),
             summary=parsed.get("summary", ""),
         )
 

@@ -28,6 +28,10 @@ export function useChat(
   const streamingContentRef = useRef('');
   const abortRef = useRef<AbortController | null>(null);
 
+  // Prefetch support — silent background fetch of match analysis
+  const prefetchedMatchRef = useRef<MatchAnalysis | null>(null);
+  const prefetchHashRef = useRef('');
+
   // Abort in-flight requests on unmount
   useEffect(() => {
     return () => {
@@ -91,9 +95,17 @@ export function useChat(
     }
   }, [texContent, jobDescription, companyName]);
 
-  // Get match analysis separately
+  // Get match analysis separately — checks prefetch cache first
   const getMatchAnalysis = useCallback(async () => {
     if (!jobDescription.trim()) return;
+
+    const inputHash = `${jobDescription.trim().slice(0, 200)}|${companyName}`;
+    if (prefetchedMatchRef.current && prefetchHashRef.current === inputHash) {
+      setMatchAnalysis(prefetchedMatchRef.current);
+      prefetchedMatchRef.current = null;
+      prefetchHashRef.current = '';
+      return;
+    }
 
     setIsLoadingMatch(true);
     const result = await api.getMatchAnalysis(texContent, jobDescription, companyName);
@@ -102,6 +114,26 @@ export function useChat(
     }
     setIsLoadingMatch(false);
   }, [texContent, jobDescription, companyName]);
+
+  // Prefetch match analysis silently in background
+  const prefetchMatchAnalysis = useCallback(async (
+    cvContent: string,
+    jobDesc: string,
+    company: string,
+  ) => {
+    const inputHash = `${jobDesc.trim().slice(0, 200)}|${company}`;
+    if (inputHash === prefetchHashRef.current) return;
+
+    try {
+      const result = await api.getMatchAnalysis(cvContent, jobDesc, company);
+      if (result) {
+        prefetchedMatchRef.current = result;
+        prefetchHashRef.current = inputHash;
+      }
+    } catch {
+      // Silent failure — prefetch is best-effort
+    }
+  }, []);
 
   // Send a follow-up message
   const sendMessage = useCallback(async (message: string) => {
@@ -198,6 +230,7 @@ export function useChat(
     isLoadingMatch,
     analyzeJob,
     getMatchAnalysis,
+    prefetchMatchAnalysis,
     sendMessage,
     applyEdit: applyEditToContent,
     undoEdit,
@@ -212,6 +245,7 @@ export function useChat(
     isLoadingMatch,
     analyzeJob,
     getMatchAnalysis,
+    prefetchMatchAnalysis,
     sendMessage,
     applyEditToContent,
     undoEdit,

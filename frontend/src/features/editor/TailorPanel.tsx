@@ -1,43 +1,73 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { UseTailorReturn } from '../../hooks/useTailor';
 import type { TailorChange } from '../../types';
+import { computeWordDiff } from '../../utils/wordDiff';
 import styles from './TailorPanel.module.css';
 
 interface TailorPanelProps {
   tailor: UseTailorReturn;
   hasFormData: boolean;
+  onGoToField?: (fieldPath: string) => void;
 }
+
+const LOADING_MESSAGES = [
+  "Reading your CV...",
+  "Comparing against job requirements...",
+  "Identifying improvement opportunities...",
+  "Generating tailored suggestions...",
+];
 
 function formatValue(val: string | string[]): string {
   return Array.isArray(val) ? val.join(', ') : val;
 }
 
+function InlineDiff({ oldText, newText }: { oldText: string; newText: string }) {
+  const segments = computeWordDiff(oldText, newText);
+  return (
+    <div className={styles.inlineDiff}>
+      {segments.map((seg, i) => (
+        <span key={i} className={styles[seg.type]}>{seg.text}</span>
+      ))}
+    </div>
+  );
+}
+
 function PendingCard({
   change,
+  selectedAltIndex,
+  onSelectAlt,
   onAccept,
   onSkip,
   onEdit,
+  onGoToField,
   isApplying,
 }: {
   change: TailorChange;
+  selectedAltIndex: number;
+  onSelectAlt: (id: string, index: number) => void;
   onAccept: (id: string) => void;
   onSkip: (id: string) => void;
   onEdit: (id: string, newValue: string | string[]) => void;
+  onGoToField?: (fieldPath: string) => void;
   isApplying: boolean;
 }) {
   const [showDiff, setShowDiff] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
 
+  const selectedAlt = change.alternatives[selectedAltIndex] ?? change.alternatives[0];
+  const currentText = formatValue(change.currentValue);
+  const newText = selectedAlt ? formatValue(selectedAlt.value) : '';
+
   const handleStartEdit = () => {
-    setEditValue(formatValue(change.newValue));
+    setEditValue(newText);
     setEditing(true);
   };
 
   const handleSaveEdit = () => {
     const trimmed = editValue.trim();
-    if (trimmed && trimmed !== formatValue(change.newValue)) {
-      onEdit(change.id, Array.isArray(change.newValue) ? trimmed.split(', ') : trimmed);
+    if (trimmed && trimmed !== newText) {
+      onEdit(change.id, Array.isArray(change.currentValue) ? trimmed.split(', ') : trimmed);
     }
     setEditing(false);
   };
@@ -50,8 +80,29 @@ function PendingCard({
           <span className={`${styles.typeBadge} ${styles[change.changeType]}`}>
             {change.changeType}
           </span>
+          {onGoToField && (
+            <button className={styles.goToFieldBtn} onClick={() => onGoToField(change.fieldPath)}>
+              Edit in form
+            </button>
+          )}
         </div>
         <div className={styles.cardDesc}>{change.description}</div>
+
+        {/* Alternative pills */}
+        {change.alternatives.length > 1 && (
+          <div className={styles.altPills}>
+            {change.alternatives.map((alt, idx) => (
+              <button
+                key={idx}
+                className={`${styles.altPill} ${idx === selectedAltIndex ? styles.altPillActive : ''}`}
+                onClick={() => onSelectAlt(change.id, idx)}
+              >
+                {alt.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className={styles.cardToggles}>
           <button className={styles.diffToggle} onClick={() => setShowDiff(!showDiff)}>
             {showDiff ? 'Hide diff' : 'Show diff'}
@@ -60,12 +111,11 @@ function PendingCard({
             {editing ? 'Save edit' : 'Edit'}
           </button>
         </div>
-        {showDiff && !editing && (
-          <div className={styles.diffView}>
-            <div className={styles.diffOld}>- {formatValue(change.currentValue)}</div>
-            <div className={styles.diffNew}>+ {formatValue(change.newValue)}</div>
-          </div>
+
+        {showDiff && !editing && currentText && newText && (
+          <InlineDiff oldText={currentText} newText={newText} />
         )}
+
         {editing && (
           <textarea
             className={styles.editArea}
@@ -158,7 +208,7 @@ function ReviewedCard({
   );
 }
 
-export function TailorPanel({ tailor, hasFormData }: TailorPanelProps) {
+export function TailorPanel({ tailor, hasFormData, onGoToField }: TailorPanelProps) {
   const {
     tailorResponse,
     isLoading,
@@ -166,13 +216,29 @@ export function TailorPanel({ tailor, hasFormData }: TailorPanelProps) {
     appliedChanges,
     skippedChanges,
     pendingChanges,
+    selectedAlternatives,
     isApplying,
     acceptChange,
     skipChange,
     undoChange,
     acceptAllRemaining,
+    selectAlternative,
     editChangeValue,
   } = tailor;
+
+  // Rotating loading messages
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setLoadingMessageIndex(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setLoadingMessageIndex(i => (i + 1) % LOADING_MESSAGES.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [isLoading]);
 
   // No formData warning
   if (!hasFormData) {
@@ -194,7 +260,7 @@ export function TailorPanel({ tailor, hasFormData }: TailorPanelProps) {
       <div className={styles.panel}>
         <div className={styles.loadingState}>
           <div className={styles.spinner} />
-          <div className={styles.stateTitle}>Generating suggestions...</div>
+          <div className={styles.stateTitle}>{LOADING_MESSAGES[loadingMessageIndex]}</div>
           <div className={styles.stateText}>Analyzing your CV against the job requirements.</div>
         </div>
         <div className={styles.skeleton}>
@@ -287,9 +353,12 @@ export function TailorPanel({ tailor, hasFormData }: TailorPanelProps) {
             <PendingCard
               key={change.id}
               change={change}
+              selectedAltIndex={selectedAlternatives.get(change.id) ?? 0}
+              onSelectAlt={selectAlternative}
               onAccept={acceptChange}
               onSkip={skipChange}
               onEdit={editChangeValue}
+              onGoToField={onGoToField}
               isApplying={isApplying}
             />
           );

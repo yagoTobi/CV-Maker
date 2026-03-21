@@ -232,6 +232,7 @@ TAILOR_SUGGEST_PROMPT = """You are an expert CV tailoring engine. You receive st
 4. Keep changes granular — one bullet or one skill per change, not entire sections
 5. Prefer modifying existing content over adding new content
 6. Preserve the candidate's voice and truthfulness
+7. For each change, provide 2-3 alternative rewrites with short labels describing the approach (e.g., "Metrics-focused", "Action-focused", "Keyword-rich")
 
 ## Field Path Schema
 The CV form data follows this structure:
@@ -252,7 +253,7 @@ The CV form data follows this structure:
 - `remove` — Remove an item that dilutes focus (rarely needed)
 
 ## Language
-Detect the language of the CV content. If the CV is written in a non-English language, write all descriptions, current_value, and new_value in that same language.
+Detect the language of the CV content. If the CV is written in a non-English language, write all descriptions and alternative values in that same language.
 
 ## Output Format
 Respond with ONLY a valid JSON object. No explanations, no markdown.
@@ -263,7 +264,11 @@ Respond with ONLY a valid JSON object. No explanations, no markdown.
             "section": "Work Experience",
             "description": "Added 'data pipeline' and 'ETL' keywords to align with job requirement",
             "current_value": "Built automated data processing system handling 10M records daily",
-            "new_value": "Architected ETL data pipeline processing 10M+ records daily, reducing data latency by 40%",
+            "alternatives": [
+                {"label": "Metrics-focused", "value": "Architected ETL data pipeline processing 10M+ records daily, reducing data latency by 40%"},
+                {"label": "Action-focused", "value": "Designed and deployed automated data pipeline handling 10M daily records with real-time monitoring"},
+                {"label": "Keyword-rich", "value": "Built ETL data pipeline with Apache Spark processing 10M+ records for real-time analytics"}
+            ],
             "change_type": "modify"
         }
     ],

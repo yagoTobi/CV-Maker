@@ -178,13 +178,18 @@ export interface CVFormData {
   additionalSections?: AdditionalSection[];
 }
 
+export interface TailorAlternative {
+  label: string;
+  value: string | string[];
+}
+
 export interface TailorChange {
   id: string;
   fieldPath: string;           // e.g. "workExperience[0].bullets[2]"
   section: string;             // Human-readable: "Work Experience", "Skills"
   description: string;         // "Added 'data pipeline' keyword to bullet #2"
   currentValue: string | string[];
-  newValue: string | string[];
+  alternatives: TailorAlternative[];
   changeType: 'modify' | 'add' | 'remove';
 }
 

@@ -77,7 +77,7 @@ export default function ApplyToJobScreen() {
     appCtx.setJobDescription(jobDescription);
 
     // Navigate to editor in tune mode — it will auto-compile and user can analyze there
-    navigate('/editor', { state: { mode: 'tune' } });
+    navigate('/build/form', { state: { mode: 'tune' } });
   }, [baseVersion, companyName, roleName, jobDescription, appCtx, navigate]);
 
   // Step 1 → 2: Analyze (inline flow)
@@ -456,16 +456,19 @@ export default function ApplyToJobScreen() {
                         >
                           {expandedDiffs.has(change.id) ? 'Hide diff' : 'Show diff'}
                         </button>
-                        {expandedDiffs.has(change.id) && (
-                          <div className={styles.diffView}>
-                            <div className={styles.diffOld}>
-                              - {Array.isArray(change.currentValue) ? change.currentValue.join(', ') : change.currentValue}
+                        {expandedDiffs.has(change.id) && (() => {
+                          const altValue = change.alternatives[0]?.value;
+                          return (
+                            <div className={styles.diffView}>
+                              <div className={styles.diffOld}>
+                                - {Array.isArray(change.currentValue) ? change.currentValue.join(', ') : change.currentValue}
+                              </div>
+                              <div className={styles.diffNew}>
+                                + {altValue ? (Array.isArray(altValue) ? altValue.join(', ') : altValue) : ''}
+                              </div>
                             </div>
-                            <div className={styles.diffNew}>
-                              + {Array.isArray(change.newValue) ? change.newValue.join(', ') : change.newValue}
-                            </div>
-                          </div>
-                        )}
+                          );
+                        })()}
                       </div>
                     </div>
                   ))}

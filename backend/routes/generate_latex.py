@@ -42,10 +42,29 @@ _LATEX_ESCAPE_RE = re.compile(
 )
 
 
+# Unicode characters that should be normalized before LaTeX escaping
+_UNICODE_NORMALIZE = {
+    "\u223C": "~",   # ∼ tilde operator → ASCII tilde
+    "\u2019": "'",   # ' right single quote
+    "\u2018": "'",   # ' left single quote
+    "\u201C": "``",  # " left double quote → LaTeX opening quote
+    "\u201D": "''",  # " right double quote → LaTeX closing quote
+    "\u2013": "--",  # – en dash
+    "\u2014": "---", # — em dash
+    "\u2026": "...", # … ellipsis
+    "\u00A0": " ",   # non-breaking space
+}
+_UNICODE_NORMALIZE_RE = re.compile(
+    "(" + "|".join(re.escape(k) for k in _UNICODE_NORMALIZE) + ")"
+)
+
+
 def latex_escape(value: str) -> str:
     """Escape special LaTeX characters in a single pass (no double-escaping risk)."""
     if not isinstance(value, str):
         value = str(value)
+    # Normalize problematic Unicode to ASCII/LaTeX equivalents first
+    value = _UNICODE_NORMALIZE_RE.sub(lambda m: _UNICODE_NORMALIZE[m.group(0)], value)
     return _LATEX_ESCAPE_RE.sub(lambda m: _LATEX_ESCAPE_MAP[m.group(0)], value)
 
 

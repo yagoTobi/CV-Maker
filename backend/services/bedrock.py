@@ -1,15 +1,20 @@
 import json
 import os
-from typing import Any, Dict, Generator, List
+from typing import Any, Dict, Generator, List, Optional
 
 import boto3
+
+# Model constants — use the right model per task
+# Cross-region inference profile IDs (us. prefix + :0 suffix)
+MODEL_HAIKU = "us.anthropic.claude-haiku-4-5-20251001-v1:0"     # Fast, cheap — extraction
+MODEL_SONNET = "us.anthropic.claude-sonnet-4-6"                  # Quality — analysis, rewriting (CRIS profile)
 
 
 class BedrockClient:
     def __init__(self):
         region = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
         self.client = boto3.client("bedrock-runtime", region_name=region)
-        # Use cross-region inference profile for Claude 3.5 Sonnet v2
+        # Default to Haiku for backward compatibility (fast, cheap)
         self.model_id = "us.anthropic.claude-3-5-haiku-20241022-v1:0"
 
     def chat(
@@ -19,6 +24,7 @@ class BedrockClient:
         stream: bool = True,
         max_tokens: int = 4096,
         model_id: str | None = None,
+        temperature: Optional[float] = None,
     ) -> Generator[str, None, None] | str:
         """
         Send a chat request to Bedrock Claude.
@@ -48,6 +54,8 @@ class BedrockClient:
             "system": system_prompt,
             "messages": bedrock_messages,
         }
+        if temperature is not None:
+            request_body["temperature"] = temperature
 
         effective_model = model_id or self.model_id
 
@@ -80,6 +88,7 @@ class BedrockClient:
         system_prompt: str,
         max_tokens: int = 4096,
         model_id: str | None = None,
+        temperature: Optional[float] = None,
     ) -> str:
         """
         Send a message with a document attachment to Claude.
@@ -115,6 +124,8 @@ class BedrockClient:
             "system": system_prompt,
             "messages": messages,
         }
+        if temperature is not None:
+            request_body["temperature"] = temperature
 
         effective_model = model_id or self.model_id
 

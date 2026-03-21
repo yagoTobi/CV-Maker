@@ -9,7 +9,6 @@ const BuildChoiceScreen = lazy(() => import('./features/build-choice/BuildChoice
 const TemplateSelector = lazy(() => import('./features/template-selection/TemplateSelector').then(m => ({ default: m.TemplateSelector })));
 const CVFormBuilder = lazy(() => import('./features/form-builder/CVFormBuilder'));
 const CVImportUpload = lazy(() => import('./features/cv-import/CVImportUpload'));
-const EditorScreen = lazy(() => import('./features/editor/EditorScreen'));
 const ApplyToJobScreen = lazy(() => import('./features/apply-to-job/ApplyToJobScreen'));
 
 function App() {
@@ -24,7 +23,6 @@ function App() {
           <Route path="/build/form" element={<FeatureErrorBoundary><CVFormBuilder /></FeatureErrorBoundary>} />
           <Route path="/import" element={<FeatureErrorBoundary><CVImportUpload /></FeatureErrorBoundary>} />
           <Route path="/apply" element={<FeatureErrorBoundary><ApplyToJobScreen /></FeatureErrorBoundary>} />
-          <Route path="/editor" element={<FeatureErrorBoundary><EditorScreen /></FeatureErrorBoundary>} />
         </Routes>
       </Suspense>
     </AppProvider>

@@ -243,6 +243,7 @@ async def extract_from_pdf(file_bytes: bytes) -> CVImportResult:
             system_prompt=EXTRACTION_SYSTEM_PROMPT,
             max_tokens=8192,
             model_id=EXTRACTION_MODEL_ID,
+            temperature=0.2,
         )
         return _parse_extraction_response(response, source="pdf")
     except Exception as e:
@@ -364,6 +365,7 @@ async def extract_from_docx(file_bytes: bytes) -> CVImportResult:
             stream=False,
             max_tokens=8192,
             model_id=EXTRACTION_MODEL_ID,
+            temperature=0.2,
         )
         return _parse_extraction_response(response, source="docx")
     except Exception as e:

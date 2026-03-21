@@ -186,6 +186,21 @@
   transition: width 0.3s ease;
 }
 
+@keyframes slowFill {
+  from { width: 5%; }
+  to { width: 80%; }
+}
+
+.progressBarSlow {
+  animation: slowFill 30s cubic-bezier(0.1, 0.4, 0.2, 1) forwards;
+}
+
+.progressBarDone {
+  width: 100% !important;
+  animation: none;
+  transition: width 0.3s ease;
+}
+
 /* Format chips */
 .formats {
   display: flex;

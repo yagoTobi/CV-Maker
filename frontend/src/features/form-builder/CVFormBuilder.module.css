@@ -835,6 +835,32 @@
   border-style: solid;
 }
 
+/* ── Tune mode ── */
+.navDivider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 0.5rem 0.75rem;
+}
+
+.tuneNavItem {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.navDisabled {
+  opacity: 0.4;
+  cursor: not-allowed !important;
+}
+
+.tuneArea {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 640px;
+  animation: fadeIn 0.2s ease-out;
+}
+
 /* Additional Section Title */
 .additionalSectionTitleWrapper {
   flex: 1;

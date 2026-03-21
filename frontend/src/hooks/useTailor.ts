@@ -10,6 +10,7 @@ export interface UseTailorReturn {
   appliedChanges: Set<string>;
   skippedChanges: Set<string>;
   pendingChanges: TailorChange[];
+  selectedAlternatives: Map<string, number>;
   estimatedCurrentScore: number;
   isApplying: boolean;
 
@@ -18,6 +19,7 @@ export interface UseTailorReturn {
   skipChange: (changeId: string) => void;
   undoChange: (changeId: string) => Promise<void>;
   acceptAllRemaining: () => Promise<void>;
+  selectAlternative: (changeId: string, index: number) => void;
   editChangeValue: (changeId: string, newValue: string | string[]) => void;
   reset: () => void;
 }
@@ -35,6 +37,7 @@ export function useTailor({ originalFormData, templateId, onApply }: UseTailorOp
   const [appliedChanges, setAppliedChanges] = useState<Set<string>>(new Set());
   const [skippedChanges, setSkippedChanges] = useState<Set<string>>(new Set());
   const [isApplying, setIsApplying] = useState(false);
+  const [selectedAlternatives, setSelectedAlternatives] = useState<Map<string, number>>(new Map());
 
   // Snapshot of formData before any tailor changes
   const baseFormDataRef = useRef<CVFormData | null>(null);
@@ -62,6 +65,10 @@ export function useTailor({ originalFormData, templateId, onApply }: UseTailorOp
     ? baselineScoreRef.current + (estimatedScore - baselineScoreRef.current) * (appliedCount / totalCount)
     : 0;
 
+  // Ref to track selectedAlternatives in queued operations without stale closures
+  const selectedAltsRef = useRef<Map<string, number>>(selectedAlternatives);
+  selectedAltsRef.current = selectedAlternatives;
+
   const applyCurrentState = useCallback(async (
     newApplied: Set<string>,
   ) => {
@@ -69,7 +76,7 @@ export function useTailor({ originalFormData, templateId, onApply }: UseTailorOp
     const changes = tailorResponse?.changes;
     if (!base || !changes) return;
 
-    const newFormData = applyTailorChanges(base, changes, newApplied);
+    const newFormData = applyTailorChanges(base, changes, newApplied, selectedAltsRef.current);
     const { texContent } = await api.generateLatex(newFormData);
     if (!texContent) return;
     await onApply(newFormData, texContent);
@@ -87,6 +94,7 @@ export function useTailor({ originalFormData, templateId, onApply }: UseTailorOp
     setError(null);
     setAppliedChanges(new Set());
     setSkippedChanges(new Set());
+    setSelectedAlternatives(new Map());
     baseFormDataRef.current = structuredClone(formData);
 
     try {
@@ -161,14 +169,31 @@ export function useTailor({ originalFormData, templateId, onApply }: UseTailorOp
     await queueRef.current;
   }, [tailorResponse, appliedChanges, skippedChanges, applyCurrentState]);
 
+  const selectAlternative = useCallback((changeId: string, index: number) => {
+    setSelectedAlternatives(prev => {
+      const next = new Map(prev);
+      next.set(changeId, index);
+      return next;
+    });
+  }, []);
+
   const editChangeValue = useCallback((changeId: string, newValue: string | string[]) => {
     setTailorResponse(prev => {
       if (!prev) return prev;
       return {
         ...prev,
-        changes: prev.changes.map(c =>
-          c.id === changeId ? { ...c, newValue } : c
-        ),
+        changes: prev.changes.map(c => {
+          if (c.id !== changeId) return c;
+          // Replace the selected alternative's value (or add a custom one)
+          const altIndex = selectedAltsRef.current.get(changeId) ?? 0;
+          const newAlts = [...c.alternatives];
+          if (newAlts[altIndex]) {
+            newAlts[altIndex] = { ...newAlts[altIndex], value: newValue };
+          } else {
+            newAlts.push({ label: 'Custom', value: newValue });
+          }
+          return { ...c, alternatives: newAlts };
+        }),
       };
     });
   }, []);
@@ -179,6 +204,7 @@ export function useTailor({ originalFormData, templateId, onApply }: UseTailorOp
     setError(null);
     setAppliedChanges(new Set());
     setSkippedChanges(new Set());
+    setSelectedAlternatives(new Map());
     setIsApplying(false);
     baseFormDataRef.current = null;
     baselineScoreRef.current = 0;
@@ -198,6 +224,7 @@ export function useTailor({ originalFormData, templateId, onApply }: UseTailorOp
     appliedChanges,
     skippedChanges,
     pendingChanges,
+    selectedAlternatives,
     estimatedCurrentScore,
     isApplying,
     fetchSuggestions,
@@ -205,6 +232,7 @@ export function useTailor({ originalFormData, templateId, onApply }: UseTailorOp
     skipChange,
     undoChange,
     acceptAllRemaining,
+    selectAlternative,
     editChangeValue,
     reset,
   };

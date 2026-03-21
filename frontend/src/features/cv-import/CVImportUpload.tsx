@@ -64,13 +64,20 @@ export default function CVImportUpload() {
               </p>
               {cvImport.importProgress && (
                 <div className={styles.progressIndicator}>
-                  <span className={styles.stepText}>
-                    Step {cvImport.importProgress.step} of {cvImport.importProgress.totalSteps}
-                  </span>
                   <div className={styles.progressBar}>
                     <div
-                      className={styles.progressFill}
-                      style={{ width: `${(cvImport.importProgress.step / cvImport.importProgress.totalSteps) * 100}%` }}
+                      className={`${styles.progressFill} ${
+                        cvImport.importProgress.step >= 3
+                          ? styles.progressBarDone
+                          : cvImport.importProgress.step >= 2
+                            ? styles.progressBarSlow
+                            : ''
+                      }`}
+                      style={
+                        cvImport.importProgress.step < 2
+                          ? { width: '5%' }
+                          : undefined
+                      }
                     />
                   </div>
                 </div>

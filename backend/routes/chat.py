@@ -5,16 +5,17 @@ from typing import List, Dict, Optional, Literal
 import json
 import logging
 
-from services.bedrock import bedrock_client
-from services.json_utils import strip_markdown_json
+from services.bedrock import bedrock_client, MODEL_SONNET
+from services import llm_cache
+from services.json_utils import strip_markdown_json, parse_json_with_retry
 
 logger = logging.getLogger(__name__)
 from prompts.cv_agent import get_chat_system_prompt, get_match_analysis_prompt
 
 
-async def _stream_chat(messages, system_prompt):
+async def _stream_chat(messages, system_prompt, model_id=None, temperature=None):
     """Shared SSE streaming generator for chat endpoints."""
-    for chunk in bedrock_client.chat(messages, system_prompt, stream=True):
+    for chunk in bedrock_client.chat(messages, system_prompt, stream=True, model_id=model_id, temperature=temperature):
         yield f"data: {json.dumps({'text': chunk})}\n\n"
     yield "data: [DONE]\n\n"
 
@@ -73,7 +74,7 @@ async def chat(request: ChatRequest):
 
         if request.stream:
             return StreamingResponse(
-                _stream_chat(messages, system_prompt),
+                _stream_chat(messages, system_prompt, model_id=MODEL_SONNET, temperature=0.7),
                 media_type="text/event-stream",
                 headers={
                     "Cache-Control": "no-cache",
@@ -81,7 +82,7 @@ async def chat(request: ChatRequest):
                 }
             )
         else:
-            response = bedrock_client.chat(messages, system_prompt, stream=False)
+            response = bedrock_client.chat(messages, system_prompt, stream=False, model_id=MODEL_SONNET, temperature=0.7)
             return ChatResponse(response=response)
 
     except Exception as e:
@@ -111,7 +112,7 @@ async def analyze_job(request: ChatRequest):
 
         if request.stream:
             return StreamingResponse(
-                _stream_chat(messages, system_prompt),
+                _stream_chat(messages, system_prompt, model_id=MODEL_SONNET, temperature=0.5),
                 media_type="text/event-stream",
                 headers={
                     "Cache-Control": "no-cache",
@@ -119,7 +120,7 @@ async def analyze_job(request: ChatRequest):
                 }
             )
         else:
-            response = bedrock_client.chat(messages, system_prompt, stream=False)
+            response = bedrock_client.chat(messages, system_prompt, stream=False, model_id=MODEL_SONNET, temperature=0.5)
             return ChatResponse(response=response)
 
     except Exception as e:
@@ -157,13 +158,30 @@ Return ONLY a valid JSON object with this exact structure:
 }}"""
         }]
 
-        response = bedrock_client.chat(messages, system_prompt, stream=False)
+        # Check cache first
+        cache_key = llm_cache.cache_key(request.cv_content, request.job_description, request.company_name or "")
+        cached = llm_cache.get(cache_key)
+        if cached:
+            try:
+                data = json.loads(strip_markdown_json(cached))
+                return MatchAnalysisResponse(
+                    requirements=data.get("requirements", []),
+                    matching=data.get("matching", []),
+                    missing=data.get("missing", []),
+                    suggestions=data.get("suggestions", []),
+                    match_score=min(100, max(0, int(data.get("match_score", 50))))
+                )
+            except json.JSONDecodeError:
+                pass  # Cache had bad data, proceed with fresh call
 
-        # Parse JSON from response
+        # Parse JSON from response with retry logic
         try:
-            # Try to extract JSON from the response
-            response_text = strip_markdown_json(response)
-            data = json.loads(response_text)
+            data = parse_json_with_retry(
+                lambda: bedrock_client.chat(messages, system_prompt, stream=False, model_id=MODEL_SONNET, temperature=0.3),
+                max_retries=1,
+            )
+            # Cache the raw response for future hits
+            llm_cache.put(cache_key, json.dumps(data))
             return MatchAnalysisResponse(
                 requirements=data.get("requirements", []),
                 matching=data.get("matching", []),

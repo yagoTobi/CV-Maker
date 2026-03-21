@@ -10,13 +10,14 @@ CV Maker follows a client-server architecture with a React frontend and FastAPI 
 │                                                                              │
 │  ┌────────────────┐  ┌──────────────────┐  ┌──────────────┐                 │
 │  │  Landing /     │  │  Form Builder    │  │   Editor     │                 │
-│  │  Dashboard     │  │  (Build/Import)  │  │  (all paths) │                 │
+│  │  Dashboard     │  │  (Build/Import)  │  │  (Tune/Edit) │                 │
 │  └────────────────┘  └──────────────────┘  └──────────────┘                 │
 │                                                                              │
-│  Screens: landing → template-select → form-builder → editor                 │
-│           landing → import-upload → import-review → template-select         │
-│           landing → editor (Tune path, Professional CV pre-loaded)          │
-│           landing → dashboard → editor (load saved version)                 │
+│  Screens: landing → build-choice → template-select → form-builder → editor  │
+│           landing → build-choice → import-upload → template-select → form   │
+│           landing → dashboard → "Tune for a Job" → editor (tune mode)       │
+│           landing → dashboard → "Apply to Job" → apply (3-step flow)        │
+│           landing → dashboard → click version → editor                      │
 └─────────────────────────────────────────────────────────────────────────────┘
                                      │
                                      ▼
@@ -33,13 +34,15 @@ CV Maker follows a client-server architecture with a React frontend and FastAPI 
 │  │  Import API  │        ▼            ┌──────────────┐  ┌──────────────┐    │
 │  │  /cv-import  │  ┌──────────────┐  │ AWS Bedrock  │  │  JSON Files  │    │
 │  └──────────────┘  │Jinja2 Engine │  │  (Claude)    │  │ user_data/   │    │
-│         │          │(.tex.j2      │  │              │  │ versions/    │    │
-│         ▼          │  templates)  │  └──────────────┘  └──────────────┘    │
-│  ┌──────────────┐  └──────────────┘                                        │
-│  │LaTeX Compiler│                                                           │
-│  │(pdflatex/    │                                                           │
-│  │ xelatex)     │                                                           │
+│  ┌──────────────┐  │(.tex.j2      │  │              │  │ versions/    │    │
+│  │  Tailor API  │  │  templates)  │  └──────────────┘  └──────────────┘    │
+│  │  /tailor     │  └──────────────┘                                        │
 │  └──────────────┘                                                           │
+│         │          ┌──────────────┐                                         │
+│         ▼          │LaTeX Compiler│                                         │
+│  Field-level AI    │(pdflatex/    │                                         │
+│  suggestions       │ xelatex)     │                                         │
+│                    └──────────────┘                                         │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -48,40 +51,49 @@ CV Maker follows a client-server architecture with a React frontend and FastAPI 
 ## Screen Flow
 
 ```
-React Router v6 Routes:
+React Router v6 Routes (8 routes):
 /                → LandingScreen
 /build/start     → BuildChoiceScreen
 /build           → TemplateSelector
 /build/form      → CVFormBuilder
 /import          → CVImportUpload
+/apply           → ApplyToJobScreen
 /dashboard       → Dashboard
 /editor          → EditorScreen
 
 landing (/)
-  ├── "Build my CV"       → /build/start → "Start from scratch" → /build → /build/form → /editor
-  │                                     → "Import existing CV" → /import → /build → /build/form (with ImportBanner + confidence badges)
-  ├── "Tune for a job"    → /build/form (mode:'tune', Job Tuning tab default in right panel)
-  ├── "My CVs & Applications" → /dashboard  [always shown; shows recent apps inline if versions exist]
-  └── Recent Applications → inline cards grouped by base CV (3 most recent)
+  ├── "Build my CV"    → /build/start → "Start from scratch" → /build → /build/form → /editor
+  │                                   → "Import existing CV" → /import → /build → /build/form (with ImportBanner)
+  ├── "Tune for a role" → /dashboard (if saved CVs exist) or /build/start (if no CVs)
+  └── "My Saved CVs"    → /dashboard  [shown only when savedVersions.length > 0]
 
 dashboard (/dashboard) — hierarchical view
   ├── Base CVs (expandable groups)
-  │   ├── [+ New] button per base CV → /editor (creates job application from base)
+  │   ├── "Tune for a Job" button → /editor (mode:'tune', base CV loaded)
+  │   ├── "Apply to Job" button → /apply (3-step flow from base CV)
   │   └── Job applications (nested under base)
   ├── Ungrouped versions → orphaned CVs without parent
-  ├── click base CV → /editor (base CV content loaded)
-  ├── click job application → /editor (job content + job panel pre-filled)
+  ├── click any version → /editor (version loaded)
   ├── [Move...] action → re-parent job application to different base CV
+  ├── Download PDF button → compile on-demand from any version
   └── back → /
 
-editor (/editor)
-  ├── VersionSwitcher (header) → save current / switch to saved version
-  ├── Save modal → choose "Base CV" or "Job Application" + select parent + job details
-  ├── nav link → /dashboard
-  └── breadcrumb → "From: Creative CV" (if derived from base)
+editor (/editor) — two modes
+  ├── Build mode: "Your CV Editor" header, general editing
+  ├── Tune mode: "Tune your CV" header, job input + AI suggestions
+  │   ├── Left panel: collapsible JobInput → MatchSummaryBar → TailorPanel (suggestion cards)
+  │   └── Right panel: PDF preview (auto-compiles on entry)
+  ├── VersionSwitcher (header) → save / switch / dashboard
+  └── Save modal → "Base CV" or "Job Application" + parent picker + job details
+
+apply (/apply) — 3-step progressive flow
+  ├── Step 1: Job Details (company, role, job description)
+  ├── Step 2: Match Analysis (score + gaps + suggestions) — reuses POST /chat/match-analysis
+  ├── Step 3: Review Changes (field-level AI suggestions with checkboxes)
+  └── "Open in Tune Screen" button → /editor (mode:'tune', job context pre-filled)
 
 build/form (/build/form) — CVFormBuilder
-  ├── Right panel tabs: "Preview" (PDF) | "Job Tuning" (job description + AI match analysis)
+  ├── Right panel: PDF preview
   ├── Mode passed via location.state.mode: 'build' | 'tune'
   ├── ImportBanner (when coming from import path) — source badge, confidence indicator, warnings, dismissible
   ├── Field-level confidence badges — amber border + badge on low/medium confidence fields
@@ -113,32 +125,38 @@ frontend/src/
 │   ├── form-builder/         Structured form builder
 │   │   ├── CVFormBuilder.tsx
 │   │   ├── CVFormBuilder.module.css
-│   │   ├── JobTuningPanel.tsx
-│   │   ├── JobTuningPanel.module.css
+│   │   ├── ImportBanner.tsx
+│   │   ├── ImportBanner.module.css
 │   │   └── index.ts
-│   ├── cv-import/            CV import upload + review
+│   ├── cv-import/            CV import upload
 │   │   ├── CVImportUpload.tsx
 │   │   ├── CVImportUpload.module.css
-│   │   ├── CVImportReview.tsx
-│   │   ├── CVImportReview.module.css
+│   │   └── index.ts
+│   ├── apply-to-job/         3-step job application flow
+│   │   ├── ApplyToJobScreen.tsx
+│   │   ├── ApplyToJobScreen.module.css
 │   │   └── index.ts
 │   ├── voice-widget/         Voice interview overlay
 │   │   ├── VoiceWidget.tsx
 │   │   ├── VoiceWidget.module.css
 │   │   └── index.ts
-│   ├── editor/               All editor-related components
+│   ├── editor/               Editor + tune screen components
 │   │   ├── EditorScreen.tsx
 │   │   ├── EditorScreen.module.css
-│   │   ├── LatexEditor.tsx
-│   │   ├── LatexEditor.module.css
+│   │   ├── TailorPanel.tsx       AI suggestion cards (accept/skip/undo)
+│   │   ├── TailorPanel.module.css
+│   │   ├── MatchSummaryBar.tsx   Score bar with progress + expandable details
+│   │   ├── MatchSummaryBar.module.css
+│   │   ├── MatchAnalysis.tsx     Gap/suggestion tag lists
+│   │   ├── MatchAnalysis.module.css
+│   │   ├── JobInput.tsx          Company/role/description input
+│   │   ├── JobInput.module.css
 │   │   ├── PdfPreview.tsx
 │   │   ├── PdfPreview.module.css
 │   │   ├── ChatPanel.tsx
 │   │   ├── ChatPanel.module.css
-│   │   ├── JobInput.tsx
-│   │   ├── JobInput.module.css
-│   │   ├── MatchAnalysis.tsx
-│   │   ├── MatchAnalysis.module.css
+│   │   ├── LatexEditor.tsx
+│   │   ├── LatexEditor.module.css
 │   │   └── index.ts
 │   ├── dashboard/            Saved versions management
 │   │   ├── Dashboard.tsx
@@ -148,7 +166,10 @@ frontend/src/
 │   │   └── index.ts
 │   └── shared/               Reusable cross-feature components
 │       ├── ErrorBoundary.tsx
+│       ├── useFileUpload.ts
 │       └── index.ts
+├── components/
+│   └── FeatureErrorBoundary.tsx   Per-feature error boundary with retry
 ├── contexts/                 React Context providers
 │   └── AppContext.tsx        Global shared state (replaces App.tsx god component)
 ├── hooks/                    Custom React hooks
@@ -174,20 +195,23 @@ frontend/src/
 | `LandingScreen.tsx` | landing | Intent-based entry screen (Build / Tune / Import / My CVs) |
 | `BuildChoiceScreen.tsx` | build-choice | Build entry choice ("Start from scratch" \| "Import existing CV") |
 | `TemplateSelector.tsx` | template-selection | Template selection (Build path + Import path) |
-| `CVFormBuilder.tsx` | form-builder | Structured form with 7 sections + right panel tabs (Preview \| Job Tuning) + DnD reordering + inline import indicators |
+| `CVFormBuilder.tsx` | form-builder | Structured form with 7 sections + PDF preview + DnD reordering + inline import indicators |
 | `ImportBanner.tsx` | form-builder | Dismissible import summary banner (source, confidence, warnings) shown at top of form builder when coming from import |
-| `JobTuningPanel.tsx` | form-builder | Job description input + AI match analysis (right panel tab in form builder) |
 | `VoiceWidget.tsx` | voice-widget | Voice interview overlay with animated orb, transcript feed, mic controls |
 | `CVImportUpload.tsx` | cv-import | Drag-and-drop file upload (PDF, DOCX, JSON) with progress indicator + direct navigation to template selector on success |
-| `Dashboard.tsx` | dashboard | Hierarchical CV management — base CVs with nested job applications, move/re-parent actions, AI grouping suggestions |
+| `ApplyToJobScreen.tsx` | apply-to-job | 3-step job application flow: Job Details → Match Analysis → Review Changes |
+| `Dashboard.tsx` | dashboard | Hierarchical CV management — base CVs with nested job applications, move/re-parent, tune/apply actions |
 | `VersionSwitcher.tsx` | dashboard | In-editor save / switch between saved versions, save modal with base CV picker |
-| `EditorScreen.tsx` | editor | Advanced LaTeX editor screen (power-user escape hatch) |
-| `LatexEditor.tsx` | editor | CodeMirror-based LaTeX editor component |
+| `EditorScreen.tsx` | editor | CV editor + tune screen — left panel (job input, match bar, tailor cards) + right panel (PDF preview) |
+| `TailorPanel.tsx` | editor | AI suggestion cards with accept/skip/undo, inline diff, inline edit, Accept All |
+| `MatchSummaryBar.tsx` | editor | Compact match score bar with progress indicator, expandable gap/suggestion details |
+| `MatchAnalysis.tsx` | editor | Gap tags + suggestion list (rendered inside MatchSummaryBar details) |
+| `JobInput.tsx` | editor | Company, role, job description input with Analyze button |
 | `PdfPreview.tsx` | editor | PDF rendering via `<iframe>` with base64 source |
 | `ChatPanel.tsx` | editor | AI conversation + inline edit suggestions with undo |
-| `MatchAnalysis.tsx` | editor | CV-job match score display |
-| `JobInput.tsx` | editor | Job description input |
-| `ErrorBoundary.tsx` | shared | Graceful error handling |
+| `LatexEditor.tsx` | editor | CodeMirror-based LaTeX editor component |
+| `FeatureErrorBoundary.tsx` | components | Per-feature error boundary with retry button |
+| `ErrorBoundary.tsx` | shared | Global graceful error handling |
 
 ### Custom Hooks
 
@@ -196,7 +220,8 @@ frontend/src/
 | `useFormBuilder` | All CVFormData state, section/entry CRUD, reorder helpers, isDirty tracking, export/import |
 | `useTemplates` | Selected template, content fetch, `setTemplateId` (set without fetch) |
 | `useCompiler` | Compile request, PDF state, markChanged |
-| `useChat` | AI messages, analyzeJob, applyEdit, undo |
+| `useChat` | AI messages, analyzeJob, matchAnalysis, applyEdit, undo |
+| `useTailor` | Tailor suggestions, applied/skipped/pending state, accept/skip/undo, Accept All, inline edit, estimated score |
 | `useImport` | CV import file upload (PDF/DOCX/JSON), AI extraction via Bedrock, progress tracking, confidence scoring, validation warnings, import state reset |
 | `useVoiceInterview` | Voice interview WebSocket connection, transcript collection, mic controls, session management |
 
@@ -225,13 +250,17 @@ Navigation handled by React Router v6 with browser history (back/forward support
 | `/api/compile` | POST | Compile LaTeX to PDF (engine selected per templateId) |
 | `/api/generate-latex` | POST | Generate LaTeX from `CVFormData` via Jinja2 |
 | `/api/chat` | POST | Stream AI responses (SSE) |
-| `/api/chat/match-analysis` | POST | CV-job match score |
+| `/api/chat/analyze` | POST | AI CV analysis |
+| `/api/chat/match-analysis` | POST | CV-job match score + gaps + suggestions |
+| `/api/tailor/suggest-changes` | POST | AI field-level tailoring suggestions (returns `TailorChange[]`) |
 | `/api/templates` | GET | List available templates |
 | `/api/templates/{id}/preview` | GET | Template preview image |
 | `/api/templates/{id}/content` | GET | Raw LaTeX template content |
-| `/api/user-data` | GET/POST | User profile CRUD |
+| `/api/templates/{id}/files/{filename}` | GET | Template support files (cls, fonts) |
+| `/api/user-data` | GET/POST/DELETE | User profile CRUD |
+| `/api/user-data/experience` | POST | Add experience entry to profile |
 | `/api/cv-versions` | GET/POST | List / create saved CV versions |
-| `/api/cv-versions/{id}` | GET/DELETE | Load / delete a saved version |
+| `/api/cv-versions/{id}` | GET/PATCH/DELETE | Load / update / delete a saved version |
 | `/api/cv-import` | POST | Upload PDF/DOCX/JSON for AI extraction |
 | `/api/ws/voice-interview` | WebSocket | Pipecat WebSocket pipeline (Nova Sonic S2S) |
 | `/api/voice/extract-cv` | POST | Extract CV data from voice session transcript |
@@ -303,7 +332,8 @@ StorageBackend Protocol (11 async methods)
 | `routes/cv_versions.py` | Version CRUD + all shared Pydantic models (PersonalInfo, WorkEntry, CVFormData, …); uses StorageBackend |
 | `routes/cv_import.py` | CV import upload endpoint (PDF/DOCX/JSON) |
 | `routes/voice_interview.py` | Voice interview WebSocket endpoint + transcript extraction + profile management; uses StorageBackend |
-| `routes/chat.py` | AI chat streaming |
+| `routes/chat.py` | AI chat streaming + match analysis |
+| `routes/tailor.py` | `POST /tailor/suggest-changes` — AI field-level suggestions |
 | `routes/templates.py` | Template listing and file serving |
 | `routes/user_data.py` | User profile CRUD; uses StorageBackend |
 | `services/storage.py` | StorageBackend Protocol (11-method async interface) |
@@ -311,11 +341,11 @@ StorageBackend Protocol (11 async methods)
 | `services/dynamo_storage.py` | DynamoStorage implementation (DynamoDB single-table) |
 | `services/storage_factory.py` | `get_storage()` dependency, reads `STORAGE_BACKEND` env var |
 | `services/bedrock.py` | AWS Bedrock client wrapper |
-| `services/cv_analyzer.py` | CV analysis and match scoring |
 | `services/cv_extractor.py` | AI-powered CV extraction via Bedrock (PDF multimodal, DOCX text, JSON direct) |
+| `services/json_utils.py` | JSON parsing utilities (used by chat, tailor, voice routes) |
 | `services/latex_compiler.py` | pdflatex / xelatex subprocess wrapper |
 | `dependencies.py` | `get_current_user()` dependency, reads `X-User-Id` header |
-| `prompts/cv_agent.py` | AI prompt templates |
+| `prompts/cv_agent.py` | AI prompt templates (CV_AGENT_SYSTEM_PROMPT, MATCH_ANALYSIS_PROMPT, TAILOR_SUGGEST_PROMPT) |
 | `prompts/voice_interview.py` | Voice interview system prompt and extraction prompt |
 
 ### Voice Interview Architecture
@@ -442,13 +472,27 @@ User fills form → CVFormBuilder
   → "Open in Editor" → editor screen (auto-compile, PDF tab shown)
 ```
 
-### Tune Path (raw LaTeX → AI → PDF)
+### Tune Path (editor tune mode)
 
 ```
-"Tune for a job" → med-length-proff-cv pre-loaded in editor
-User pastes job description → POST /api/chat/match-analysis → match score
-User sends chat message     → POST /api/chat (streaming)    → AI suggestions
-User applies edit           → LaTeX updated → POST /api/compile → PDF
+Dashboard → "Tune for a Job" → /editor (mode:'tune', base CV loaded, auto-compiles PDF)
+User fills in company, role, job description → clicks "Analyze Position"
+  → POST /api/chat/match-analysis → match score + gaps + suggestions (MatchSummaryBar)
+  → POST /api/tailor/suggest-changes (background) → field-level change cards (TailorPanel)
+User reviews cards: Accept / Skip / Edit each suggestion
+  → Accept: formData updated → LaTeX regenerated → PDF recompiled → preview updates
+  → Skip: card collapses, move to next
+  → Undo: reverts accepted/skipped change
+```
+
+### Apply to Job Path (3-step wizard)
+
+```
+Dashboard → "Apply to Job" → /apply (base CV loaded)
+  Step 1: Enter company, role, job description
+  Step 2: POST /api/chat/match-analysis → score + gaps (can "Open in Tune Screen" → /editor)
+  Step 3: POST /api/tailor/suggest-changes → field-level suggestions with checkboxes
+  → Apply selected → save as job application version → /dashboard
 ```
 
 ### Version Save / Load (Job-Centric Model)
@@ -476,10 +520,11 @@ src/
 │   ├── landing/                # LandingScreen.tsx, .module.css, index.ts
 │   ├── build-choice/           # BuildChoiceScreen.tsx, .module.css, index.ts
 │   ├── template-selection/     # TemplateSelector.tsx, .css, index.ts
-│   ├── form-builder/           # CVFormBuilder.tsx, JobTuningPanel.tsx, ImportBanner.tsx, .module.css, index.ts
+│   ├── form-builder/           # CVFormBuilder.tsx, ImportBanner.tsx, .module.css, index.ts
 │   ├── cv-import/              # CVImportUpload.tsx, .module.css, index.ts
+│   ├── apply-to-job/           # ApplyToJobScreen.tsx, .module.css, index.ts
 │   ├── voice-widget/           # VoiceWidget.tsx, .module.css, index.ts
-│   ├── editor/                 # EditorScreen.tsx, LatexEditor, PdfPreview, ChatPanel, JobInput, MatchAnalysis
+│   ├── editor/                 # EditorScreen, TailorPanel, MatchSummaryBar, MatchAnalysis, JobInput, PdfPreview, ChatPanel, LatexEditor
 │   ├── dashboard/              # Dashboard.tsx, VersionSwitcher.tsx, .module.css, index.ts
 │   └── shared/                 # ErrorBoundary.tsx, index.ts
 ├── contexts/
@@ -488,7 +533,8 @@ src/
 │   ├── useFormBuilder.ts       # CVFormData state + CRUD
 │   ├── useTemplates.ts         # Template selection + content
 │   ├── useCompiler.ts          # LaTeX compilation
-│   ├── useChat.ts              # AI chat
+│   ├── useChat.ts              # AI chat + match analysis
+│   ├── useTailor.ts            # AI tailoring suggestions + accept/skip/undo
 │   ├── useImport.ts            # CV import file upload + extraction
 │   └── useVoiceInterview.ts    # Voice interview WebSocket + transcript
 ├── services/
@@ -512,9 +558,10 @@ backend/
 │   ├── cv_versions.py          # CRUD /cv-versions + shared Pydantic models
 │   ├── cv_import.py            # POST /cv-import (upload + extraction)
 │   ├── voice_interview.py      # WS /ws/voice-interview, POST /voice/extract-cv, GET/POST /voice/profile
-│   ├── chat.py                 # POST /chat, /match-analysis
-│   ├── templates.py            # GET /templates
-│   └── user_data.py            # GET/POST /user-data
+│   ├── chat.py                 # POST /chat, /chat/analyze, /chat/match-analysis
+│   ├── tailor.py               # POST /tailor/suggest-changes
+│   ├── templates.py            # GET /templates, /{id}/preview, /{id}/content, /{id}/files/{filename}
+│   └── user_data.py            # GET/POST/DELETE /user-data, POST /user-data/experience
 ├── latex_templates/
 │   ├── med-length-proff-cv.tex.j2
 │   ├── mcdowell-cv.tex.j2
@@ -524,10 +571,10 @@ backend/
 │   ├── file_storage.py         # FileStorage implementation (JSON files)
 │   ├── dynamo_storage.py       # DynamoStorage implementation (DynamoDB)
 │   ├── storage_factory.py      # get_storage() dependency
-│   ├── bedrock.py
-│   ├── cv_analyzer.py
+│   ├── bedrock.py              # AWS Bedrock client wrapper
 │   ├── cv_extractor.py         # AI extraction (PDF/DOCX/JSON)
-│   └── latex_compiler.py
+│   ├── json_utils.py           # JSON parsing utilities
+│   └── latex_compiler.py       # pdflatex / xelatex subprocess
 ├── prompts/
 │   ├── cv_agent.py
 │   └── voice_interview.py      # Voice interview system prompt + extraction prompt

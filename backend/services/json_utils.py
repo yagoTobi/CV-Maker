@@ -27,3 +27,16 @@ def parse_markdown_json(text: str) -> dict | None:
         return json.loads(strip_markdown_json(text))
     except (json.JSONDecodeError, ValueError):
         return None
+
+
+def parse_json_with_retry(bedrock_fn, max_retries=1):
+    """Call bedrock_fn(), strip markdown fences, parse JSON. On parse failure, retry once."""
+    for attempt in range(max_retries + 1):
+        response = bedrock_fn()
+        cleaned = strip_markdown_json(response)
+        try:
+            return json.loads(cleaned)
+        except json.JSONDecodeError:
+            if attempt < max_retries:
+                continue
+            raise

@@ -33,7 +33,7 @@ CV-Maker is in **Phase 1: Nail the Creation Loop** (see [PRODUCT_STRATEGY.md](PR
 **Form Builder (Build Path)**
 - [x] Structured form with 6 standard sections: Personal Info, Work Experience, Education, Skills, Projects, Awards
 - [x] Generic `additionalSections` support for custom sections (Leadership, Certifications, etc.)
-- [x] Right panel tabs: Preview (PDF) and Job Tuning (job description + AI match analysis)
+- [x] Right panel PDF preview
 - [x] Live PDF preview alongside form with drag-to-resize panel (300-760px)
 - [x] Drag-and-drop section ordering in sidebar nav (reflected in compiled LaTeX via `sectionOrder`)
 - [x] Drag-and-drop entry ordering within sections
@@ -51,7 +51,7 @@ CV-Maker is in **Phase 1: Nail the Creation Loop** (see [PRODUCT_STRATEGY.md](PR
 - [x] Template selection screen (Build path only)
 - [x] Dashboard for saved versions (grid view, load, delete)
 - [x] In-editor version switcher (save / switch between saved versions)
-- [x] React Router v6 with 8 routes: `/`, `/build/start`, `/build`, `/build/form`, `/import`, `/import/review`, `/dashboard`, `/editor`
+- [x] React Router v6 with 8 routes: `/`, `/build/start`, `/build`, `/build/form`, `/import`, `/apply`, `/dashboard`, `/editor`
 
 **Version Management**
 - [x] Save versions with metadata (name, template, job description, company, match score)
@@ -63,7 +63,7 @@ CV-Maker is in **Phase 1: Nail the Creation Loop** (see [PRODUCT_STRATEGY.md](PR
 - [x] Backend: Upload endpoint (`POST /api/cv-import`) accepting PDF, DOCX, JSON (10MB limit)
 - [x] Backend: AI extraction service for structured data extraction via Claude
 - [x] Frontend: Upload screen (`CVImportUpload.tsx`) with drag-and-drop
-- [x] Frontend: Review screen (`CVImportReview.tsx`) with confidence indicators
+- [x] Frontend: ImportBanner with inline confidence indicators (replaced dedicated review screen)
 - [x] End-to-end testing with comprehensive test suite (integration, error paths, edge cases)
 - [x] Image-based PDF detection and graceful error messaging
 
@@ -71,6 +71,21 @@ CV-Maker is in **Phase 1: Nail the Creation Loop** (see [PRODUCT_STRATEGY.md](PR
 - [x] Backend template rendering test suite (21 tests covering minimal, maximal, special chars, empty sections, section ordering, filters)
 - [x] Backend template compilation test suite (18 tests with pdflatex/xelatex, unicode, PDF size validation)
 - [x] Backend CV import test suite (integration tests, error path tests, extraction validation)
+
+**Apply to Job & CV Tailoring**
+- [x] Apply to Job 3-step flow (`/apply` route): Job Details → Match Analysis → Review Changes
+- [x] `POST /api/tailor/suggest-changes` endpoint — AI-powered field-level CV suggestions
+- [x] TailorPanel with card-based suggestion review (accept/skip/undo, inline diff/edit, Accept All)
+- [x] MatchSummaryBar with score, gap count, progress indicator, expandable details
+- [x] Editor tune mode — collapsible job input, match analysis, tailor cards + PDF preview
+- [x] Auto-collapse reviewed cards to compact single-line for space efficiency
+- [x] Dashboard: "Tune for a Job" and "Apply to Job" buttons per base CV group
+- [x] Dashboard: on-demand PDF download from any version row
+
+**Storage Abstraction**
+- [x] `StorageBackend` Protocol with FileStorage (JSON files) and DynamoStorage (DynamoDB single-table)
+- [x] Docker Compose setup with DynamoDB Local
+- [x] Migration script (FileStorage → DynamoDB)
 
 **UI/UX**
 - [x] Zed-inspired light design system (soft gray-blue backgrounds, clean typography)
@@ -165,7 +180,7 @@ See [PRODUCT_STRATEGY.md § Phase 4](PRODUCT_STRATEGY.md#phase-4--platform--grow
 
 **DevOps**
 - [ ] CI/CD pipeline (automated tests on PR, deployment automation)
-- [ ] Docker containerization (for simplified deployment and dev environment setup)
+- [x] Docker containerization (Dockerfile + docker-compose with DynamoDB Local)
 
 **Performance**
 - [ ] LaTeX compilation caching (reduce redundant compiles for unchanged content)

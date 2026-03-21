@@ -1,17 +1,22 @@
-import { useState, useRef, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   useFormBuilder,
   type FormSection,
 } from "../../hooks/useFormBuilder";
 import { useAppContext } from "../../contexts/AppContext";
+import { useTailor } from "../../hooks/useTailor";
 import { SaveCVModal } from "../dashboard";
 import type { SaveVersionData } from "../dashboard";
 import { api } from "../../services/api";
 import { VoiceWidget } from "../voice-widget";
 import { generateCVFilename } from "../../utils/cvFilename";
+import { fieldPathToSection } from "../../utils/formDataPatch";
 import ImportBanner from "./ImportBanner";
 import { GripIcon } from "./components/GripIcon";
+import { JobInput } from "../editor/JobInput";
+import { MatchSummaryBar } from "../editor/MatchSummaryBar";
+import { TailorPanel } from "../editor/TailorPanel";
 import {
   PersonalSection,
   WorkSection,
@@ -22,6 +27,7 @@ import {
   AdditionalSectionView,
 } from "./sections";
 import styles from "./CVFormBuilder.module.css";
+import type { CVFormData } from "../../types";
 
 const SECTION_LABELS: Record<FormSection, string> = {
   personal: "Personal Info",
@@ -34,6 +40,9 @@ const SECTION_LABELS: Record<FormSection, string> = {
 
 export default function CVFormBuilder() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const initialTuneMode = (location.state as { mode?: string })?.mode === "tune";
+
   const {
     selectedTemplateForBuild,
     formData,
@@ -45,6 +54,13 @@ export default function CVFormBuilder() {
     activeVersion,
     isSavingVersion,
     cvImport,
+    companyName,
+    setCompanyName,
+    roleName,
+    setRoleName,
+    jobDescription,
+    setJobDescription,
+    chat,
   } = useAppContext();
 
   const templateId = selectedTemplateForBuild || "med-length-proff-cv";
@@ -55,7 +71,6 @@ export default function CVFormBuilder() {
 
   // Save modal state
   const [showSaveModal, setShowSaveModal] = useState(false);
-  const [tuneAfterSave, setTuneAfterSave] = useState(false);
   const [saveFlash, setSaveFlash] = useState(false);
   const saveFlashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const baseCvs = savedVersions.filter((v) => !v.parentVersionId);
@@ -67,6 +82,97 @@ export default function CVFormBuilder() {
   const [compileError, setCompileError] = useState<string | null>(null);
   const [compileWarnings, setCompileWarnings] = useState<string[]>([]);
   const [pageCount, setPageCount] = useState(0);
+
+  // --- Tune mode ---
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  // Start on tune section if entering in tune mode
+  const hasSetInitialMode = useRef(false);
+  useEffect(() => {
+    if (initialTuneMode && !hasSetInitialMode.current) {
+      hasSetInitialMode.current = true;
+      fb.setActiveSection("tune");
+    }
+  }, [initialTuneMode, fb]);
+
+  // Tailor: apply callback updates form data, LaTeX, and PDF
+  const handleTailorApply = useCallback(
+    async (newFormData: CVFormData, newTexContent: string) => {
+      fb.replaceFormData(newFormData);
+      setGeneratedTex(newTexContent);
+      setFormData(newFormData);
+      // Recompile PDF
+      setIsCompiling(true);
+      const result = await api.compileLatex(newTexContent, templateId);
+      setIsCompiling(false);
+      setCompileWarnings(result.warnings ?? []);
+      setPageCount(result.page_count);
+      if (result.success && result.pdf_base64) {
+        setPdfBase64(result.pdf_base64);
+      } else {
+        setCompileError(result.error || "Compilation failed");
+      }
+    },
+    [fb, templateId, setFormData],
+  );
+
+  const tailorOpts = useMemo(
+    () => ({
+      originalFormData: fb.formData,
+      templateId,
+      onApply: handleTailorApply,
+    }),
+    [fb.formData, templateId, handleTailorApply],
+  );
+
+  const tailor = useTailor(tailorOpts);
+
+  const handleAnalyze = useCallback(async () => {
+    setIsAnalyzing(true);
+
+    // Generate LaTeX from form data if needed for match analysis
+    let tex = generatedTex;
+    if (!tex) {
+      const { texContent } = await fb.generateCV();
+      tex = texContent;
+      if (tex) {
+        setGeneratedTex(tex);
+        templates.updateContent(tex);
+        templates.setTemplateId(templateId);
+      }
+    } else {
+      templates.updateContent(tex);
+      templates.setTemplateId(templateId);
+    }
+
+    // Fire tailor suggestions in background
+    tailor.fetchSuggestions(fb.formData, jobDescription, companyName, roleName);
+
+    // Await streaming match analysis
+    await chat.analyzeJob();
+
+    setIsAnalyzing(false);
+  }, [
+    fb,
+    generatedTex,
+    jobDescription,
+    companyName,
+    roleName,
+    tailor.fetchSuggestions,
+    chat.analyzeJob,
+    templates,
+    templateId,
+  ]);
+
+  const handleGoToField = useCallback(
+    (fieldPath: string) => {
+      fb.setActiveSection(fieldPathToSection(fieldPath));
+    },
+    [fb],
+  );
+
+  const isTuneSave = fb.activeSection === "tune" && chat.hasAnalyzed;
+  const analyzeInProgress = isAnalyzing || chat.isAnalyzing;
 
   // Resizable preview panel
   const [previewWidth, setPreviewWidth] = useState(520);
@@ -264,6 +370,21 @@ export default function CVFormBuilder() {
     }
   }, [fb, templateId, importMeta, importDismissed]);
 
+  // Auto-compile when entering tune mode with data but no PDF
+  const hasAutoCompiled = useRef(false);
+  useEffect(() => {
+    if (
+      fb.activeSection === "tune" &&
+      !pdfBase64 &&
+      !isCompiling &&
+      !hasAutoCompiled.current &&
+      fb.formData.personalInfo.fullName
+    ) {
+      hasAutoCompiled.current = true;
+      handleGenerate();
+    }
+  }, [fb.activeSection, pdfBase64, isCompiling, handleGenerate, fb.formData.personalInfo.fullName]);
+
   const handleRegenerate = async () => {
     if (!generatedTex) return;
     setIsCompiling(true);
@@ -329,43 +450,38 @@ export default function CVFormBuilder() {
   }, []);
 
   const handleSaveCV = useCallback(async () => {
-    if (activeVersion) {
+    if (isTuneSave) {
+      // Tune mode with analysis done — save as job application
+      setShowSaveModal(true);
+    } else if (activeVersion) {
       // Existing version — quick-save without modal
       const saved = await doQuickSave();
       if (saved) triggerSaveFlash();
     } else {
       // New CV — show modal to enter name
-      setTuneAfterSave(false);
       setShowSaveModal(true);
     }
-  }, [activeVersion, doQuickSave, triggerSaveFlash]);
+  }, [isTuneSave, activeVersion, doQuickSave, triggerSaveFlash]);
 
-  const handleTuneForRole = useCallback(async () => {
-    if (activeVersion) {
-      // Already saved — quick-save then navigate to editor in tune mode
-      const saved = await doQuickSave();
-      if (saved) navigate("/editor", { state: { mode: "tune" } });
-    } else {
-      // New CV — show modal, then navigate after save
-      setTuneAfterSave(true);
-      setShowSaveModal(true);
-    }
-  }, [activeVersion, doQuickSave, navigate]);
+  const handleTuneFromPreview = useCallback(() => {
+    fb.setActiveSection("tune");
+  }, [fb]);
 
-  // Modal save callback (only used for first-time saves)
+  // Modal save callback
   const handleSaveComplete = useCallback(
     async (data: SaveVersionData) => {
       await prepareForSave();
       const saved = await handleSaveVersion(data);
       if (!saved) return;
 
-      if (tuneAfterSave) {
-        navigate("/editor", { state: { mode: "tune" } });
-      } else {
-        triggerSaveFlash();
+      if (isTuneSave) {
+        // After saving a job application, reset tune state for next tune
+        tailor.reset();
+        chat.reset();
       }
+      triggerSaveFlash();
     },
-    [prepareForSave, handleSaveVersion, tuneAfterSave, navigate, triggerSaveFlash],
+    [prepareForSave, handleSaveVersion, isTuneSave, tailor, chat, triggerSaveFlash],
   );
 
   const isGenerateDisabled = fb.isGenerating || isCompiling;
@@ -404,8 +520,17 @@ export default function CVFormBuilder() {
             Back
           </button>
           <div className={styles.sidebarTitle}>
-            <span className={styles.eyebrow}>Step 2 of 2</span>
-            <h2>Fill in your CV</h2>
+            {fb.activeSection === "tune" ? (
+              <>
+                <span className={styles.eyebrow}>Tune Mode</span>
+                <h2>Tailor your CV</h2>
+              </>
+            ) : (
+              <>
+                <span className={styles.eyebrow}>Step 2 of 2</span>
+                <h2>Fill in your CV</h2>
+              </>
+            )}
           </div>
         </div>
 
@@ -481,6 +606,20 @@ export default function CVFormBuilder() {
               onClick={fb.addAdditionalSection}
             >
               + Add Section
+            </button>
+
+            {/* Tune divider + entry */}
+            <div className={styles.navDivider} />
+            <button
+              className={`${styles.navItem} ${styles.tuneNavItem} ${fb.activeSection === "tune" ? styles.navActive : ""} ${!activeVersion ? styles.navDisabled : ""}`}
+              onClick={() => activeVersion && fb.setActiveSection("tune")}
+              title={!activeVersion ? "Save your base CV first" : "Tailor your CV for a specific job"}
+              disabled={!activeVersion}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+              </svg>
+              Tune for Job
             </button>
           </nav>
         </div>
@@ -569,27 +708,73 @@ export default function CVFormBuilder() {
 
       {/* ── Form area ── */}
       <main className={styles.formArea}>
-        {importMeta && !importDismissed && importMeta.confidence && importMeta.summary && (
-          <ImportBanner
-            source={importMeta.source}
-            confidence={importMeta.confidence}
-            summary={importMeta.summary}
-            backendWarnings={importMeta.warnings}
-            formData={fb.formData}
-            onDismiss={() => setImportDismissed(true)}
-          />
-        )}
-        {fb.activeSection === "personal" && <PersonalSection fb={fb} importCtx={importCtx} />}
-        {fb.activeSection === "work" && <WorkSection fb={fb} importCtx={importCtx} />}
-        {fb.activeSection === "education" && <EducationSection fb={fb} importCtx={importCtx} />}
-        {fb.activeSection === "skills" && <SkillsSection fb={fb} />}
-        {fb.activeSection === "projects" && <ProjectsSection fb={fb} />}
-        {fb.activeSection === "awards" && <AwardsSection fb={fb} />}
-        {fb.activeSection.startsWith("additional-") && (
-          <AdditionalSectionView
-            fb={fb}
-            sectionIndex={parseInt(fb.activeSection.replace("additional-", ""))}
-          />
+        {fb.activeSection === "tune" ? (
+          <div className={styles.tuneArea}>
+            <JobInput
+              companyName={companyName}
+              roleName={roleName}
+              jobDescription={jobDescription}
+              onCompanyNameChange={setCompanyName}
+              onRoleNameChange={setRoleName}
+              onJobDescriptionChange={setJobDescription}
+              onAnalyze={handleAnalyze}
+              isAnalyzing={analyzeInProgress}
+              hasAnalyzed={chat.hasAnalyzed}
+            />
+
+            {chat.matchAnalysis && (
+              <MatchSummaryBar
+                analysis={chat.matchAnalysis}
+                isLoading={chat.isLoadingMatch}
+                onReanalyze={chat.getMatchAnalysis}
+                hasJobDescription={!!jobDescription.trim()}
+                estimatedScore={
+                  tailor.tailorResponse
+                    ? tailor.estimatedCurrentScore
+                    : undefined
+                }
+                companyName={companyName}
+                roleName={roleName}
+                reviewedCount={
+                  tailor.appliedChanges.size + tailor.skippedChanges.size
+                }
+                totalChanges={
+                  tailor.tailorResponse?.changes.length ?? 0
+                }
+              />
+            )}
+
+            <TailorPanel
+              tailor={tailor}
+              hasFormData={!!fb.formData}
+              onGoToField={handleGoToField}
+            />
+          </div>
+        ) : (
+          <>
+            {importMeta && !importDismissed && importMeta.confidence && importMeta.summary && (
+              <ImportBanner
+                source={importMeta.source}
+                confidence={importMeta.confidence}
+                summary={importMeta.summary}
+                backendWarnings={importMeta.warnings}
+                formData={fb.formData}
+                onDismiss={() => setImportDismissed(true)}
+              />
+            )}
+            {fb.activeSection === "personal" && <PersonalSection fb={fb} importCtx={importCtx} />}
+            {fb.activeSection === "work" && <WorkSection fb={fb} importCtx={importCtx} />}
+            {fb.activeSection === "education" && <EducationSection fb={fb} importCtx={importCtx} />}
+            {fb.activeSection === "skills" && <SkillsSection fb={fb} />}
+            {fb.activeSection === "projects" && <ProjectsSection fb={fb} />}
+            {fb.activeSection === "awards" && <AwardsSection fb={fb} />}
+            {fb.activeSection.startsWith("additional-") && (
+              <AdditionalSectionView
+                fb={fb}
+                sectionIndex={parseInt(fb.activeSection.replace("additional-", ""))}
+              />
+            )}
+          </>
         )}
       </main>
 
@@ -638,46 +823,33 @@ export default function CVFormBuilder() {
                       <polyline points="17 21 17 13 7 13 7 21" />
                       <polyline points="7 3 7 8 15 8" />
                     </svg>
-                    {isSavingVersion ? "Saving..." : "Save"}
+                    {isSavingVersion ? "Saving..." : isTuneSave ? "Save as Job App" : "Save"}
                   </>
                 )}
               </button>
-              {activeVersion ? (
-                <>
-                  <button
-                    className={styles.actionBtn}
-                    onClick={() => navigate("/dashboard")}
-                    title="Go to Dashboard"
-                  >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
-                      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
-                    </svg>
-                    Dashboard
-                  </button>
-                  <button
-                    className={`${styles.actionBtn} ${styles.actionBtnPrimary}`}
-                    onClick={handleTuneForRole}
-                    disabled={isSavingVersion}
-                    title="Tailor this CV for a specific job"
-                  >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-                    </svg>
-                    Tune for a Job
-                  </button>
-                </>
-              ) : (
+              {activeVersion && (
+                <button
+                  className={styles.actionBtn}
+                  onClick={() => navigate("/dashboard")}
+                  title="Go to Dashboard"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                  </svg>
+                  Dashboard
+                </button>
+              )}
+              {activeVersion && fb.activeSection !== "tune" && (
                 <button
                   className={`${styles.actionBtn} ${styles.actionBtnPrimary}`}
-                  onClick={handleTuneForRole}
-                  disabled={isSavingVersion}
-                  title="Save and tune for a specific role"
+                  onClick={handleTuneFromPreview}
+                  title="Tailor this CV for a specific job"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
                   </svg>
-                  Tune for a Role
+                  Tune for a Job
                 </button>
               )}
             </div>
@@ -770,7 +942,10 @@ export default function CVFormBuilder() {
         isSaving={isSavingVersion}
         activeVersion={activeVersion}
         baseCvs={baseCvs}
-        forceBaseCV
+        forceBaseCV={!isTuneSave}
+        forceJobApp={isTuneSave}
+        defaultCompanyName={isTuneSave ? companyName : undefined}
+        defaultRole={isTuneSave ? roleName : undefined}
       />
     </div>
   );

@@ -13,7 +13,7 @@ from prompts.voice_interview import (
 )
 from pydantic import BaseModel
 from services.bedrock import bedrock_client
-from services.json_utils import parse_markdown_json
+from services.json_utils import parse_markdown_json, parse_json_with_retry
 from services.storage import StorageBackend
 from services.storage_factory import get_storage
 from dependencies import get_current_user
@@ -277,24 +277,27 @@ async def extract_cv(
 
     transcript_text = "\n".join(transcript_lines)
 
-    result = bedrock_client.chat(
-        messages=[
-            {
-                "role": "user",
-                "content": (
-                    "Here is the voice interview transcript:\n\n"
-                    f"{transcript_text}\n\n"
-                    "Extract the CV data as a JSON object."
-                ),
-            }
-        ],
-        system_prompt=VOICE_EXTRACTION_PROMPT,
-        stream=False,
-        max_tokens=4096,
-    )
-
-    form_data = parse_markdown_json(result)
-    if form_data is None:
+    try:
+        form_data = parse_json_with_retry(
+            lambda: bedrock_client.chat(
+                messages=[
+                    {
+                        "role": "user",
+                        "content": (
+                            "Here is the voice interview transcript:\n\n"
+                            f"{transcript_text}\n\n"
+                            "Extract the CV data as a JSON object."
+                        ),
+                    }
+                ],
+                system_prompt=VOICE_EXTRACTION_PROMPT,
+                stream=False,
+                max_tokens=4096,
+                temperature=0.2,
+            ),
+            max_retries=1,
+        )
+    except (json.JSONDecodeError, Exception):
         logger.error("[voice] session %s — failed to parse CV JSON from transcript", request.session_id)
         raise HTTPException(
             status_code=500, detail="An internal error occurred"
@@ -312,6 +315,7 @@ async def extract_cv(
             system_prompt=VOICE_PROFILE_SUMMARY_PROMPT,
             stream=False,
             max_tokens=1024,
+            temperature=0.3,
         )
         profile_data = parse_markdown_json(profile_result)
         if profile_data:

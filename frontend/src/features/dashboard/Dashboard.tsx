@@ -103,7 +103,7 @@ export default function Dashboard() {
     if (version) {
       handleVersionLoad(version);
       setSelectedTemplateForBuild(version.templateId);
-      navigate('/editor', { state: { mode: 'tune' } });
+      navigate('/build/form', { state: { mode: 'tune' } });
     }
   }, [handleVersionLoad, setSelectedTemplateForBuild, navigate]);
 

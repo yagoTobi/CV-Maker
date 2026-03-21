@@ -107,37 +107,20 @@ export function useImport(): UseImportReturn {
 
     // PDF / DOCX — send to backend for AI extraction
     setIsImporting(true);
-    setImportProgress({ message: 'Reading file...', step: 1, totalSteps: 4 });
+    setImportProgress({ message: 'Uploading file...', step: 1, totalSteps: 3 });
 
-    // Use a ref to track if we should continue updating progress
-    const progressActive = { current: true };
+    // Move to "processing" stage after a brief moment
+    const processingTimer = setTimeout(() => {
+      setImportProgress({ message: 'Extracting your experience and skills...', step: 2, totalSteps: 3 });
+    }, 500);
 
-    // Simulated progress updates
-    const updateProgress = async () => {
-      await new Promise(r => setTimeout(r, 600));
-      if (progressActive.current) {
-        setImportProgress({ message: 'Analyzing structure...', step: 2, totalSteps: 4 });
-      }
+    const result = await api.importCV(file);
 
-      await new Promise(r => setTimeout(r, 1000));
-      if (progressActive.current) {
-        setImportProgress({ message: 'Extracting data...', step: 3, totalSteps: 4 });
-      }
+    clearTimeout(processingTimer);
 
-      await new Promise(r => setTimeout(r, 1200));
-      if (progressActive.current) {
-        setImportProgress({ message: 'Almost done...', step: 4, totalSteps: 4 });
-      }
-    };
-
-    // Start progress updates and API call in parallel
-    const [result] = await Promise.all([
-      api.importCV(file),
-      updateProgress()
-    ]);
-
-    // Stop progress updates
-    progressActive.current = false;
+    // Brief "structuring" stage before navigation
+    setImportProgress({ message: 'Structuring your CV data...', step: 3, totalSteps: 3 });
+    await new Promise(r => setTimeout(r, 400));
 
     setIsImporting(false);
     setImportProgress(null);

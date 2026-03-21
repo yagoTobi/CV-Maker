@@ -530,6 +530,18 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
     return result;
   }, [formData]);
 
+  // --- Replace form data (used by tailor accept) ---
+
+  const replaceFormData = useCallback((newData: CVFormData) => {
+    setFormData({
+      ...newData,
+      templateId,
+      sectionOrder: sanitizeSectionOrder(newData.sectionOrder, newData.additionalSections),
+    });
+    lastGeneratedRef.current = newData;
+    setIsDirty(false);
+  }, [templateId]);
+
   // --- Export / Import ---
 
   const exportFormData = useCallback(() => {
@@ -616,6 +628,7 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
     // Actions
     generateCV,
     exportFormData,
+    replaceFormData,
   }), [
     formData,
     activeSection,
@@ -675,5 +688,6 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
     reorderAdditionalEntryBullets,
     generateCV,
     exportFormData,
+    replaceFormData,
   ]);
 }

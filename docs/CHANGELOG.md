@@ -9,6 +9,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Apply to Job**: 3-step progressive flow for job applications (`/apply` route)
+  - Step 1: Job Details (company, role, description)
+  - Step 2: Match Analysis (reuses `POST /chat/match-analysis`)
+  - Step 3: Review Changes — AI-generated field-level suggestions with per-change checkboxes
+  - "Open in Tune Screen" button to continue in editor tune mode
+  - `ApplyToJobScreen.tsx` with step navigation and animations
+- **AI tailoring endpoint**: `POST /api/tailor/suggest-changes` generates field-level CV change suggestions
+  - Returns granular changes per-bullet, per-skill with section, type, description, old/new values
+  - `TAILOR_SUGGEST_PROMPT` in `prompts/cv_agent.py`
+  - `routes/tailor.py` route handler
+- **Editor tune mode**: Guided CV tailoring in the editor screen
+  - Collapsible job input section (company, role, description) with smooth animation
+  - `MatchSummaryBar` — compact score bar with gap count, progress indicator, expandable details
+  - `TailorPanel` — AI suggestion cards with accept/skip/undo, inline diff view, inline editing
+  - Auto-collapse reviewed cards to compact single-line (recovers ~58px per card)
+  - "Accept All Remaining" bulk action
+  - PDF auto-recompiles after each accepted change
+  - Auto-compile on tune mode entry
+  - `useTailor` hook managing suggestions, applied/skipped/pending state, estimated score
+- **Dashboard actions**: "Tune for a Job" and "Apply to Job" buttons per base CV group
+  - "Tune for a Job" navigates to `/editor` with `mode: 'tune'` and base CV loaded
+  - "Apply to Job" navigates to `/apply` with base CV loaded
+  - On-demand PDF download button from any version row
+  - `cvFilename.ts` utility generates formatted filenames (e.g., `John_Smith_Google_Staff_SWE_CV.pdf`)
+- **Form data patching**: `formDataPatch.ts` resolves nested paths like `workExperience[0].bullets[2]` for granular form updates
 - **Storage abstraction layer**: Pluggable storage backends for user data persistence
   - `StorageBackend` Protocol with 11-method async interface (`services/storage.py`)
   - `FileStorage` implementation wraps existing JSON file I/O — zero behavior change (`services/file_storage.py`)
@@ -45,7 +70,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Voice profile persistence for returning users (`GET/POST /api/voice/profile`)
   - Alpha quality: optional dependency (`pip install 'pipecat-ai[aws]'`), no session persistence, no error recovery
 - **React Router v6 navigation**: URL-based routing with browser back/forward support
-  - 7 routes: `/`, `/build/start`, `/build`, `/build/form`, `/import`, `/dashboard`, `/editor`
+  - 8 routes: `/`, `/build/start`, `/build`, `/build/form`, `/import`, `/apply`, `/dashboard`, `/editor`
   - `react-router-dom` v6 with `<Routes>` and `<Route>` components in App.tsx
   - Navigation via `useNavigate()` hook, state passed via `location.state`
 - **AppContext refactor**: Centralized state management replacing App.tsx god component
@@ -121,10 +146,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **State management**: App.tsx god component pattern replaced with AppContext
   - All shared state moved to `contexts/AppContext.tsx`
   - Components access state via `useAppContext()` hook
-- **Form builder right panel**: Redesigned with tabs (Preview | Job Tuning)
-  - Mode passed via `location.state.mode`: 'build' | 'tune'
-  - Tune mode defaults to Job Tuning tab; Build mode defaults to Preview tab
-  - "Advanced Editor" button in preview header navigates to `/editor` escape hatch
+- **Form builder right panel**: PDF preview with "Advanced Editor" escape hatch to `/editor`
 - CORS `allow_methods` expanded to include `DELETE`
 - Template selection screen now has a Back button (returns to landing)
 - Landing page layout: two-column (branding left, actions right), responsive collapse on mobile
