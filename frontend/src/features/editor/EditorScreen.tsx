@@ -116,6 +116,8 @@ export default function EditorScreen() {
     el.style.maxHeight = `${el.scrollHeight}px`;
     void el.offsetHeight;
     el.style.maxHeight = "0px";
+    el.style.paddingTop = "0";
+    el.style.paddingBottom = "0";
     setJobCollapsed(true);
   }, []);
 
@@ -124,6 +126,8 @@ export default function EditorScreen() {
     setJobCollapsed(false);
     requestAnimationFrame(() => {
       if (el) {
+        el.style.paddingTop = "";
+        el.style.paddingBottom = "";
         el.style.maxHeight = `${el.scrollHeight}px`;
       }
     });
@@ -255,6 +259,8 @@ export default function EditorScreen() {
                 if (e.propertyName !== "max-height") return;
                 if (!jobCollapsed && jobBodyRef.current) {
                   jobBodyRef.current.style.maxHeight = "";
+                  jobBodyRef.current.style.paddingTop = "";
+                  jobBodyRef.current.style.paddingBottom = "";
                 }
               }}
             >
