@@ -28,6 +28,14 @@ export function useChat(
   const streamingContentRef = useRef('');
   const abortRef = useRef<AbortController | null>(null);
 
+  // Refs to always hold the latest parameter values (avoids stale closures)
+  const texContentRef = useRef(texContent);
+  texContentRef.current = texContent;
+  const jobDescriptionRef = useRef(jobDescription);
+  jobDescriptionRef.current = jobDescription;
+  const companyNameRef = useRef(companyName);
+  companyNameRef.current = companyName;
+
   // Prefetch support — silent background fetch of match analysis
   const prefetchedMatchRef = useRef<MatchAnalysis | null>(null);
   const prefetchHashRef = useRef('');
@@ -44,7 +52,11 @@ export function useChat(
 
   // Analyze job description (initial analysis)
   const analyzeJob = useCallback(async () => {
-    if (!jobDescription.trim()) return;
+    const currentTex = texContentRef.current;
+    const currentJD = jobDescriptionRef.current;
+    const currentCompany = companyNameRef.current;
+
+    if (!currentJD.trim()) return;
 
     // Cancel any in-flight request
     abortRef.current?.abort();
@@ -58,7 +70,7 @@ export function useChat(
     streamingContentRef.current = '';
 
     // Also trigger match analysis in background
-    api.getMatchAnalysis(texContent, jobDescription, companyName, controller.signal).then((result) => {
+    api.getMatchAnalysis(currentTex, currentJD, currentCompany, controller.signal).then((result) => {
       if (result) {
         setMatchAnalysis(result);
       }
@@ -66,9 +78,9 @@ export function useChat(
 
     try {
       await api.analyzeJob(
-        texContent,
-        jobDescription,
-        companyName,
+        currentTex,
+        currentJD,
+        currentCompany,
         (chunk) => {
           setIsThinking(false);
           streamingContentRef.current += chunk;
@@ -93,13 +105,17 @@ export function useChat(
       setIsAnalyzing(false);
       setIsThinking(false);
     }
-  }, [texContent, jobDescription, companyName]);
+  }, []);
 
   // Get match analysis separately — checks prefetch cache first
   const getMatchAnalysis = useCallback(async () => {
-    if (!jobDescription.trim()) return;
+    const currentJD = jobDescriptionRef.current;
+    const currentCompany = companyNameRef.current;
+    const currentTex = texContentRef.current;
 
-    const inputHash = `${jobDescription.trim().slice(0, 200)}|${companyName}`;
+    if (!currentJD.trim()) return;
+
+    const inputHash = `${currentJD.trim().slice(0, 200)}|${currentCompany}`;
     if (prefetchedMatchRef.current && prefetchHashRef.current === inputHash) {
       setMatchAnalysis(prefetchedMatchRef.current);
       prefetchedMatchRef.current = null;
@@ -108,12 +124,12 @@ export function useChat(
     }
 
     setIsLoadingMatch(true);
-    const result = await api.getMatchAnalysis(texContent, jobDescription, companyName);
+    const result = await api.getMatchAnalysis(currentTex, currentJD, currentCompany);
     if (result) {
       setMatchAnalysis(result);
     }
     setIsLoadingMatch(false);
-  }, [texContent, jobDescription, companyName]);
+  }, []);
 
   // Prefetch match analysis silently in background
   const prefetchMatchAnalysis = useCallback(async (

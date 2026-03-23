@@ -51,7 +51,7 @@ function PendingCard({
   onGoToField?: (fieldPath: string) => void;
   isApplying: boolean;
 }) {
-  const [showDiff, setShowDiff] = useState(false);
+  const [showDiff, setShowDiff] = useState(true);
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
 
@@ -105,7 +105,7 @@ function PendingCard({
 
         <div className={styles.cardToggles}>
           <button className={styles.diffToggle} onClick={() => setShowDiff(!showDiff)}>
-            {showDiff ? 'Hide diff' : 'Show diff'}
+            {showDiff ? 'Hide changes' : 'Show changes'}
           </button>
           <button className={styles.diffToggle} onClick={editing ? handleSaveEdit : handleStartEdit}>
             {editing ? 'Save edit' : 'Edit'}

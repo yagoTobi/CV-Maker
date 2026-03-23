@@ -59,19 +59,24 @@ def _serialize_form_data(fd: CVFormData) -> str:
     return json.dumps(cleaned, indent=2)
 
 
-def _resolve_path(data: dict, path: str) -> bool:
-    """Check if a field path is resolvable against the form data."""
+def _resolve_path(data: dict, path: str, change_type: str = "modify") -> bool:
+    """Check if a field path is resolvable against the form data.
+
+    For 'add' changes, allows the path if the parent object exists
+    (the leaf key may not exist yet, e.g. adding personalInfo.summary).
+    """
     import re
     segments = re.findall(r'([^.\[]+)|\[(\d+)\]', path)
+    parsed = [seg_name if seg_name else int(seg_idx) for seg_name, seg_idx in segments]
+
     cur = data
-    for seg_name, seg_idx in segments:
-        key = seg_name if seg_name else int(seg_idx)
+    for i, key in enumerate(parsed):
         try:
-            if isinstance(key, int):
-                cur = cur[key]
-            else:
-                cur = cur[key]
+            cur = cur[key]
         except (KeyError, IndexError, TypeError):
+            # For 'add' changes, it's OK if just the last segment is missing
+            if change_type == "add" and i == len(parsed) - 1:
+                return True
             return False
     return True
 
@@ -128,8 +133,9 @@ Analyze this CV against the job description and suggest specific field-level cha
         changes = []
         for item in parsed.get("changes", []):
             field_path = item.get("field_path", "")
+            change_type = item.get("change_type", "modify")
             # Validate path resolves against form data
-            if not _resolve_path(form_dict, field_path):
+            if not _resolve_path(form_dict, field_path, change_type):
                 logger.warning(f"Skipping unresolvable path: {field_path}")
                 continue
             # Parse alternatives array, with fallback for flat new_value
