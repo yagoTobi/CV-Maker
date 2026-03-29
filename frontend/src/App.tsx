@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Link } from 'react-router-dom';
 import { AppProvider } from './contexts/AppContext';
 import { FeatureErrorBoundary } from './components/FeatureErrorBoundary';
 
@@ -10,6 +10,15 @@ const TemplateSelector = lazy(() => import('./features/template-selection/Templa
 const CVFormBuilder = lazy(() => import('./features/form-builder/CVFormBuilder'));
 const CVImportUpload = lazy(() => import('./features/cv-import/CVImportUpload'));
 const ApplyToJobScreen = lazy(() => import('./features/apply-to-job/ApplyToJobScreen'));
+
+function NotFound() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', fontFamily: 'var(--font-family-sans)', color: 'var(--color-text-primary)' }}>
+      <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>404 - Page not found</h1>
+      <Link to="/" style={{ color: 'var(--color-accent)', textDecoration: 'none' }}>Go to home</Link>
+    </div>
+  );
+}
 
 function App() {
   return (
@@ -23,6 +32,7 @@ function App() {
           <Route path="/build/form" element={<FeatureErrorBoundary><CVFormBuilder /></FeatureErrorBoundary>} />
           <Route path="/import" element={<FeatureErrorBoundary><CVImportUpload /></FeatureErrorBoundary>} />
           <Route path="/apply" element={<FeatureErrorBoundary><ApplyToJobScreen /></FeatureErrorBoundary>} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
     </AppProvider>

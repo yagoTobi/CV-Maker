@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import base64
 import logging
 
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class CompileRequest(BaseModel):
-    tex_content: str
+    tex_content: str = Field(max_length=500_000)
     cls_content: str | None = None
     template_id: str | None = None
 
