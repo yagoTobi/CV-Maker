@@ -19,7 +19,7 @@ function App() {
           <Route path="/" element={<LandingScreen />} />
           <Route path="/dashboard" element={<FeatureErrorBoundary><Dashboard /></FeatureErrorBoundary>} />
           <Route path="/build/start" element={<FeatureErrorBoundary><BuildChoiceScreen /></FeatureErrorBoundary>} />
-          <Route path="/build" element={<TemplateSelector />} />
+          <Route path="/build" element={<FeatureErrorBoundary><TemplateSelector /></FeatureErrorBoundary>} />
           <Route path="/build/form" element={<FeatureErrorBoundary><CVFormBuilder /></FeatureErrorBoundary>} />
           <Route path="/import" element={<FeatureErrorBoundary><CVImportUpload /></FeatureErrorBoundary>} />
           <Route path="/apply" element={<FeatureErrorBoundary><ApplyToJobScreen /></FeatureErrorBoundary>} />

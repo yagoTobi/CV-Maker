@@ -9,9 +9,9 @@ import type {
   VoiceWidgetState,
   VoiceTranscriptLine,
 } from "../types";
+import { API_BASE } from "../services/api";
 
-const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:8000/api`;
-const WS_URL = import.meta.env.VITE_WS_URL || API_BASE.replace(/^http/, 'ws').replace(/\/api$/, '/api/ws/voice-interview');
+const WS_URL = import.meta.env.VITE_WS_URL || API_BASE.replace(/^http/, 'ws') + '/ws/voice-interview';
 
 // Dev-only logging
 const log = import.meta.env.DEV ? console.log.bind(console) : () => {};

@@ -258,6 +258,21 @@ async def voice_interview_ws(websocket: WebSocket):
 # ---------------------------------------------------------------------------
 
 
+class CareerHistoryEntry(BaseModel):
+    company: str = ""
+    title: str = ""
+    years: str = ""
+
+
+class VoiceProfileData(BaseModel):
+    fullName: str = ""
+    summary: str = ""
+    skills_mentioned: list[str] = []
+    career_history: list[CareerHistoryEntry] = []
+    projects_mentioned: list[str] = []
+    last_updated: str = ""
+
+
 class ExtractCVRequest(BaseModel):
     session_id: str
 
@@ -344,10 +359,10 @@ async def get_voice_profile_endpoint(
 
 @router.post("/voice/profile")
 async def post_voice_profile(
-    profile: dict,
+    profile: VoiceProfileData,
     user_id: str = Depends(get_current_user),
     storage: StorageBackend = Depends(get_storage),
 ):
-    await storage.save_voice_profile(user_id, profile)
+    await storage.save_voice_profile(user_id, profile.model_dump())
     return {"ok": True}
 

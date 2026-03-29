@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { api } from '../services/api';
-import type { Message, UserProfile, MatchAnalysis, CVEdit } from '../types';
-import { applyEdit } from '../types';
+import type { Message, UserProfile, MatchAnalysis } from '../types';
 
 interface UseChatOptions {
   onContentChanged?: (newContent: string) => void;
@@ -19,7 +18,6 @@ export function useChat(
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
-  const [editHistory, setEditHistory] = useState<Record<string, string>>({});
 
   // Match analysis
   const [matchAnalysis, setMatchAnalysis] = useState<MatchAnalysis | null>(null);
@@ -200,31 +198,6 @@ export function useChat(
     }
   }, [messages, texContent, jobDescription, companyName, userProfile]);
 
-  // Apply an edit from AI suggestion
-  const applyEditToContent = useCallback((edit: CVEdit, editKey: string): boolean => {
-    const newContent = applyEdit(texContent, edit);
-    if (newContent) {
-      setEditHistory(prev => ({ ...prev, [editKey]: texContent }));
-      onContentChanged?.(newContent);
-      return true;
-    }
-    return false;
-  }, [texContent, onContentChanged]);
-
-  // Undo an edit
-  const undoEdit = useCallback((editKey: string): boolean => {
-    const previousContent = editHistory[editKey];
-    if (previousContent) {
-      setEditHistory(prev => {
-        const { [editKey]: _, ...rest } = prev;
-        return rest;
-      });
-      onContentChanged?.(previousContent);
-      return true;
-    }
-    return false;
-  }, [editHistory, onContentChanged]);
-
   // Reset chat state
   const reset = useCallback(() => {
     abortRef.current?.abort();
@@ -233,7 +206,6 @@ export function useChat(
     setStreamingContent('');
     setMatchAnalysis(null);
     setHasAnalyzed(false);
-    setEditHistory({});
   }, []);
 
   return useMemo(() => ({
@@ -248,8 +220,6 @@ export function useChat(
     getMatchAnalysis,
     prefetchMatchAnalysis,
     sendMessage,
-    applyEdit: applyEditToContent,
-    undoEdit,
     reset,
   }), [
     messages,
@@ -263,8 +233,6 @@ export function useChat(
     getMatchAnalysis,
     prefetchMatchAnalysis,
     sendMessage,
-    applyEditToContent,
-    undoEdit,
     reset,
   ]);
 }

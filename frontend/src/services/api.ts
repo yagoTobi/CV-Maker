@@ -2,7 +2,7 @@ import axios from 'axios';
 import type { CompileResponse, ChatRequest, UserProfile, MatchAnalysis, CVFormData, CVVersion, CVVersionMeta, CVVersionWithChildren, CVImportResponse, TailorResponse } from '../types';
 import type { Template } from '../features/template-selection';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 // Create axios instance with default timeout
 const axiosInstance = axios.create({
@@ -80,32 +80,22 @@ export const api = {
   },
 
   async fetchTemplates(): Promise<Template[]> {
-    try {
-      const response = await axiosInstance.get<{ templates: Template[] }>(`${API_BASE}/templates`);
-      const apiOrigin = new URL(API_BASE).origin;
-      return response.data.templates.map(t => ({
-        ...t,
-        previewUrl: `${apiOrigin}${t.previewUrl}`,
-      }));
-    } catch (err) {
-      console.error('Failed to fetch templates:', err);
-      return [];
-    }
+    const response = await axiosInstance.get<{ templates: Template[] }>(`${API_BASE}/templates`);
+    const apiOrigin = new URL(API_BASE).origin;
+    return response.data.templates.map(t => ({
+      ...t,
+      previewUrl: `${apiOrigin}${t.previewUrl}`,
+    }));
   },
 
   async loadTemplateContent(templateId: string): Promise<{ content: string; clsContent: string | null }> {
-    try {
-      const response = await axiosInstance.get<{ content: string; cls_content: string | null }>(
-        `${API_BASE}/templates/${templateId}/content`
-      );
-      return {
-        content: response.data.content,
-        clsContent: response.data.cls_content,
-      };
-    } catch (err) {
-      console.error('Failed to load template content:', err);
-      return { content: '', clsContent: null };
-    }
+    const response = await axiosInstance.get<{ content: string; cls_content: string | null }>(
+      `${API_BASE}/templates/${templateId}/content`
+    );
+    return {
+      content: response.data.content,
+      clsContent: response.data.cls_content,
+    };
   },
 
   async streamChat(
@@ -162,34 +152,21 @@ export const api = {
     companyName: string,
     signal?: AbortSignal
   ): Promise<MatchAnalysis | null> {
-    try {
-      const response = await axiosInstance.post<MatchAnalysis>(`${API_BASE}/chat/match-analysis`, {
-        cv_content: cvContent,
-        job_description: jobDescription,
-        company_name: companyName,
-      }, { signal });
-      return response.data;
-    } catch (err) {
-      console.error('Match analysis failed:', err);
-      return null;
-    }
+    const response = await axiosInstance.post<MatchAnalysis>(`${API_BASE}/chat/match-analysis`, {
+      cv_content: cvContent,
+      job_description: jobDescription,
+      company_name: companyName,
+    }, { signal });
+    return response.data;
   },
 
   async loadUserData(): Promise<UserProfile | null> {
-    try {
-      const response = await axiosInstance.get<UserProfile>(`${API_BASE}/user-data`);
-      return response.data;
-    } catch {
-      return null;
-    }
+    const response = await axiosInstance.get<UserProfile>(`${API_BASE}/user-data`);
+    return response.data;
   },
 
   async saveUserData(profile: UserProfile): Promise<void> {
-    try {
-      await axiosInstance.post(`${API_BASE}/user-data`, profile);
-    } catch (err) {
-      console.error('Failed to save user data:', err);
-    }
+    await axiosInstance.post(`${API_BASE}/user-data`, profile);
   },
 
   async generateLatex(formData: CVFormData): Promise<{ texContent: string; error?: string }> {
@@ -203,12 +180,8 @@ export const api = {
   },
 
   async listVersions(): Promise<{ versions: CVVersionWithChildren[]; ungrouped: CVVersionMeta[] }> {
-    try {
-      const response = await axiosInstance.get<{ versions: CVVersionWithChildren[]; ungrouped: CVVersionMeta[] }>(`${API_BASE}/cv-versions`);
-      return response.data;
-    } catch {
-      return { versions: [], ungrouped: [] };
-    }
+    const response = await axiosInstance.get<{ versions: CVVersionWithChildren[]; ungrouped: CVVersionMeta[] }>(`${API_BASE}/cv-versions`);
+    return response.data;
   },
 
   async suggestTailorChanges(
@@ -218,21 +191,16 @@ export const api = {
     role?: string,
     signal?: AbortSignal
   ): Promise<TailorResponse | null> {
-    try {
-      const response = await axiosInstance.post<TailorResponse>(`${API_BASE}/tailor/suggest-changes`, {
-        form_data: formData,
-        job_description: jobDescription,
-        company_name: companyName,
-        role: role,
-      }, {
-        timeout: 60000,
-        signal,
-      });
-      return response.data;
-    } catch (err) {
-      console.error('Tailor suggest-changes failed:', err);
-      return null;
-    }
+    const response = await axiosInstance.post<TailorResponse>(`${API_BASE}/tailor/suggest-changes`, {
+      form_data: formData,
+      job_description: jobDescription,
+      company_name: companyName,
+      role: role,
+    }, {
+      timeout: 60000,
+      signal,
+    });
+    return response.data;
   },
 
   async saveVersion(data: {
@@ -247,55 +215,37 @@ export const api = {
     baselineMatchScore?: number;
     parentVersionId?: string | null;
   }): Promise<CVVersion | null> {
-    try {
-      const payload = {
-        name: data.name,
-        template_id: data.templateId,
-        tex_content: data.texContent,
-        form_data: data.formData,
-        job_description: data.jobDescription,
-        company_name: data.companyName,
-        role: data.role,
-        match_score: data.matchScore,
-        baseline_match_score: data.baselineMatchScore,
-        parent_version_id: data.parentVersionId,
-      };
-      const response = await axiosInstance.post<CVVersion>(`${API_BASE}/cv-versions`, payload);
-      return response.data;
-    } catch (err) {
-      console.error('Failed to save version:', err);
-      return null;
-    }
+    const payload = {
+      name: data.name,
+      template_id: data.templateId,
+      tex_content: data.texContent,
+      form_data: data.formData,
+      job_description: data.jobDescription,
+      company_name: data.companyName,
+      role: data.role,
+      match_score: data.matchScore,
+      baseline_match_score: data.baselineMatchScore,
+      parent_version_id: data.parentVersionId,
+    };
+    const response = await axiosInstance.post<CVVersion>(`${API_BASE}/cv-versions`, payload);
+    return response.data;
   },
 
   async getVersion(id: string): Promise<CVVersion | null> {
-    try {
-      const response = await axiosInstance.get<CVVersion>(`${API_BASE}/cv-versions/${id}`);
-      return response.data;
-    } catch {
-      return null;
-    }
+    const response = await axiosInstance.get<CVVersion>(`${API_BASE}/cv-versions/${id}`);
+    return response.data;
   },
 
   async deleteVersion(id: string): Promise<boolean> {
-    try {
-      await axiosInstance.delete(`${API_BASE}/cv-versions/${id}`);
-      return true;
-    } catch {
-      return false;
-    }
+    await axiosInstance.delete(`${API_BASE}/cv-versions/${id}`);
+    return true;
   },
 
   async updateVersion(id: string, data: { parentVersionId?: string | null }): Promise<boolean> {
-    try {
-      await axiosInstance.patch(`${API_BASE}/cv-versions/${id}`, {
-        parentVersionId: data.parentVersionId,
-      });
-      return true;
-    } catch (err) {
-      console.error('Failed to update version:', err);
-      return false;
-    }
+    await axiosInstance.patch(`${API_BASE}/cv-versions/${id}`, {
+      parentVersionId: data.parentVersionId,
+    });
+    return true;
   },
 
   async importCV(file: File, signal?: AbortSignal): Promise<CVImportResponse> {
@@ -309,7 +259,7 @@ export const api = {
       });
       return response.data;
     } catch (err) {
-      if (axiosInstance.isAxiosError(err) && err.response?.data?.detail) {
+      if (axios.isAxiosError(err) && err.response?.data?.detail) {
         return {
           success: false,
           formData: null,
