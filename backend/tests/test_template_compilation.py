@@ -28,8 +28,8 @@ from typing import Optional
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from jinja2 import Environment, FileSystemLoader
-from routes.cv_versions import CVFormData
-from routes.generate_latex import latex_escape, latex_url_escape, _build_personal_items
+from routes.cv_versions import CVFormData, BulletItem
+from routes.generate_latex import latex_escape, latex_url_escape, _build_personal_items, _flatten_for_template
 from services.latex_compiler import LaTeXCompiler, CompileResult
 from config.templates import get_template
 
@@ -75,16 +75,21 @@ class TestTemplateCompilation:
         return LaTeXCompiler()
 
     def _build_context(self, form_data: CVFormData) -> dict:
-        """Build template rendering context (mirrors generate_latex.py logic)."""
+        """Build template rendering context (mirrors generate_latex.py logic).
+
+        Uses _flatten_for_template to convert BulletItem/SkillItem to strings,
+        matching the production generate_latex route behavior.
+        """
+        flat = _flatten_for_template(form_data)
         personal_order = form_data.personalInfo.personalOrder or ["phone", "email", "location", "links"]
         return {
             "personal": form_data.personalInfo,
             "personal_items": _build_personal_items(form_data.personalInfo, personal_order),
-            "work": form_data.workExperience,
-            "education": form_data.education,
-            "skills": form_data.skills,
-            "projects": form_data.projects or [],
-            "awards": form_data.awards or [],
+            "work": flat.get("workExperience", []),
+            "education": flat.get("education", []),
+            "skills": flat.get("skills", []),
+            "projects": flat.get("projects", []),
+            "awards": flat.get("awards", []),
             "section_order": form_data.sectionOrder or ["work", "education", "skills", "projects", "awards"],
         }
 
@@ -273,9 +278,9 @@ class TestTemplateCompilation:
         data.personalInfo.location = "Zürich, Switzerland"
         data.workExperience[0].company = "Société Générale"
         data.workExperience[0].bullets = [
-            "Développé des applications en français",
-            "Worked with über-complex systems",
-            "Managed €10M budget efficiently",
+            BulletItem(text="Développé des applications en français"),
+            BulletItem(text="Worked with über-complex systems"),
+            BulletItem(text="Managed €10M budget efficiently"),
         ]
 
         result = self._render_and_compile(compiler, template_id, data)

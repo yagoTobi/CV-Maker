@@ -6,38 +6,41 @@
     "phone": "+1-555-0123",
     "location": "San Francisco, CA",
     "links": [
-      {"label": "GitHub", "url": "https://github.com/janesmith"},
-      {"label": "LinkedIn", "url": "https://linkedin.com/in/janesmith"}
+      {"id": "test-link-1", "label": "GitHub", "url": "https://github.com/janesmith"},
+      {"id": "test-link-2", "label": "LinkedIn", "url": "https://linkedin.com/in/janesmith"}
     ],
     "summary": "Experienced software engineer with a passion for building scalable systems."
   },
   "workExperience": [
     {
+      "id": "test-work-1",
       "company": "Tech Giant Inc",
       "title": "Senior Software Engineer",
       "startDate": "Jan 2021",
       "endDate": "Present",
       "location": "San Francisco, CA",
       "bullets": [
-        "Led a team of 5 engineers to build microservices architecture",
-        "Improved system performance by 40% through optimization",
-        "Mentored junior developers and conducted code reviews"
+        {"id": "test-wb-1", "text": "Led a team of 5 engineers to build microservices architecture"},
+        {"id": "test-wb-2", "text": "Improved system performance by 40% through optimization"},
+        {"id": "test-wb-3", "text": "Mentored junior developers and conducted code reviews"}
       ]
     },
     {
+      "id": "test-work-2",
       "company": "StartupXYZ",
       "title": "Software Engineer",
       "startDate": "Jun 2019",
       "endDate": "Dec 2020",
       "location": "Remote",
       "bullets": [
-        "Built RESTful APIs using Python and FastAPI",
-        "Implemented CI/CD pipelines with GitHub Actions"
+        {"id": "test-wb-4", "text": "Built RESTful APIs using Python and FastAPI"},
+        {"id": "test-wb-5", "text": "Implemented CI/CD pipelines with GitHub Actions"}
       ]
     }
   ],
   "education": [
     {
+      "id": "test-edu-1",
       "school": "University of California, Berkeley",
       "degree": "B.S. in Computer Science",
       "startDate": "Aug 2015",
@@ -45,32 +48,47 @@
       "location": "Berkeley, CA",
       "gpa": "3.8/4.0",
       "details": [
-        "Dean's List all semesters",
-        "Relevant coursework: Data Structures, Algorithms, Machine Learning"
+        {"id": "test-ed-1", "text": "Dean's List all semesters"},
+        {"id": "test-ed-2", "text": "Relevant coursework: Data Structures, Algorithms, Machine Learning"}
       ]
     }
   ],
   "skills": [
     {
+      "id": "test-skill-1",
       "category": "Languages",
-      "skills": ["Python", "JavaScript", "TypeScript", "Go"]
+      "skills": [
+        {"id": "test-sk-1", "text": "Python"},
+        {"id": "test-sk-2", "text": "JavaScript"},
+        {"id": "test-sk-3", "text": "TypeScript"},
+        {"id": "test-sk-4", "text": "Go"}
+      ]
     },
     {
+      "id": "test-skill-2",
       "category": "Frameworks",
-      "skills": ["React", "FastAPI", "Django"]
+      "skills": [
+        {"id": "test-sk-5", "text": "React"},
+        {"id": "test-sk-6", "text": "FastAPI"},
+        {"id": "test-sk-7", "text": "Django"}
+      ]
     }
   ],
   "projects": [
     {
+      "id": "test-proj-1",
       "name": "Open Source CLI Tool",
       "year": "2023",
       "description": "Built a command-line tool for managing cloud resources",
       "technologies": "Go, AWS SDK",
-      "bullets": ["Published on Homebrew with 500+ downloads"]
+      "bullets": [
+        {"id": "test-pb-1", "text": "Published on Homebrew with 500+ downloads"}
+      ]
     }
   ],
   "awards": [
     {
+      "id": "test-award-1",
       "year": "2023",
       "title": "Best Innovation Award",
       "description": "For developing an AI-powered code review system"

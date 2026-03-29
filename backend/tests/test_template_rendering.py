@@ -92,7 +92,11 @@ class TestFixtures:
 
     @staticmethod
     def maximal_data() -> CVFormData:
-        """Maximal CV: all sections filled with multiple entries."""
+        """Maximal CV: all sections filled with multiple entries.
+
+        Uses new structured format (BulletItem/SkillItem) to verify rendering
+        with ID-bearing data after flattening.
+        """
         return CVFormData(
             templateId="med-length-proff-cv",
             sectionOrder=["work", "education", "projects", "skills", "awards"],
@@ -110,31 +114,34 @@ class TestFixtures:
             ),
             workExperience=[
                 WorkEntry(
+                    id="test-work-1",
                     company="Tech Giant Inc",
                     title="Senior Software Engineer",
                     startDate="2021",
                     endDate="Present",
                     location="San Francisco, CA",
                     bullets=[
-                        "Led a team of 5 engineers to build microservices architecture",
-                        "Improved system performance by 40% through optimization",
-                        "Mentored junior developers and conducted code reviews",
+                        BulletItem(id="test-wb-1", text="Led a team of 5 engineers to build microservices architecture"),
+                        BulletItem(id="test-wb-2", text="Improved system performance by 40% through optimization"),
+                        BulletItem(id="test-wb-3", text="Mentored junior developers and conducted code reviews"),
                     ],
                 ),
                 WorkEntry(
+                    id="test-work-2",
                     company="StartupXYZ",
                     title="Software Engineer",
                     startDate="2019",
                     endDate="2021",
                     location="Remote",
                     bullets=[
-                        "Built RESTful APIs using Python and FastAPI",
-                        "Implemented CI/CD pipelines with GitHub Actions",
+                        BulletItem(id="test-wb-4", text="Built RESTful APIs using Python and FastAPI"),
+                        BulletItem(id="test-wb-5", text="Implemented CI/CD pipelines with GitHub Actions"),
                     ],
                 ),
             ],
             education=[
                 EducationEntry(
+                    id="test-edu-1",
                     school="University of California, Berkeley",
                     degree="B.S. in Computer Science",
                     startDate="2015",
@@ -142,33 +149,55 @@ class TestFixtures:
                     location="Berkeley, CA",
                     gpa="3.8/4.0",
                     details=[
-                        "Dean's List all semesters",
-                        "Relevant coursework: Data Structures, Algorithms, Machine Learning",
+                        BulletItem(id="test-ed-1", text="Dean's List all semesters"),
+                        BulletItem(id="test-ed-2", text="Relevant coursework: Data Structures, Algorithms, Machine Learning"),
                     ],
                 ),
             ],
             skills=[
                 SkillCategory(
+                    id="test-skill-1",
                     category="Languages",
-                    skills=["Python", "JavaScript", "TypeScript", "Go", "Rust"],
+                    skills=[
+                        SkillItem(id="test-sk-1", text="Python"),
+                        SkillItem(id="test-sk-2", text="JavaScript"),
+                        SkillItem(id="test-sk-3", text="TypeScript"),
+                        SkillItem(id="test-sk-4", text="Go"),
+                        SkillItem(id="test-sk-5", text="Rust"),
+                    ],
                 ),
                 SkillCategory(
+                    id="test-skill-2",
                     category="Frameworks",
-                    skills=["React", "FastAPI", "Django", "Express.js"],
+                    skills=[
+                        SkillItem(id="test-sk-6", text="React"),
+                        SkillItem(id="test-sk-7", text="FastAPI"),
+                        SkillItem(id="test-sk-8", text="Django"),
+                        SkillItem(id="test-sk-9", text="Express.js"),
+                    ],
                 ),
                 SkillCategory(
+                    id="test-skill-3",
                     category="Tools",
-                    skills=["Docker", "Kubernetes", "AWS", "Git", "PostgreSQL"],
+                    skills=[
+                        SkillItem(id="test-sk-10", text="Docker"),
+                        SkillItem(id="test-sk-11", text="Kubernetes"),
+                        SkillItem(id="test-sk-12", text="AWS"),
+                        SkillItem(id="test-sk-13", text="Git"),
+                        SkillItem(id="test-sk-14", text="PostgreSQL"),
+                    ],
                 ),
             ],
             projects=[
                 Project(
+                    id="test-proj-1",
                     name="Open Source Contributor",
                     year="2023",
                     description="Contributed to several high-profile open source projects including React and Kubernetes",
                     technologies="JavaScript, Go",
                 ),
                 Project(
+                    id="test-proj-2",
                     name="Personal Blog Platform",
                     year="2022",
                     description="Built a full-stack blog platform with markdown support and real-time comments",
@@ -177,11 +206,13 @@ class TestFixtures:
             ],
             awards=[
                 Award(
+                    id="test-award-1",
                     year="2023",
                     title="Best Innovation Award",
                     description="For developing an AI-powered code review system",
                 ),
                 Award(
+                    id="test-award-2",
                     year="2022",
                     title="Hackathon Winner",
                     description="First place in company-wide hackathon",
@@ -534,16 +565,21 @@ class TestTemplateRendering:
             assert awards_pos < projects_pos, "Awards should come before Projects"
 
     def _build_context(self, form_data: CVFormData) -> dict:
-        """Build template rendering context (mirrors generate_latex.py logic)."""
+        """Build template rendering context (mirrors generate_latex.py logic).
+
+        Uses _flatten_for_template to convert BulletItem/SkillItem to strings,
+        matching the production generate_latex route behavior.
+        """
+        flat = _flatten_for_template(form_data)
         personal_order = form_data.personalInfo.personalOrder or ["phone", "email", "location", "links"]
         return {
             "personal": form_data.personalInfo,
             "personal_items": _build_personal_items(form_data.personalInfo, personal_order),
-            "work": form_data.workExperience,
-            "education": form_data.education,
-            "skills": form_data.skills,
-            "projects": form_data.projects or [],
-            "awards": form_data.awards or [],
+            "work": flat.get("workExperience", []),
+            "education": flat.get("education", []),
+            "skills": flat.get("skills", []),
+            "projects": flat.get("projects", []),
+            "awards": flat.get("awards", []),
             "section_order": form_data.sectionOrder or ["work", "education", "skills", "projects", "awards"],
         }
 

@@ -260,6 +260,3 @@ test-cv.json
 # Vitest
 .vitest/
 **/coverage/
-
-# GSD planning artifacts (development-only)
-.planning/

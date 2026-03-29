@@ -313,7 +313,9 @@ class TestValidJsonResponse:
         skills = result.form_data["skills"]
         assert len(skills) == 3
         assert skills[0]["category"] == "Languages"
-        assert "Python" in skills[0]["skills"]
+        # After ensure_ids, skills are structured: [{"id": "...", "text": "Python"}, ...]
+        skill_texts = [s["text"] if isinstance(s, dict) else s for s in skills[0]["skills"]]
+        assert "Python" in skill_texts
 
     def test_projects_data_preserved(self):
         raw = json.dumps(_full_valid_response())

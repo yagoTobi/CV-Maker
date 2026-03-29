@@ -45,39 +45,60 @@ def ensure_ids(form_data: dict) -> tuple[dict, bool]:
         return changed
 
     # Personal info links
-    for link in form_data.get("personalInfo", {}).get("links", []):
-        if isinstance(link, dict):
-            modified |= _ensure_id(link)
+    personal_info = form_data.get("personalInfo", {})
+    if isinstance(personal_info, dict):
+        for link in personal_info.get("links", []):
+            if isinstance(link, dict):
+                modified |= _ensure_id(link)
 
     # Work experience
-    for entry in form_data.get("workExperience", []):
-        modified |= _ensure_id(entry)
-        modified |= _ensure_bullet_ids(entry.get("bullets", []))
+    work = form_data.get("workExperience", [])
+    if isinstance(work, list):
+        for entry in work:
+            if isinstance(entry, dict):
+                modified |= _ensure_id(entry)
+                modified |= _ensure_bullet_ids(entry.get("bullets", []))
 
     # Education
-    for entry in form_data.get("education", []):
-        modified |= _ensure_id(entry)
-        modified |= _ensure_bullet_ids(entry.get("details", []))
+    education = form_data.get("education", [])
+    if isinstance(education, list):
+        for entry in education:
+            if isinstance(entry, dict):
+                modified |= _ensure_id(entry)
+                modified |= _ensure_bullet_ids(entry.get("details", []))
 
     # Skills
-    for entry in form_data.get("skills", []):
-        modified |= _ensure_id(entry)
-        modified |= _ensure_skill_ids(entry.get("skills", []))
+    skills = form_data.get("skills", [])
+    if isinstance(skills, list):
+        for entry in skills:
+            if isinstance(entry, dict):
+                modified |= _ensure_id(entry)
+                modified |= _ensure_skill_ids(entry.get("skills", []))
 
     # Projects
-    for entry in form_data.get("projects", []) or []:
-        modified |= _ensure_id(entry)
-        modified |= _ensure_bullet_ids(entry.get("bullets", []) or [])
+    projects = form_data.get("projects", []) or []
+    if isinstance(projects, list):
+        for entry in projects:
+            if isinstance(entry, dict):
+                modified |= _ensure_id(entry)
+                modified |= _ensure_bullet_ids(entry.get("bullets", []) or [])
 
     # Awards
-    for entry in form_data.get("awards", []) or []:
-        modified |= _ensure_id(entry)
+    awards = form_data.get("awards", []) or []
+    if isinstance(awards, list):
+        for entry in awards:
+            if isinstance(entry, dict):
+                modified |= _ensure_id(entry)
 
     # Additional sections
-    for section in form_data.get("additionalSections", []) or []:
-        modified |= _ensure_id(section)
-        for entry in section.get("entries", []):
-            modified |= _ensure_id(entry)
-            modified |= _ensure_bullet_ids(entry.get("bullets", []))
+    additional = form_data.get("additionalSections", []) or []
+    if isinstance(additional, list):
+        for section in additional:
+            if isinstance(section, dict):
+                modified |= _ensure_id(section)
+                for entry in section.get("entries", []):
+                    if isinstance(entry, dict):
+                        modified |= _ensure_id(entry)
+                        modified |= _ensure_bullet_ids(entry.get("bullets", []))
 
     return form_data, modified

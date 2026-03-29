@@ -1,22 +1,9 @@
 .container {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-primary);
-  position: relative;
-  padding: 2rem;
+  composes: pageContainer from '../../styles/shared.module.css';
 }
 
 .background {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(var(--grid-color) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
-  background-size: 40px 40px;
-  opacity: 0.5;
-  pointer-events: none;
+  composes: gridBackground from '../../styles/shared.module.css';
 }
 
 .content {
