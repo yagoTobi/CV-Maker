@@ -33,7 +33,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md -- Type definitions + ID generation helpers (frontend types, backend Pydantic, nanoid, ensure_ids)
+- [x] 01-01-PLAN.md -- Type definitions + ID generation helpers (frontend types, backend Pydantic, nanoid, ensure_ids)
 - [ ] 01-02-PLAN.md -- Backend consumers (storage migration, generate_latex flatten, tailor strip, extractor, backend tests)
 - [ ] 01-03-PLAN.md -- Frontend consumers (useFormBuilder, formDataPatch, UI sections, frontend tests)
 

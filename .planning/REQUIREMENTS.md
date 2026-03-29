@@ -9,9 +9,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Data Model
 
-- [ ] **DATA-01**: All CVFormData array entry types (workExperience, education, skills, projects, awards, additionalSections) have stable unique IDs (not positional indices)
+- [x] **DATA-01**: All CVFormData array entry types (workExperience, education, skills, projects, awards, additionalSections) have stable unique IDs (not positional indices)
 - [ ] **DATA-02**: Existing features (AI tailor, import, version save/load) work correctly with ID-bearing entries
-- [ ] **DATA-03**: Backend endpoints accept and preserve stable IDs on array entries
+- [x] **DATA-03**: Backend endpoints accept and preserve stable IDs on array entries
 
 ### Core Editing
 
@@ -101,9 +101,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | Phase 1: Data Model Prep | Pending |
+| DATA-01 | Phase 1: Data Model Prep | Complete |
 | DATA-02 | Phase 1: Data Model Prep | Pending |
-| DATA-03 | Phase 1: Data Model Prep | Pending |
+| DATA-03 | Phase 1: Data Model Prep | Complete |
 | EDIT-01 | Phase 2: Core Editing Surface | Pending |
 | EDIT-02 | Phase 2: Core Editing Surface | Pending |
 | EDIT-03 | Phase 2: Core Editing Surface | Pending |
