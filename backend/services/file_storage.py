@@ -2,6 +2,8 @@ import json
 import os
 from typing import Optional
 
+from utils.id_helpers import ensure_ids
+
 
 class FileStorage:
     """File-based storage backend. Wraps existing JSON file I/O with zero behavior change."""
@@ -46,7 +48,18 @@ class FileStorage:
         if not os.path.exists(path):
             return None
         with open(path, "r") as f:
-            return json.load(f)
+            data = json.load(f)
+
+        # Auto-migrate: ensure all entries have stable IDs (D-05, D-06)
+        form_data = data.get("formData")
+        if form_data:
+            form_data, was_modified = ensure_ids(form_data)
+            if was_modified:
+                data["formData"] = form_data
+                with open(path, "w") as f:
+                    json.dump(data, f, indent=2)
+
+        return data
 
     async def create_version(self, user_id: str, version_data: dict) -> dict:
         versions_dir = self._versions_dir(user_id)

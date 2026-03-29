@@ -16,6 +16,46 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def _strip_ids_for_ai(form_dict: dict) -> dict:
+    """Strip IDs and flatten BulletItem/SkillItem to strings for AI consumption.
+
+    The AI expects the old schema (bullets as string[], skills as string[]).
+    This ensures the AI prompt matches training data format.
+    """
+    import copy
+    d = copy.deepcopy(form_dict)
+
+    def _flatten_bullets(items):
+        return [b["text"] if isinstance(b, dict) and "text" in b else b for b in items]
+
+    def _flatten_skills(items):
+        return [s["text"] if isinstance(s, dict) and "text" in s else s for s in items]
+
+    for work in d.get("workExperience", []):
+        work.pop("id", None)
+        work["bullets"] = _flatten_bullets(work.get("bullets", []))
+    for edu in d.get("education", []):
+        edu.pop("id", None)
+        edu["details"] = _flatten_bullets(edu.get("details", []))
+    for skill in d.get("skills", []):
+        skill.pop("id", None)
+        skill["skills"] = _flatten_skills(skill.get("skills", []))
+    for proj in d.get("projects", []) or []:
+        proj.pop("id", None)
+        proj["bullets"] = _flatten_bullets(proj.get("bullets", []) or [])
+    for award in d.get("awards", []) or []:
+        award.pop("id", None)
+    for section in d.get("additionalSections", []) or []:
+        section.pop("id", None)
+        for entry in section.get("entries", []):
+            entry.pop("id", None)
+            entry["bullets"] = _flatten_bullets(entry.get("bullets", []))
+    for link in d.get("personalInfo", {}).get("links", []):
+        link.pop("id", None)
+
+    return d
+
+
 class TailorRequest(BaseModel):
     form_data: CVFormData
     job_description: str
@@ -46,7 +86,7 @@ class TailorResponse(BaseModel):
 
 def _serialize_form_data(fd: CVFormData) -> str:
     """Serialize form data to readable structured text for AI consumption."""
-    d = fd.model_dump(exclude_none=True)
+    d = _strip_ids_for_ai(fd.model_dump(exclude_none=True))
     # Remove empty arrays and blank strings to reduce token count
     def _clean(obj):
         if isinstance(obj, dict):

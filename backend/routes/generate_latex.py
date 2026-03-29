@@ -111,6 +111,47 @@ def _build_personal_items(personal, order: list) -> list:
     return items
 
 
+def _flatten_for_template(form_data: CVFormData) -> dict:
+    """Flatten BulletItem/SkillItem back to strings for Jinja2 template consumption.
+
+    Templates expect bullets as strings and skills as strings.
+    This strips IDs and extracts .text values so templates need no changes.
+    """
+    d = form_data.model_dump(exclude_none=True)
+
+    def _flatten_bullets(items):
+        return [b["text"] if isinstance(b, dict) and "text" in b else str(b) for b in items]
+
+    def _flatten_skills(items):
+        return [s["text"] if isinstance(s, dict) and "text" in s else str(s) for s in items]
+
+    for work in d.get("workExperience", []):
+        work["bullets"] = _flatten_bullets(work.get("bullets", []))
+        work.pop("id", None)
+    for edu in d.get("education", []):
+        edu["details"] = _flatten_bullets(edu.get("details", []))
+        edu.pop("id", None)
+    for skill in d.get("skills", []):
+        skill["skills"] = _flatten_skills(skill.get("skills", []))
+        skill.pop("id", None)
+    for proj in d.get("projects", []) or []:
+        proj["bullets"] = _flatten_bullets(proj.get("bullets", []) or [])
+        proj.pop("id", None)
+    for award in d.get("awards", []) or []:
+        award.pop("id", None)
+    for section in d.get("additionalSections", []) or []:
+        section.pop("id", None)
+        for entry in section.get("entries", []):
+            entry["bullets"] = _flatten_bullets(entry.get("bullets", []))
+            entry.pop("id", None)
+
+    # Strip id from personal info links
+    for link in d.get("personalInfo", {}).get("links", []):
+        link.pop("id", None)
+
+    return d
+
+
 _TEMPLATE_FILE_MAP = {
     "med-length-proff-cv": "med-length-proff-cv.tex.j2",
     "deedy-resume": "deedy-resume.tex.j2",
@@ -134,16 +175,17 @@ async def generate_latex(form_data: CVFormData):
         logger.exception("Failed to load template: %s", form_data.templateId)
         raise HTTPException(status_code=500, detail="An internal error occurred")
 
+    flat = _flatten_for_template(form_data)
     personal_order = form_data.personalInfo.personalOrder or _DEFAULT_PERSONAL_ORDER
     context = {
         "personal": form_data.personalInfo,
         "personal_items": _build_personal_items(form_data.personalInfo, personal_order),
-        "work": form_data.workExperience,
-        "education": form_data.education,
-        "skills": form_data.skills,
-        "projects": form_data.projects or [],
-        "awards": form_data.awards or [],
-        "additional_sections": form_data.additionalSections or [],
+        "work": flat.get("workExperience", []),
+        "education": flat.get("education", []),
+        "skills": flat.get("skills", []),
+        "projects": flat.get("projects", []),
+        "awards": flat.get("awards", []),
+        "additional_sections": flat.get("additionalSections", []),
         "section_order": form_data.sectionOrder or ["work", "education", "skills", "projects", "awards"],
     }
 

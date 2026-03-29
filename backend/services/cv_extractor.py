@@ -12,6 +12,7 @@ from io import BytesIO
 
 from routes.cv_versions import CVFormData
 from services.bedrock import bedrock_client
+from utils.id_helpers import ensure_ids
 
 logger = logging.getLogger(__name__)
 
@@ -223,6 +224,9 @@ def _parse_extraction_response(raw: str, source: str) -> CVImportResult:
         logger.warning("Extracted data has schema issues: %s", e)
         warnings.append("Some fields may not match the expected format.")
 
+    # Ensure all extracted entries have stable IDs
+    data, _ = ensure_ids(data)
+
     return CVImportResult(
         success=True,
         form_data=data,
@@ -411,6 +415,9 @@ async def extract_from_json(file_bytes: bytes) -> CVImportResult:
             error="JSON structure doesn't match the CV schema.",
             warnings=field_errors[:5],
         )
+
+    # Ensure all entries have stable IDs
+    form_data, _ = ensure_ids(form_data)
 
     summary = ImportSummary(
         workEntries=len(form_data.get("workExperience", [])),

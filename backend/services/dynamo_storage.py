@@ -4,6 +4,8 @@ from typing import Optional
 
 import boto3
 
+from utils.id_helpers import ensure_ids
+
 
 class DynamoStorage:
     """DynamoDB storage backend using single-table design."""
@@ -78,7 +80,17 @@ class DynamoStorage:
         item = resp.get("Item")
         if item is None:
             return None
-        return self._convert_decimals(self._strip_keys(item))
+        item = self._convert_decimals(self._strip_keys(item))
+
+        # Auto-migrate: ensure all entries have stable IDs (D-05, D-06)
+        form_data = item.get("formData")
+        if form_data:
+            form_data, was_modified = ensure_ids(form_data)
+            if was_modified:
+                item["formData"] = form_data
+                await self.update_version(user_id, version_id, {"formData": form_data})
+
+        return item
 
     async def create_version(self, user_id: str, version_data: dict) -> dict:
         item = self._sanitize_for_dynamo(version_data)
