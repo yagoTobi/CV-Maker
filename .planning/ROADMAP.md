@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [x] 01-01-PLAN.md -- Type definitions + ID generation helpers (frontend types, backend Pydantic, nanoid, ensure_ids)
-- [ ] 01-02-PLAN.md -- Backend consumers (storage migration, generate_latex flatten, tailor strip, extractor, backend tests)
+- [x] 01-02-PLAN.md -- Backend consumers (storage migration, generate_latex flatten, tailor strip, extractor, backend tests)
 - [x] 01-03-PLAN.md -- Frontend consumers (useFormBuilder, formDataPatch, UI sections, frontend tests)
 
 ### Phase 2: Core Editing Surface

@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 01-03-PLAN.md
-last_updated: "2026-03-29T23:19:47.037Z"
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-03-29T23:20:12.189Z"
 last_activity: 2026-03-29
 progress:
   total_phases: 6
@@ -54,6 +54,7 @@ Progress: [███████░░░] 67%
 *Updated after each plan completion*
 | Phase 01 P01 | 3min | 2 tasks | 7 files |
 | Phase 01 P03 | 6min | 2 tasks | 10 files |
+| Phase 01 P02 | 4min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,8 @@ Recent decisions affecting current work:
 - [Phase 01]: Pydantic id fields are Optional[str] = None with field_validators for backward-compatible bare string coercion
 - [Phase 01]: ID-preserving CRUD pattern: { ...b, text: value } spread to update text while keeping stable id
 - [Phase 01]: Runtime structured array detection (_isStructuredArray) in formDataPatch over path-based detection
+- [Phase 01]: Auto-migration persists to storage on first read for idempotent ID injection
+- [Phase 01]: _flatten_for_template isolates Jinja2 templates from BulletItem/SkillItem data model changes
 
 ### Pending Todos
 
@@ -81,6 +84,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29T23:18:56.685Z
-Stopped at: Completed 01-03-PLAN.md
+Last session: 2026-03-29T23:20:12.180Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None
