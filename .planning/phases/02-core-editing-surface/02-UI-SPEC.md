@@ -36,9 +36,20 @@ The design contract has two layers:
 
 ## Spacing Scale
 
-This phase uses TWO spacing systems. The CV document layer uses LaTeX-derived values (in `pt`, `em`, `in`). The chrome layer uses the existing app spacing tokens.
+> **WARNING -- Two Independent Spacing Systems**
+>
+> This phase uses TWO spacing systems that MUST NOT be mixed. Applying 8px-grid tokens to CV document elements will break LaTeX fidelity. Applying LaTeX-derived tokens to chrome elements will break app consistency.
+>
+> - **CV Document elements** (anything inside `MedLengthTemplate`) --> use ONLY "CV Document Spacing" tokens below (pt/em/in units).
+> - **Chrome elements** (SaveIndicator, page-level wrapper margins) --> use ONLY "Chrome Spacing" tokens below (px units from app design tokens).
+>
+> If you are unsure which system applies, check the component: if it renders CV content, use CV tokens. If it renders app UI, use Chrome tokens.
+
+---
 
 ### CV Document Spacing (derived from resume.cls)
+
+**Applies to:** All elements inside `MedLengthTemplate` and its children. Units are pt/em/in to match LaTeX output.
 
 | Token | Value | Usage | Source |
 |-------|-------|-------|--------|
@@ -51,14 +62,16 @@ This phase uses TWO spacing systems. The CV document layer uses LaTeX-derived va
 | parskip | 0.54em | Paragraph skip (0.45 * 1.2em baseline) | resume.cls line 31 |
 | section-header-gap | 3pt | Space below section header text, above hrule | LaTeX \smallskip at 11pt |
 
+---
+
 ### Chrome Spacing (existing app tokens)
+
+**Applies to:** `SaveIndicator` and `DirectEditPage` wrapper only. Uses the existing 8px-grid app tokens.
 
 | Token | Value | Usage |
 |-------|-------|-------|
 | sm | 8px | Save indicator internal padding |
 | md | 16px | Save indicator margin from edge |
-
-Exceptions: CV document spacing does NOT use the 8-point grid. It uses LaTeX-equivalent values in pt/em/in to achieve ~95% visual fidelity with the PDF output.
 
 ---
 
@@ -120,7 +133,7 @@ This phase has a unique color profile. The CV document is black text on white pa
 
 **60/30/10 split for CV document:** 95% white (paper), 4.9% black (text, rules, bullets), 0.1% blue (link color only). This is a document rendering -- the standard 60/30/10 app color split does not apply.
 
-Accent reserved for: Focus highlight on editable fields ONLY. No accent color on the CV document itself.
+**Accent reserved for:** Focus highlight (8% opacity) and hover highlight (4% opacity) on editable fields within the CV document layer. These are the ONLY uses of accent-derived color (`#3B82F6` base) on the CV itself. The chrome layer (save indicator) uses existing app design tokens (`--success`, `--text-muted`, `--error`) which follow separate accent rules defined in the app's `variables.css` -- those rules are outside this phase's contract.
 
 ---
 
