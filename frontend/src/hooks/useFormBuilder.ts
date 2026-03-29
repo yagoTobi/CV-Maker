@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { api } from '../services/api';
+import { generateId } from '../utils/idHelpers';
 import type {
   CVFormData,
   PersonalInfo,
@@ -10,6 +11,8 @@ import type {
   Award,
   AdditionalSection,
   AdditionalEntry,
+  BulletItem,
+  SkillItem,
 } from '../types';
 
 export type FormSection = 'personal' | 'work' | 'education' | 'skills' | 'projects' | 'awards' | string;
@@ -20,6 +23,14 @@ export const DEFAULT_SECTION_ORDER: FormSection[] = [
 
 export const DEFAULT_PERSONAL_ORDER = ['phone', 'email', 'location', 'links'];
 
+function emptyBullet(): BulletItem {
+  return { id: generateId(), text: '' };
+}
+
+function emptySkillItem(): SkillItem {
+  return { id: generateId(), text: '' };
+}
+
 function emptyPersonalInfo(): PersonalInfo {
   return {
     fullName: '', email: '', phone: '', location: '', links: [],
@@ -28,31 +39,31 @@ function emptyPersonalInfo(): PersonalInfo {
 }
 
 function emptyWorkEntry(): WorkEntry {
-  return { company: '', title: '', startDate: '', endDate: '', location: '', bullets: [''] };
+  return { id: generateId(), company: '', title: '', startDate: '', endDate: '', location: '', bullets: [emptyBullet()] };
 }
 
 function emptyEducationEntry(): EducationEntry {
-  return { school: '', degree: '', startDate: '', endDate: '', location: '', gpa: '', details: [] };
+  return { id: generateId(), school: '', degree: '', startDate: '', endDate: '', location: '', gpa: '', details: [] };
 }
 
 function emptySkillCategory(): SkillCategory {
-  return { category: '', skills: [] };
+  return { id: generateId(), category: '', skills: [] };
 }
 
 function emptyProject(): Project {
-  return { name: '', year: '', description: '', technologies: '', bullets: [] };
+  return { id: generateId(), name: '', year: '', description: '', technologies: '', bullets: [] };
 }
 
 function emptyAward(): Award {
-  return { year: '', title: '', description: '' };
+  return { id: generateId(), year: '', title: '', description: '' };
 }
 
 function emptyAdditionalEntry(): AdditionalEntry {
-  return { title: '', subtitle: '', startDate: '', endDate: '', location: '', description: '', bullets: [''] };
+  return { id: generateId(), title: '', subtitle: '', startDate: '', endDate: '', location: '', description: '', bullets: [emptyBullet()] };
 }
 
 function emptyAdditionalSection(index: number): AdditionalSection {
-  return { title: `Additional Section ${index + 1}`, entries: [emptyAdditionalEntry()] };
+  return { id: generateId(), title: `Additional Section ${index + 1}`, entries: [emptyAdditionalEntry()] };
 }
 
 function reorder<T>(arr: T[], from: number, to: number): T[] {
@@ -161,7 +172,7 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
   const addLink = useCallback(() => {
     setFormData(prev => ({
       ...prev,
-      personalInfo: { ...prev.personalInfo, links: [...prev.personalInfo.links, { label: '', url: '' }] },
+      personalInfo: { ...prev.personalInfo, links: [...prev.personalInfo.links, { id: generateId(), label: '', url: '' }] },
     }));
   }, []);
 
@@ -204,7 +215,7 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
     setFormData(prev => ({
       ...prev,
       workExperience: prev.workExperience.map((e, i) =>
-        i === workIndex ? { ...e, bullets: [...e.bullets, ''] } : e
+        i === workIndex ? { ...e, bullets: [...e.bullets, emptyBullet()] } : e
       ),
     }));
   }, []);
@@ -214,7 +225,7 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
       ...prev,
       workExperience: prev.workExperience.map((e, i) =>
         i === workIndex
-          ? { ...e, bullets: e.bullets.map((b, bi) => bi === bulletIndex ? value : b) }
+          ? { ...e, bullets: e.bullets.map((b, bi) => bi === bulletIndex ? { ...b, text: value } : b) }
           : e
       ),
     }));
@@ -263,7 +274,7 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
     setFormData(prev => ({
       ...prev,
       education: prev.education.map((e, i) =>
-        i === eduIndex ? { ...e, details: [...e.details, ''] } : e
+        i === eduIndex ? { ...e, details: [...e.details, emptyBullet()] } : e
       ),
     }));
   }, []);
@@ -273,7 +284,7 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
       ...prev,
       education: prev.education.map((e, i) =>
         i === eduIndex
-          ? { ...e, details: e.details.map((d, di) => di === detailIndex ? value : d) }
+          ? { ...e, details: e.details.map((d, di) => di === detailIndex ? { ...d, text: value } : d) }
           : e
       ),
     }));
@@ -319,10 +330,22 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
   }, []);
 
   const updateSkillsText = useCallback((index: number, value: string) => {
-    const skills = value.split(',').map(s => s.trim()).filter(Boolean);
+    const newTexts = value.split(',').map(s => s.trim()).filter(Boolean);
     setFormData(prev => ({
       ...prev,
-      skills: prev.skills.map((s, i) => i === index ? { ...s, skills } : s),
+      skills: prev.skills.map((s, i) => {
+        if (i !== index) return s;
+        // Preserve IDs for skills whose text hasn't changed
+        const updatedSkills: SkillItem[] = newTexts.map((text, ti) => {
+          const existing = s.skills[ti];
+          if (existing && existing.text === text) return existing;
+          // Try to find by text match (handles reordering from comma edits)
+          const matchByText = s.skills.find(sk => sk.text === text);
+          if (matchByText) return matchByText;
+          return { id: generateId(), text };
+        });
+        return { ...s, skills: updatedSkills };
+      }),
     }));
   }, []);
 
@@ -351,7 +374,7 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
     setFormData(prev => ({
       ...prev,
       projects: (prev.projects || []).map((p, i) =>
-        i === projectIndex ? { ...p, bullets: [...(p.bullets || []), ''] } : p
+        i === projectIndex ? { ...p, bullets: [...(p.bullets || []), emptyBullet()] } : p
       ),
     }));
   }, []);
@@ -361,7 +384,7 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
       ...prev,
       projects: (prev.projects || []).map((p, i) =>
         i === projectIndex
-          ? { ...p, bullets: (p.bullets || []).map((b, bi) => bi === bulletIndex ? value : b) }
+          ? { ...p, bullets: (p.bullets || []).map((b, bi) => bi === bulletIndex ? { ...b, text: value } : b) }
           : p
       ),
     }));
@@ -475,7 +498,7 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
       ...prev,
       additionalSections: (prev.additionalSections || []).map((s, i) =>
         i === sectionIndex
-          ? { ...s, entries: s.entries.map((e, ei) => ei === entryIndex ? { ...e, bullets: [...e.bullets, ''] } : e) }
+          ? { ...s, entries: s.entries.map((e, ei) => ei === entryIndex ? { ...e, bullets: [...e.bullets, emptyBullet()] } : e) }
           : s
       ),
     }));
@@ -497,7 +520,7 @@ export function useFormBuilder(templateId: string, importedData?: CVFormData) {
       ...prev,
       additionalSections: (prev.additionalSections || []).map((s, i) =>
         i === sectionIndex
-          ? { ...s, entries: s.entries.map((e, ei) => ei === entryIndex ? { ...e, bullets: e.bullets.map((b, bi) => bi === bulletIndex ? value : b) } : e) }
+          ? { ...s, entries: s.entries.map((e, ei) => ei === entryIndex ? { ...e, bullets: e.bullets.map((b, bi) => bi === bulletIndex ? { ...b, text: value } : b) } : e) }
           : s
       ),
     }));

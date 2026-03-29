@@ -1,4 +1,5 @@
 import type { CVFormData, TailorChange } from '../types';
+import { generateId } from './idHelpers';
 
 /** Parse a path like "workExperience[0].bullets[2]" into segments */
 function parsePath(path: string): (string | number)[] {
@@ -12,6 +13,13 @@ function parsePath(path: string): (string | number)[] {
   return segments;
 }
 
+/** Check if an array contains structured items (BulletItem/SkillItem with id+text fields) */
+function _isStructuredArray(arr: unknown[]): boolean {
+  if (arr.length === 0) return false;
+  const first = arr[0];
+  return typeof first === 'object' && first !== null && 'text' in first && 'id' in first;
+}
+
 function setAtPath(obj: Record<string, unknown>, path: string, value: unknown): void {
   const segs = parsePath(path);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -22,7 +30,19 @@ function setAtPath(obj: Record<string, unknown>, path: string, value: unknown): 
     }
     cur = cur[segs[i]];
   }
-  cur[segs[segs.length - 1]] = value;
+  const lastSeg = segs[segs.length - 1];
+  const existing = cur[lastSeg];
+
+  // If the existing value is a BulletItem/SkillItem and the new value is a string,
+  // preserve the ID and update only the text field
+  if (existing && typeof existing === 'object' && 'text' in existing && 'id' in existing && typeof value === 'string') {
+    cur[lastSeg] = { ...existing, text: value };
+  } else if (typeof lastSeg === 'number' && Array.isArray(cur) && typeof value === 'string' && _isStructuredArray(cur)) {
+    // Inserting into a structured array — wrap value in BulletItem/SkillItem
+    cur[lastSeg] = { id: generateId(), text: value };
+  } else {
+    cur[lastSeg] = value;
+  }
 }
 
 export function applyTailorChanges(
@@ -37,8 +57,26 @@ export function applyTailorChanges(
     const altIndex = selectedAlternatives?.get(change.id) ?? 0;
     const alt = change.alternatives[altIndex] ?? change.alternatives[0];
     if (!alt) continue;
+
+    let valueToSet: unknown = alt.value;
+
+    // If value is string[] and target is a structured array (SkillItem[]/BulletItem[]),
+    // wrap each string in a structured object
+    if (Array.isArray(valueToSet) && valueToSet.every(v => typeof v === 'string')) {
+      const segs = parsePath(change.fieldPath);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let target: any = patched;
+      for (const seg of segs) {
+        if (target == null) break;
+        target = target[seg];
+      }
+      if (Array.isArray(target) && _isStructuredArray(target)) {
+        valueToSet = (valueToSet as string[]).map((text) => ({ id: generateId(), text }));
+      }
+    }
+
     try {
-      setAtPath(patched as Record<string, unknown>, change.fieldPath, alt.value);
+      setAtPath(patched as Record<string, unknown>, change.fieldPath, valueToSet);
     } catch {
       // Skip unresolvable paths
     }
