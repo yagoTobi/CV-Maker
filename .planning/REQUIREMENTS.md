@@ -47,6 +47,9 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **AI-02**: Apply to Job flow works with the web CV editor (changes applied and visible on the web CV)
 - [ ] **AI-03**: AI tailor suggestions appear as inline diffs on the web CV itself (not in a side panel)
 - [ ] **AI-04**: User can accept or reject individual AI suggestions directly on the web CV
+- [ ] **AI-05**: CV import extraction responds in under 2 seconds using fastest available model/provider
+- [ ] **AI-06**: Tailor suggestion generation targets sub-2 second response using fast model/provider
+- [ ] **AI-07**: AI integration phase researches and selects fastest model/provider for each AI task (Bedrock Llama, Groq, etc.)
 
 ### Route Integration
 
@@ -71,8 +74,8 @@ Deferred to future release. Tracked but not in current roadmap.
 
 ### AI Enhancements
 
-- **AI-05**: AI writing assist per-field (sparkle icon -> alternatives)
-- **AI-06**: Real-time match score updates as user edits
+- **AI-08**: AI writing assist per-field (sparkle icon -> alternatives)
+- **AI-09**: Real-time match score updates as user edits
 
 ### Additional Templates
 
@@ -98,40 +101,43 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | TBD | Pending |
-| DATA-02 | TBD | Pending |
-| DATA-03 | TBD | Pending |
-| EDIT-01 | TBD | Pending |
-| EDIT-02 | TBD | Pending |
-| EDIT-03 | TBD | Pending |
-| EDIT-04 | TBD | Pending |
-| EDIT-05 | TBD | Pending |
-| EDIT-06 | TBD | Pending |
-| CONT-01 | TBD | Pending |
-| CONT-02 | TBD | Pending |
-| CONT-03 | TBD | Pending |
-| CONT-04 | TBD | Pending |
-| UX-01 | TBD | Pending |
-| UX-02 | TBD | Pending |
-| DND-01 | TBD | Pending |
-| DND-02 | TBD | Pending |
-| DND-03 | TBD | Pending |
-| DND-04 | TBD | Pending |
-| AI-01 | TBD | Pending |
-| AI-02 | TBD | Pending |
-| AI-03 | TBD | Pending |
-| AI-04 | TBD | Pending |
-| ROUTE-01 | TBD | Pending |
-| ROUTE-02 | TBD | Pending |
-| ROUTE-03 | TBD | Pending |
-| ROUTE-04 | TBD | Pending |
-| ROUTE-05 | TBD | Pending |
+| DATA-01 | Phase 1: Data Model Prep | Pending |
+| DATA-02 | Phase 1: Data Model Prep | Pending |
+| DATA-03 | Phase 1: Data Model Prep | Pending |
+| EDIT-01 | Phase 2: Core Editing Surface | Pending |
+| EDIT-02 | Phase 2: Core Editing Surface | Pending |
+| EDIT-03 | Phase 2: Core Editing Surface | Pending |
+| EDIT-04 | Phase 2: Core Editing Surface | Pending |
+| EDIT-05 | Phase 2: Core Editing Surface | Pending |
+| EDIT-06 | Phase 2: Core Editing Surface | Pending |
+| UX-01 | Phase 2: Core Editing Surface | Pending |
+| CONT-01 | Phase 3: Content Management | Pending |
+| CONT-02 | Phase 3: Content Management | Pending |
+| CONT-03 | Phase 3: Content Management | Pending |
+| CONT-04 | Phase 3: Content Management | Pending |
+| UX-02 | Phase 3: Content Management | Pending |
+| DND-01 | Phase 4: Drag and Drop | Pending |
+| DND-02 | Phase 4: Drag and Drop | Pending |
+| DND-03 | Phase 4: Drag and Drop | Pending |
+| DND-04 | Phase 4: Drag and Drop | Pending |
+| AI-01 | Phase 5: AI Integration | Pending |
+| AI-02 | Phase 5: AI Integration | Pending |
+| AI-03 | Phase 5: AI Integration | Pending |
+| AI-04 | Phase 5: AI Integration | Pending |
+| AI-05 | Phase 5: AI Integration | Pending |
+| AI-06 | Phase 5: AI Integration | Pending |
+| AI-07 | Phase 5: AI Integration | Pending |
+| ROUTE-01 | Phase 6: Route Integration | Pending |
+| ROUTE-02 | Phase 6: Route Integration | Pending |
+| ROUTE-03 | Phase 6: Route Integration | Pending |
+| ROUTE-04 | Phase 6: Route Integration | Pending |
+| ROUTE-05 | Phase 6: Route Integration | Pending |
 
 **Coverage:**
-- v1 requirements: 28 total
-- Mapped to phases: 0
-- Unmapped: 28
+- v1 requirements: 31 total
+- Mapped to phases: 31
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-29*
-*Last updated: 2026-03-29 after initial definition*
+*Last updated: 2026-03-29 after roadmap creation*

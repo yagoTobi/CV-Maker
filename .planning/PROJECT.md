@@ -66,6 +66,7 @@ Key unknowns:
 - **Templates**: Web template components must be maintainable alongside LaTeX templates
 - **AI features**: Import, Tune, Apply to Job must all work with the new editor
 - **Browser**: Modern browsers only (CSS grid, contenteditable, modern APIs acceptable)
+- **AI speed**: CV import, tailor suggestions, and per-field AI assist must target sub-2 second response times to keep users in editing flow. Match analysis can take longer. Research fastest model/provider (Bedrock Llama, Groq, etc.) during AI integration phase.
 
 ## Key Decisions
 
@@ -76,6 +77,7 @@ Key unknowns:
 | Start with 1 template web version | Proves the architecture before investing in all 3 | -- Pending |
 | Inline editing (not popup/modal) | Most natural "typing on a document" experience | -- Pending |
 | Contextual "+" buttons for adding content | Discoverable without cluttering the CV view | -- Pending |
+| Prioritize AI speed over intelligence for in-flow features | Users in editing flow can't tolerate 10s AI calls; sub-2s keeps them engaged. Use fastest available models for import/tailor. | -- Pending |
 
 ## Evolution
 
