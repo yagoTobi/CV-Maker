@@ -37,10 +37,12 @@ from routes.cv_versions import (
     SkillCategory,
     Project,
     Award,
+    BulletItem,
+    SkillItem,
 )
 
 # Import the latex_escape function and template setup from generate_latex
-from routes.generate_latex import latex_escape, latex_url_escape, _build_personal_items
+from routes.generate_latex import latex_escape, latex_url_escape, _build_personal_items, _flatten_for_template
 
 # Template directory
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "..", "latex_templates")

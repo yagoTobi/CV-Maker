@@ -139,7 +139,7 @@ function EducationEntryCard({
         </div>
         {edu.details.map((detail, di) => (
           <div
-            key={di}
+            key={detail.id}
             className={`${styles.bulletRow} ${detailDrag.dragOver === di ? styles.bulletRowDragOver : ""}`}
             data-drag-card
             onDragStart={(e) => detailDrag.onDragStart(e, di)}
@@ -157,7 +157,7 @@ function EducationEntryCard({
             </span>
             <input
               className={styles.input}
-              value={detail}
+              value={detail.text}
               onChange={(e) => fb.updateEduDetail(i, di, e.target.value)}
               placeholder="Thesis, honours, coursework..."
             />

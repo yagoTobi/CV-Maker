@@ -128,7 +128,7 @@ function WorkEntryCard({
         </div>
         {job.bullets.map((bullet, bi) => (
           <div
-            key={bi}
+            key={bullet.id}
             className={`${styles.bulletRow} ${bulletDrag.dragOver === bi ? styles.bulletRowDragOver : ""}`}
             data-drag-card
             onDragStart={(e) => bulletDrag.onDragStart(e, bi)}
@@ -146,7 +146,7 @@ function WorkEntryCard({
             </span>
             <textarea
               className={`${styles.input} ${styles.bulletInput}`}
-              value={bullet}
+              value={bullet.text}
               onChange={(e) => fb.updateBullet(i, bi, e.target.value)}
               placeholder="Describe an achievement or responsibility..."
               rows={2}

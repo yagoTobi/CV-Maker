@@ -107,7 +107,7 @@ function ProjectEntryCard({
           </div>
           {proj.bullets.map((bullet, bi) => (
             <div
-              key={bi}
+              key={bullet.id}
               className={`${styles.bulletRow} ${bulletDrag.dragOver === bi ? styles.bulletRowDragOver : ""}`}
               data-drag-card
               onDragStart={(e) => bulletDrag.onDragStart(e, bi)}
@@ -125,7 +125,7 @@ function ProjectEntryCard({
               </span>
               <textarea
                 className={`${styles.input} ${styles.bulletInput}`}
-                value={bullet}
+                value={bullet.text}
                 onChange={(e) => fb.updateProjectBullet(i, bi, e.target.value)}
                 placeholder="Describe an achievement or key feature..."
                 rows={2}

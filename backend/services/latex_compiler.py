@@ -147,16 +147,7 @@ class LaTeXCompiler:
     def _get_page_count(self, pdf_bytes: bytes) -> int:
         """Extract page count from PDF bytes."""
         try:
-            # Try PyPDF2 first (most reliable)
-            try:
-                import io
-                from PyPDF2 import PdfReader
-                reader = PdfReader(io.BytesIO(pdf_bytes))
-                return len(reader.pages)
-            except ImportError:
-                pass
-
-            # Fallback: Parse PDF structure
+            # Parse PDF structure directly (no external dependency needed)
             pdf_text = pdf_bytes.decode('latin-1')
 
             # Look for the root Pages object with /Count

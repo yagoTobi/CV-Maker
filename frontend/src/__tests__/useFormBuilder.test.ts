@@ -34,28 +34,33 @@ describe('useFormBuilder', () => {
       expect(fd.personalInfo.summary).toBe('');
     });
 
-    it('creates one empty work entry', () => {
+    it('creates one empty work entry with ID-bearing bullets', () => {
       const { result } = renderHook(() => useFormBuilder('med-length-proff-cv'));
 
       expect(result.current.formData.workExperience).toHaveLength(1);
       expect(result.current.formData.workExperience[0].company).toBe('');
       expect(result.current.formData.workExperience[0].title).toBe('');
-      expect(result.current.formData.workExperience[0].bullets).toEqual(['']);
+      expect(result.current.formData.workExperience[0].id).toBeDefined();
+      expect(result.current.formData.workExperience[0].bullets).toHaveLength(1);
+      expect(result.current.formData.workExperience[0].bullets[0].text).toBe('');
+      expect(result.current.formData.workExperience[0].bullets[0].id).toBeDefined();
     });
 
-    it('creates one empty education entry', () => {
+    it('creates one empty education entry with ID', () => {
       const { result } = renderHook(() => useFormBuilder('med-length-proff-cv'));
 
       expect(result.current.formData.education).toHaveLength(1);
       expect(result.current.formData.education[0].school).toBe('');
       expect(result.current.formData.education[0].degree).toBe('');
+      expect(result.current.formData.education[0].id).toBeDefined();
     });
 
-    it('creates one empty skill category', () => {
+    it('creates one empty skill category with ID', () => {
       const { result } = renderHook(() => useFormBuilder('med-length-proff-cv'));
 
       expect(result.current.formData.skills).toHaveLength(1);
       expect(result.current.formData.skills[0].category).toBe('');
+      expect(result.current.formData.skills[0].id).toBeDefined();
       expect(result.current.formData.skills[0].skills).toEqual([]);
     });
 
@@ -107,23 +112,23 @@ describe('useFormBuilder', () => {
         email: 'john@test.com',
         phone: '555-1234',
         location: 'New York',
-        links: [{ label: 'GitHub', url: 'https://github.com/johndoe' }],
+        links: [{ id: 'imp-link-1', label: 'GitHub', url: 'https://github.com/johndoe' }],
         summary: 'Experienced developer',
       },
       workExperience: [
-        { company: 'Acme', title: 'Dev', startDate: 'Jan 2020', endDate: 'Present', location: 'NYC', bullets: ['Built stuff'] },
+        { id: 'imp-work-1', company: 'Acme', title: 'Dev', startDate: 'Jan 2020', endDate: 'Present', location: 'NYC', bullets: [{ id: 'imp-b1', text: 'Built stuff' }] },
       ],
       education: [
-        { school: 'MIT', degree: 'BS CS', startDate: 'Sep 2015', endDate: 'May 2019', location: 'Cambridge', details: [] },
+        { id: 'imp-edu-1', school: 'MIT', degree: 'BS CS', startDate: 'Sep 2015', endDate: 'May 2019', location: 'Cambridge', details: [] },
       ],
       skills: [
-        { category: 'Languages', skills: ['TypeScript', 'Python'] },
+        { id: 'imp-sk-1', category: 'Languages', skills: [{ id: 'imp-ski-1', text: 'TypeScript' }, { id: 'imp-ski-2', text: 'Python' }] },
       ],
       projects: [
-        { name: 'CV Maker', year: '2024', description: 'A CV builder', technologies: 'React' },
+        { id: 'imp-proj-1', name: 'CV Maker', year: '2024', description: 'A CV builder', technologies: 'React' },
       ],
       awards: [
-        { year: '2020', title: 'Best Project' },
+        { id: 'imp-award-1', year: '2020', title: 'Best Project' },
       ],
     };
 
@@ -158,12 +163,14 @@ describe('useFormBuilder', () => {
       expect(result.current.formData.education[0].school).toBe('MIT');
     });
 
-    it('preserves imported skills', () => {
+    it('preserves imported skills as SkillItem[]', () => {
       const { result } = renderHook(() => useFormBuilder('med-length-proff-cv', importedData));
 
       expect(result.current.formData.skills).toHaveLength(1);
       expect(result.current.formData.skills[0].category).toBe('Languages');
-      expect(result.current.formData.skills[0].skills).toEqual(['TypeScript', 'Python']);
+      expect(result.current.formData.skills[0].skills).toHaveLength(2);
+      expect(result.current.formData.skills[0].skills[0].text).toBe('TypeScript');
+      expect(result.current.formData.skills[0].skills[1].text).toBe('Python');
     });
 
     it('preserves imported projects', () => {

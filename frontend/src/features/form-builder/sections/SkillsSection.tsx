@@ -66,7 +66,7 @@ function SkillsSectionRaw({ fb }: { fb: FB }) {
           <Field label="Skills (comma-separated)">
             <input
               className={styles.input}
-              value={cat.skills.join(", ")}
+              value={cat.skills.map(s => s.text).join(", ")}
               onChange={(e) => fb.updateSkillsText(i, e.target.value)}
               placeholder="Python, TypeScript, Go"
             />
