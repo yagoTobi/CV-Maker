@@ -42,66 +42,83 @@ export interface MatchAnalysis {
 
 // --- CV Form Data Types ---
 
+export interface BulletItem {
+  id: string;
+  text: string;
+}
+
+export interface SkillItem {
+  id: string;
+  text: string;
+}
+
 export interface PersonalInfo {
   fullName: string;
   email: string;
   phone: string;
   location: string;
-  links: Array<{ label: string; url: string }>;
+  links: Array<{ id: string; label: string; url: string }>;
   summary?: string;
   /** Ordered list of header fields: 'phone' | 'email' | 'location' | 'links' */
   personalOrder?: string[];
 }
 
 export interface WorkEntry {
+  id: string;
   company: string;
   title: string;
   startDate: string;
   endDate: string;
   location: string;
-  bullets: string[];
+  bullets: BulletItem[];
 }
 
 export interface EducationEntry {
+  id: string;
   school: string;
   degree: string;
   startDate: string;
   endDate: string;
   location: string;
   gpa?: string;
-  details: string[];
+  details: BulletItem[];
 }
 
 export interface SkillCategory {
+  id: string;
   category: string;
-  skills: string[];
+  skills: SkillItem[];
 }
 
 export interface Project {
+  id: string;
   name: string;
   year: string;
   description: string;
   technologies?: string;
-  bullets?: string[];
+  bullets?: BulletItem[];
 }
 
 export interface Award {
+  id: string;
   year: string;
   title: string;
   description?: string;
 }
 
 export interface AdditionalEntry {
+  id: string;
   title: string;
   subtitle?: string;
   startDate?: string;
   endDate?: string;
   location?: string;
   description?: string;
-  bullets: string[];
+  bullets: BulletItem[];
 }
 
 export interface AdditionalSection {
+  id: string;
   title: string;
   entries: AdditionalEntry[];
 }
