@@ -225,7 +225,7 @@ describe('useFormBuilder', () => {
         expect(result.current.formData.personalInfo.email).toBe(''); // unchanged
       });
 
-      it('addLink adds an empty link', () => {
+      it('addLink adds an empty link with ID', () => {
         const { result } = renderHook(() => useFormBuilder('med-length-proff-cv'));
 
         act(() => {
@@ -233,7 +233,9 @@ describe('useFormBuilder', () => {
         });
 
         expect(result.current.formData.personalInfo.links).toHaveLength(1);
-        expect(result.current.formData.personalInfo.links[0]).toEqual({ label: '', url: '' });
+        expect(result.current.formData.personalInfo.links[0].label).toBe('');
+        expect(result.current.formData.personalInfo.links[0].url).toBe('');
+        expect(result.current.formData.personalInfo.links[0].id).toBeDefined();
       });
 
       it('updateLink updates a specific field', () => {
@@ -302,7 +304,7 @@ describe('useFormBuilder', () => {
         expect(result.current.formData.workExperience).toHaveLength(1);
       });
 
-      it('addBullet adds an empty bullet to a work entry', () => {
+      it('addBullet adds an empty BulletItem to a work entry', () => {
         const { result } = renderHook(() => useFormBuilder('med-length-proff-cv'));
 
         act(() => {
@@ -310,17 +312,20 @@ describe('useFormBuilder', () => {
         });
 
         expect(result.current.formData.workExperience[0].bullets).toHaveLength(2);
-        expect(result.current.formData.workExperience[0].bullets[1]).toBe('');
+        expect(result.current.formData.workExperience[0].bullets[1].text).toBe('');
+        expect(result.current.formData.workExperience[0].bullets[1].id).toBeDefined();
       });
 
-      it('updateBullet updates a specific bullet', () => {
+      it('updateBullet updates text and preserves ID', () => {
         const { result } = renderHook(() => useFormBuilder('med-length-proff-cv'));
 
+        const originalId = result.current.formData.workExperience[0].bullets[0].id;
         act(() => {
           result.current.updateBullet(0, 0, 'Led a team of 5 engineers');
         });
 
-        expect(result.current.formData.workExperience[0].bullets[0]).toBe('Led a team of 5 engineers');
+        expect(result.current.formData.workExperience[0].bullets[0].text).toBe('Led a team of 5 engineers');
+        expect(result.current.formData.workExperience[0].bullets[0].id).toBe(originalId);
       });
 
       it('removeBullet removes a specific bullet', () => {
@@ -408,14 +413,19 @@ describe('useFormBuilder', () => {
   });
 
   describe('skills text parsing', () => {
-    it('updateSkillsText splits comma-separated string into array', () => {
+    it('updateSkillsText splits comma-separated string into SkillItem[]', () => {
       const { result } = renderHook(() => useFormBuilder('med-length-proff-cv'));
 
       act(() => {
         result.current.updateSkillsText(0, 'TypeScript, Python, Go');
       });
 
-      expect(result.current.formData.skills[0].skills).toEqual(['TypeScript', 'Python', 'Go']);
+      const skills = result.current.formData.skills[0].skills;
+      expect(skills).toHaveLength(3);
+      expect(skills[0].text).toBe('TypeScript');
+      expect(skills[1].text).toBe('Python');
+      expect(skills[2].text).toBe('Go');
+      skills.forEach(s => expect(s.id).toBeDefined());
     });
 
     it('updateSkillsText handles trailing commas and whitespace', () => {
@@ -426,7 +436,30 @@ describe('useFormBuilder', () => {
       });
 
       // filter(Boolean) removes empty strings
-      expect(result.current.formData.skills[0].skills).toEqual(['JS', 'CSS']);
+      const skills = result.current.formData.skills[0].skills;
+      expect(skills).toHaveLength(2);
+      expect(skills[0].text).toBe('JS');
+      expect(skills[1].text).toBe('CSS');
+    });
+
+    it('updateSkillsText preserves IDs for unchanged skills', () => {
+      const { result } = renderHook(() => useFormBuilder('med-length-proff-cv'));
+
+      act(() => {
+        result.current.updateSkillsText(0, 'TypeScript, Python');
+      });
+
+      const firstId = result.current.formData.skills[0].skills[0].id;
+      const secondId = result.current.formData.skills[0].skills[1].id;
+
+      // Add a third skill — existing IDs should be preserved
+      act(() => {
+        result.current.updateSkillsText(0, 'TypeScript, Python, Go');
+      });
+
+      expect(result.current.formData.skills[0].skills[0].id).toBe(firstId);
+      expect(result.current.formData.skills[0].skills[1].id).toBe(secondId);
+      expect(result.current.formData.skills[0].skills[2].text).toBe('Go');
     });
   });
 });
