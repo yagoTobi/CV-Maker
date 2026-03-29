@@ -22,6 +22,9 @@ The CV itself is the editor. Users type directly on what they'll download — no
 - [x] Drag-and-drop section reordering -- existing
 - [x] Storage abstraction (FileStorage + DynamoStorage) -- existing
 - [x] Docker deployment with TeX Live -- existing
+- [x] Stable unique IDs on all CVFormData array entries (BulletItem, SkillItem, entry-level IDs) -- Phase 1
+- [x] Auto-migration of legacy saved versions (IDs generated on load, persisted) -- Phase 1
+- [x] Backend accepts and preserves stable IDs across all endpoints -- Phase 1
 
 ### Active
 
@@ -97,4 +100,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-29 after initialization*
+*Last updated: 2026-03-29 after Phase 1 completion*
