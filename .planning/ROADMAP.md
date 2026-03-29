@@ -30,11 +30,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Existing AI features (import, tailor suggestions, match analysis) produce correct results when operating on ID-bearing entries
   3. Backend endpoints accept, preserve, and return stable IDs without data loss or ID reassignment
   4. Saved CV versions load with their original IDs intact (no ID regeneration on load)
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md -- Type definitions + ID generation helpers (frontend types, backend Pydantic, nanoid, ensure_ids)
+- [ ] 01-02-PLAN.md -- Backend consumers (storage migration, generate_latex flatten, tailor strip, extractor, backend tests)
+- [ ] 01-03-PLAN.md -- Frontend consumers (useFormBuilder, formDataPatch, UI sections, frontend tests)
 
 ### Phase 2: Core Editing Surface
 **Goal**: Users can view and directly edit their CV as a web-rendered document that visually matches the LaTeX PDF output
@@ -125,7 +126,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Model Prep | 0/0 | Not started | - |
+| 1. Data Model Prep | 0/3 | Planning complete | - |
 | 2. Core Editing Surface | 0/0 | Not started | - |
 | 3. Content Management | 0/0 | Not started | - |
 | 4. Drag and Drop | 0/0 | Not started | - |
