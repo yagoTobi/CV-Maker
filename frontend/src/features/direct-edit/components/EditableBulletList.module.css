@@ -8,7 +8,9 @@
 .bulletItem {
   display: flex;
   align-items: flex-start;
-  margin-bottom: -0.4em;
+  margin-bottom: 0;
+  /* LaTeX \itemsep -0.4em compresses inter-item gap, but web line-height
+     already renders tighter than LaTeX. Zero margin avoids text bleed. */
 }
 
 .bulletMarker {

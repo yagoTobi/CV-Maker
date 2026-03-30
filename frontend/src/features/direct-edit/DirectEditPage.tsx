@@ -5,29 +5,85 @@
  * into a full-bleed, white-background page. EB Garamond font is loaded here
  * (not globally) so it only applies to the CV editing surface.
  *
+ * If formData is not in context (e.g., direct URL navigation), tries to load
+ * the most recent saved version. Falls back to an empty template with placeholders.
+ *
  * Covers: EDIT-01 through EDIT-06, UX-01, D-05.
  */
 import '@fontsource-variable/eb-garamond';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useDirectEditor } from './hooks/useDirectEditor';
 import { useAutoSave } from './hooks/useAutoSave';
 import { MedLengthTemplate } from './components/MedLengthTemplate';
 import { SaveIndicator } from './components/SaveIndicator';
 import { useCVContext } from '../../contexts/CVContext';
+import { api } from '../../services/api';
+import { generateId } from '../../utils/idHelpers';
+import type { CVFormData } from '../../types';
 import styles from './DirectEditPage.module.css';
 
+const DEFAULT_TEMPLATE = 'med-length-proff-cv';
+
+function createEmptyFormData(): CVFormData {
+  return {
+    templateId: DEFAULT_TEMPLATE,
+    sectionOrder: ['work', 'education', 'skills', 'projects', 'awards'],
+    personalInfo: {
+      fullName: '', email: '', phone: '', location: '', links: [],
+      summary: '', personalOrder: ['phone', 'email', 'location', 'links'],
+    },
+    workExperience: [{ id: generateId(), company: '', title: '', startDate: '', endDate: '', location: '', bullets: [{ id: generateId(), text: '' }] }],
+    education: [{ id: generateId(), school: '', degree: '', startDate: '', endDate: '', location: '', gpa: '', details: [] }],
+    skills: [{ id: generateId(), category: '', skills: [] }],
+    projects: [],
+    awards: [],
+    additionalSections: [],
+  };
+}
+
 export default function DirectEditPage() {
-  const { activeVersion } = useCVContext();
+  const { activeVersion, setFormData, savedVersions } = useCVContext();
   const { formData, updateField, addBullet, removeBullet } = useDirectEditor();
   const saveStatus = useAutoSave(formData, activeVersion?.id ?? null);
+  const [isBootstrapping, setIsBootstrapping] = useState(!formData);
+
+  // Bootstrap formData if context is empty (direct URL navigation / page refresh)
+  useEffect(() => {
+    if (formData) {
+      setIsBootstrapping(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function bootstrap() {
+      // Try loading the most recent saved version
+      if (savedVersions.length > 0) {
+        const mostRecent = savedVersions[0];
+        const full = await api.getVersion(mostRecent.id);
+        if (!cancelled && full?.formData) {
+          setFormData(full.formData);
+          setIsBootstrapping(false);
+          return;
+        }
+      }
+
+      // Fall back to empty template with placeholders
+      if (!cancelled) {
+        setFormData(createEmptyFormData());
+        setIsBootstrapping(false);
+      }
+    }
+
+    bootstrap();
+    return () => { cancelled = true; };
+  }, [formData, savedVersions, setFormData]);
 
   const handleInput = useCallback(() => {
     // No-op -- useAutoSave watches formData changes directly.
-    // This callback exists so MedLengthTemplate can signal input events
-    // for potential future enhancements (e.g., flush focused field).
   }, []);
 
-  if (!formData) {
+  if (isBootstrapping || !formData) {
     return <div className={styles.loading}>Loading...</div>;
   }
 

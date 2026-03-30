@@ -176,7 +176,7 @@ export function MedLengthTemplate({
         onInput={onInput}
       />
       {(startDate || endDate) && (
-        <span className={styles.dateSeparator}>--</span>
+        <span className={styles.dateSeparator}>{'\u2013'}</span>
       )}
       <EditableField
         value={endDate}
