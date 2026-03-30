@@ -73,6 +73,7 @@
 
 .sectionContent {
   padding-left: 0.5em; /* resume.cls line 94: \setlength{\leftmargin}{0.5em} */
+  overflow: visible; /* Allow EntryWrapper delete button (right: -20px) to render outside */
 }
 
 /* --- Subsection (rSubsection from resume.cls lines 101-112) --- */

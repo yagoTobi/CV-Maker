@@ -6,11 +6,16 @@
  * at ~95% visual fidelity (EDIT-02).
  *
  * Section order follows formData.sectionOrder (or DEFAULT_SECTION_ORDER fallback).
- * Empty sections (no entries) are not rendered, matching LaTeX template guards.
+ * Each section is wrapped in SectionWrapper (hover-reveal add button + toggle).
+ * Each entry is wrapped in EntryWrapper (hover-reveal delete + optional confirm).
+ *
+ * Phase 3: SectionWrapper/EntryWrapper integration for CONT-01 through CONT-04.
  */
 import { useCallback } from 'react';
 import { EditableField } from './EditableField';
 import { EditableBulletList } from './EditableBulletList';
+import { SectionWrapper } from './SectionWrapper';
+import { EntryWrapper } from './EntryWrapper';
 import { generateId } from '../../../utils/idHelpers';
 import type {
   CVFormData,
@@ -32,6 +37,10 @@ interface MedLengthTemplateProps {
   onFieldChange: (path: string, value: string) => void;
   onBulletAdd: (basePath: string, afterIndex: number) => void;
   onBulletRemove: (basePath: string, index: number) => void;
+  onAddEntry: (sectionKey: string) => void;
+  onRemoveEntry: (sectionKey: string, index: number) => void;
+  onToggleSection: (sectionKey: string) => void;
+  hiddenSections: Set<string>;
   onInput?: () => void;
 }
 
@@ -40,6 +49,10 @@ export function MedLengthTemplate({
   onFieldChange,
   onBulletAdd,
   onBulletRemove,
+  onAddEntry,
+  onRemoveEntry,
+  onToggleSection,
+  hiddenSections,
   onInput,
 }: MedLengthTemplateProps) {
   const { personalInfo } = formData;
@@ -60,24 +73,6 @@ export function MedLengthTemplate({
         if (matchByText) return matchByText;
         return { id: generateId(), text };
       });
-      // Encode the skills array as a JSON string at the skillsText virtual path.
-      // The onFieldChange handler treats this as a special case: we encode the
-      // updated skills array via the real path.
-      // Instead, we set each skill individually -- but that's complex.
-      // Simplest approach: directly update the skills array via a synthetic path.
-      // We'll use the real formData path and serialize/deserialize.
-      //
-      // Actually, the cleanest approach is to call onFieldChange for each skill,
-      // but that creates N state updates. Instead, we patch the skills array directly
-      // by setting the full category skills array. We use a dedicated path convention.
-      //
-      // For now, we rebuild the comma text to the actual skills array path and
-      // handle it at this component level. We call onFieldChange for each item
-      // but batch via the actual field path.
-      //
-      // The simplest correct approach: set a JSON-encoded skills array at a known path.
-      // useDirectEditor.updateField uses setAtPath which sets arbitrary values.
-      // We can set the full skills array at `skills[${skillIndex}].skills`.
       onFieldChange(`skills[${skillIndex}].skills`, JSON.stringify(updatedSkills));
     },
     [onFieldChange]
@@ -190,13 +185,26 @@ export function MedLengthTemplate({
   );
 
   const renderWorkSection = (entries: WorkEntry[]) => {
-    if (entries.length === 0) return null;
     return (
-      <div key="work" className={styles.section}>
-        <div className={styles.sectionHeader}>Experience</div>
-        <div className={styles.sectionContent}>
-          {entries.map((job, i) => (
-            <div key={job.id} className={styles.subsection}>
+      <SectionWrapper
+        key="work"
+        sectionKey="work"
+        title="Experience"
+        isHidden={hiddenSections.has('work')}
+        isEmpty={entries.length === 0}
+        onToggleVisibility={() => onToggleSection('work')}
+        onAddEntry={() => onAddEntry('work')}
+        addLabel="+ Add work entry"
+        headerClassName={styles.sectionHeader}
+      >
+        {entries.map((job, i) => (
+          <EntryWrapper
+            key={job.id}
+            onDelete={() => onRemoveEntry('work', i)}
+            requireConfirm={true}
+            confirmMessage={`Delete "${job.company || 'this work entry'}"?`}
+          >
+            <div className={styles.subsection}>
               <div className={styles.subsectionLine1}>
                 <EditableField
                   value={job.company}
@@ -246,23 +254,36 @@ export function MedLengthTemplate({
                 onInput={onInput}
               />
             </div>
-          ))}
-        </div>
-      </div>
+          </EntryWrapper>
+        ))}
+      </SectionWrapper>
     );
   };
 
   const renderEducationSection = (entries: EducationEntry[]) => {
-    if (entries.length === 0) return null;
     return (
-      <div key="education" className={styles.section}>
-        <div className={styles.sectionHeader}>Education</div>
-        <div className={styles.sectionContent}>
-          {entries.map((edu, i) => {
-            const hasItems = !!(edu.gpa || edu.details.length > 0);
-            if (hasItems) {
-              return (
-                <div key={edu.id} className={styles.subsection}>
+      <SectionWrapper
+        key="education"
+        sectionKey="education"
+        title="Education"
+        isHidden={hiddenSections.has('education')}
+        isEmpty={entries.length === 0}
+        onToggleVisibility={() => onToggleSection('education')}
+        onAddEntry={() => onAddEntry('education')}
+        addLabel="+ Add education"
+        headerClassName={styles.sectionHeader}
+      >
+        {entries.map((edu, i) => {
+          const hasItems = !!(edu.gpa || edu.details.length > 0);
+          if (hasItems) {
+            return (
+              <EntryWrapper
+                key={edu.id}
+                onDelete={() => onRemoveEntry('education', i)}
+                requireConfirm={true}
+                confirmMessage={`Delete "${edu.school || 'this education entry'}"?`}
+              >
+                <div className={styles.subsection}>
                   <div className={styles.subsectionLine1}>
                     <EditableField
                       value={edu.school}
@@ -329,11 +350,18 @@ export function MedLengthTemplate({
                     />
                   )}
                 </div>
-              );
-            }
-            // Simple layout: no GPA, no details
-            return (
-              <div key={edu.id} className={styles.educationSimple}>
+              </EntryWrapper>
+            );
+          }
+          // Simple layout: no GPA, no details
+          return (
+            <EntryWrapper
+              key={edu.id}
+              onDelete={() => onRemoveEntry('education', i)}
+              requireConfirm={true}
+              confirmMessage={`Delete "${edu.school || 'this education entry'}"?`}
+            >
+              <div className={styles.educationSimple}>
                 <div className={styles.subsectionLine1}>
                   <EditableField
                     value={edu.school}
@@ -371,44 +399,68 @@ export function MedLengthTemplate({
                   />
                 </div>
               </div>
-            );
-          })}
-        </div>
-      </div>
+            </EntryWrapper>
+          );
+        })}
+      </SectionWrapper>
     );
   };
 
   const renderSkillsSection = (categories: SkillCategory[]) => {
-    if (categories.length === 0) return null;
     return (
-      <div key="skills" className={styles.section}>
-        <div className={styles.sectionHeader}>Skills</div>
-        <div className={styles.sectionContent}>
-          <div className={styles.skillsGrid}>
-            {categories.map((cat, i) => (
+      <SectionWrapper
+        key="skills"
+        sectionKey="skills"
+        title="Skills"
+        isHidden={hiddenSections.has('skills')}
+        isEmpty={categories.length === 0}
+        onToggleVisibility={() => onToggleSection('skills')}
+        onAddEntry={() => onAddEntry('skills')}
+        addLabel="+ Add skill category"
+        headerClassName={styles.sectionHeader}
+      >
+        <div className={styles.skillsGrid}>
+          {categories.map((cat, i) => (
+            <EntryWrapper
+              key={cat.id}
+              onDelete={() => onRemoveEntry('skills', i)}
+              requireConfirm={false}
+            >
               <SkillCategoryRow
-                key={cat.id}
                 category={cat}
                 index={i}
                 onFieldChange={onFieldChange}
                 onSkillsTextChange={handleSkillsTextChange}
                 onInput={onInput}
               />
-            ))}
-          </div>
+            </EntryWrapper>
+          ))}
         </div>
-      </div>
+      </SectionWrapper>
     );
   };
 
   const renderProjectsSection = (entries: Project[]) => {
-    if (entries.length === 0) return null;
     return (
-      <div key="projects" className={styles.section}>
-        <div className={styles.sectionHeader}>Projects</div>
-        <div className={styles.sectionContent}>
-          {entries.map((proj, i) => (
-            <div key={proj.id} className={styles.projectEntry}>
+      <SectionWrapper
+        key="projects"
+        sectionKey="projects"
+        title="Projects"
+        isHidden={hiddenSections.has('projects')}
+        isEmpty={entries.length === 0}
+        onToggleVisibility={() => onToggleSection('projects')}
+        onAddEntry={() => onAddEntry('projects')}
+        addLabel="+ Add project"
+        headerClassName={styles.sectionHeader}
+      >
+        {entries.map((proj, i) => (
+          <EntryWrapper
+            key={proj.id}
+            onDelete={() => onRemoveEntry('projects', i)}
+            requireConfirm={true}
+            confirmMessage={`Delete "${proj.name || 'this project'}"?`}
+          >
+            <div className={styles.projectEntry}>
               <div className={styles.projectHeader}>
                 <EditableField
                   value={proj.name}
@@ -464,52 +516,81 @@ export function MedLengthTemplate({
                 />
               )}
             </div>
-          ))}
-        </div>
-      </div>
+          </EntryWrapper>
+        ))}
+      </SectionWrapper>
     );
   };
 
   const renderAwardsSection = (entries: Award[]) => {
-    if (entries.length === 0) return null;
     return (
-      <div key="awards" className={styles.section}>
-        <div className={styles.sectionHeader}>Awards</div>
-        <div className={styles.sectionContent}>
-          <div className={styles.awardsGrid}>
-            {entries.map((award, i) => (
+      <SectionWrapper
+        key="awards"
+        sectionKey="awards"
+        title="Awards"
+        isHidden={hiddenSections.has('awards')}
+        isEmpty={entries.length === 0}
+        onToggleVisibility={() => onToggleSection('awards')}
+        onAddEntry={() => onAddEntry('awards')}
+        addLabel="+ Add award"
+        headerClassName={styles.sectionHeader}
+      >
+        <div className={styles.awardsGrid}>
+          {entries.map((award, i) => (
+            <EntryWrapper
+              key={award.id}
+              onDelete={() => onRemoveEntry('awards', i)}
+              requireConfirm={true}
+              confirmMessage={`Delete "${award.title || 'this award'}"?`}
+            >
               <AwardRow
-                key={award.id}
                 award={award}
                 index={i}
                 onFieldChange={onFieldChange}
                 onInput={onInput}
               />
-            ))}
-          </div>
+            </EntryWrapper>
+          ))}
         </div>
-      </div>
+      </SectionWrapper>
     );
   };
 
   const renderAdditionalSection = (asec: AdditionalSection, sectionIdx: number) => {
+    const sectionKey = `additional-${sectionIdx}`;
     return (
-      <div key={`additional-${sectionIdx}`} className={styles.section}>
-        <EditableField
-          value={asec.title}
-          fieldPath={`additionalSections[${sectionIdx}].title`}
-          onFieldChange={onFieldChange}
-          placeholder="Section Title"
-          tag="div"
-          className={styles.sectionHeader}
-          onInput={onInput}
-        />
-        <div className={styles.sectionContent}>
-          {asec.entries.map((entry, entryIdx) => {
-            const hasItems = !!(entry.bullets.length > 0 || entry.description);
-            if (hasItems) {
-              return (
-                <div key={entry.id} className={styles.subsection}>
+      <SectionWrapper
+        key={sectionKey}
+        sectionKey={sectionKey}
+        title={asec.title || 'Additional Section'}
+        isHidden={hiddenSections.has(sectionKey)}
+        isEmpty={asec.entries.length === 0}
+        onToggleVisibility={() => onToggleSection(sectionKey)}
+        onAddEntry={() => onAddEntry(sectionKey)}
+        addLabel="+ Add entry"
+        renderHeader={() => (
+          <EditableField
+            value={asec.title}
+            fieldPath={`additionalSections[${sectionIdx}].title`}
+            onFieldChange={onFieldChange}
+            placeholder="Section Title"
+            tag="div"
+            className={styles.sectionHeader}
+            onInput={onInput}
+          />
+        )}
+      >
+        {asec.entries.map((entry, entryIdx) => {
+          const hasItems = !!(entry.bullets.length > 0 || entry.description);
+          if (hasItems) {
+            return (
+              <EntryWrapper
+                key={entry.id}
+                onDelete={() => onRemoveEntry(sectionKey, entryIdx)}
+                requireConfirm={true}
+                confirmMessage={`Delete "${entry.title || 'this entry'}"?`}
+              >
+                <div className={styles.subsection}>
                   <div className={styles.subsectionLine1}>
                     <EditableField
                       value={entry.title}
@@ -586,11 +667,18 @@ export function MedLengthTemplate({
                     />
                   )}
                 </div>
-              );
-            }
-            // Simple layout: no bullets, no description
-            return (
-              <div key={entry.id} className={styles.additionalSimple}>
+              </EntryWrapper>
+            );
+          }
+          // Simple layout: no bullets, no description
+          return (
+            <EntryWrapper
+              key={entry.id}
+              onDelete={() => onRemoveEntry(sectionKey, entryIdx)}
+              requireConfirm={true}
+              confirmMessage={`Delete "${entry.title || 'this entry'}"?`}
+            >
+              <div className={styles.additionalSimple}>
                 <div className={styles.subsectionLine1}>
                   <EditableField
                     value={entry.title}
@@ -632,10 +720,10 @@ export function MedLengthTemplate({
                   )}
                 </div>
               </div>
-            );
-          })}
-        </div>
-      </div>
+            </EntryWrapper>
+          );
+        })}
+      </SectionWrapper>
     );
   };
 
