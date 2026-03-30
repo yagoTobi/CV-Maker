@@ -1,0 +1,31 @@
+/* SaveIndicator -- Chrome layer styling (app UI, not CV document).
+ * Position: fixed top-right corner, 16px from edges.
+ * Font: IBM Plex Sans 13px per UI-SPEC Chrome Typography.
+ * Colors: CSS variables from app design tokens (variables.css).
+ */
+
+.indicator {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  z-index: 100;
+  pointer-events: none;
+  user-select: none;
+  transition: opacity 0.3s ease;
+}
+
+.saving {
+  color: var(--text-muted);
+}
+
+.saved {
+  color: var(--success);
+}
+
+.error {
+  color: var(--error);
+}
