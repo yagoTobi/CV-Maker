@@ -1,0 +1,24 @@
+/**
+ * DirectEditPage -- Page-level CSS.
+ *
+ * Overrides app background to white (D-05: full-bleed, no gray background).
+ * Enables user-select: text (body has user-select: none from variables.css).
+ */
+
+.page {
+  background: #FFFFFF;
+  min-height: 100vh;
+  /* Allow user-select inside CV content (override body user-select: none from variables.css) */
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--text-muted);
+  font-size: 14px;
+}

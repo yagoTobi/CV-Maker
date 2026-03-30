@@ -10,6 +10,7 @@ const TemplateSelector = lazy(() => import('./features/template-selection/Templa
 const CVFormBuilder = lazy(() => import('./features/form-builder/CVFormBuilder'));
 const CVImportUpload = lazy(() => import('./features/cv-import/CVImportUpload'));
 const ApplyToJobScreen = lazy(() => import('./features/apply-to-job/ApplyToJobScreen'));
+const DirectEditPage = lazy(() => import('./features/direct-edit/DirectEditPage'));
 
 function NotFound() {
   return (
@@ -32,6 +33,7 @@ function App() {
           <Route path="/build/form" element={<FeatureErrorBoundary><CVFormBuilder /></FeatureErrorBoundary>} />
           <Route path="/import" element={<FeatureErrorBoundary><CVImportUpload /></FeatureErrorBoundary>} />
           <Route path="/apply" element={<FeatureErrorBoundary><ApplyToJobScreen /></FeatureErrorBoundary>} />
+          <Route path="/direct-edit" element={<FeatureErrorBoundary><DirectEditPage /></FeatureErrorBoundary>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
