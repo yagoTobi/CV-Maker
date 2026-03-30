@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-03-30T06:55:07.356Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-03-30T06:56:14.200Z"
 last_activity: 2026-03-30
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 6
   percent: 67
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-29)
 ## Current Position
 
 Phase: 02 (core-editing-surface) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-03-30
 
@@ -57,6 +57,7 @@ Progress: [███████░░░] 67%
 | Phase 01 P02 | 4min | 2 tasks | 10 files |
 | Phase 02 P01 | 7min | 2 tasks | 9 files |
 | Phase 02 P03 | 3min | 2 tasks | 4 files |
+| Phase 02 P02 | 5min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,9 @@ Recent decisions affecting current work:
 - [Phase 02]: Export parsePath, setAtPath, getAtPath from formDataPatch.ts for reuse by useDirectEditor
 - [Phase 02]: EditableField uses forwardRef+useImperativeHandle for parent DOM access (focus management)
 - [Phase 02]: Auto-save creates new versions via POST (no PATCH for full updates); version dedup deferred
+- [Phase 02]: Skills rendered as single EditableField per category with comma-separated text, parsed on blur via handleSkillsTextChange
+- [Phase 02]: Link labels rendered as editable text (not anchor tags) -- URLs only hyperlinked in final PDF
+- [Phase 02]: Additional section headers are EditableField, allowing inline section rename
 
 ### Pending Todos
 
@@ -89,6 +93,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-30T06:55:07.352Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-03-30T06:56:14.195Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None
