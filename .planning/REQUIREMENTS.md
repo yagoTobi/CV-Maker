@@ -24,10 +24,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Content Management
 
-- [ ] **CONT-01**: User can add a new entry to any section via contextual "+" button (new job, education, skill category, project, etc.)
-- [ ] **CONT-02**: User can delete any entry via contextual delete control (with confirmation for major entries like entire jobs)
-- [ ] **CONT-03**: User can toggle section visibility on/off without deleting underlying data
-- [ ] **CONT-04**: New entries appear in the correct position with empty/placeholder content ready to edit
+- [x] **CONT-01**: User can add a new entry to any section via contextual "+" button (new job, education, skill category, project, etc.)
+- [x] **CONT-02**: User can delete any entry via contextual delete control (with confirmation for major entries like entire jobs)
+- [x] **CONT-03**: User can toggle section visibility on/off without deleting underlying data
+- [x] **CONT-04**: New entries appear in the correct position with empty/placeholder content ready to edit
 
 ### Editor UX
 
@@ -111,10 +111,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EDIT-05 | Phase 2: Core Editing Surface | Complete |
 | EDIT-06 | Phase 2: Core Editing Surface | Complete |
 | UX-01 | Phase 2: Core Editing Surface | Complete |
-| CONT-01 | Phase 3: Content Management | Pending |
-| CONT-02 | Phase 3: Content Management | Pending |
-| CONT-03 | Phase 3: Content Management | Pending |
-| CONT-04 | Phase 3: Content Management | Pending |
+| CONT-01 | Phase 3: Content Management | Complete |
+| CONT-02 | Phase 3: Content Management | Complete |
+| CONT-03 | Phase 3: Content Management | Complete |
+| CONT-04 | Phase 3: Content Management | Complete |
 | UX-02 | Phase 3: Content Management | Pending |
 | DND-01 | Phase 4: Drag and Drop | Pending |
 | DND-02 | Phase 4: Drag and Drop | Pending |

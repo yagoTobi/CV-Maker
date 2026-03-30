@@ -69,7 +69,7 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 03-01-PLAN.md -- Entry factory extraction + useDirectEditor CRUD extensions (addEntry, removeEntry, toggleSection)
+- [x] 03-01-PLAN.md -- Entry factory extraction + useDirectEditor CRUD extensions (addEntry, removeEntry, toggleSection)
 - [ ] 03-02-PLAN.md -- SectionWrapper, EntryWrapper, ConfirmDialog components + MedLengthTemplate integration
 - [ ] 03-03-PLAN.md -- Page break indicator (usePageBreak hook + PageBreakIndicator component + visual checkpoint)
 
