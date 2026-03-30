@@ -31,7 +31,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Editor UX
 
-- [ ] **UX-01**: CV auto-saves to backend on debounced CVFormData changes with visible save status indicator
+- [x] **UX-01**: CV auto-saves to backend on debounced CVFormData changes with visible save status indicator
 - [ ] **UX-02**: Visual indicator appears when content exceeds the page boundary (page break / overflow warning)
 
 ### Drag and Drop
@@ -110,7 +110,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EDIT-04 | Phase 2: Core Editing Surface | Complete |
 | EDIT-05 | Phase 2: Core Editing Surface | Complete |
 | EDIT-06 | Phase 2: Core Editing Surface | Complete |
-| UX-01 | Phase 2: Core Editing Surface | Pending |
+| UX-01 | Phase 2: Core Editing Surface | Complete |
 | CONT-01 | Phase 3: Content Management | Pending |
 | CONT-02 | Phase 3: Content Management | Pending |
 | CONT-03 | Phase 3: Content Management | Pending |
