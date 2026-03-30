@@ -47,12 +47,14 @@ Plans:
   3. User can edit multi-line bullet points naturally: Enter creates a new bullet below, Backspace on an empty bullet deletes it and moves focus to the previous bullet
   4. Empty fields display context-appropriate placeholder text (e.g., "Your Name", "Job Title at Company") that disappears when the user focuses the field
   5. Edits sync to CVFormData in real-time without cursor jumps or focus loss, and auto-save fires on a debounce with a visible save status indicator
-**Plans**: TBD
+**Plans**: 4 plans
 **UI hint**: yes
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
+- [ ] 02-01-PLAN.md -- EditableField + EditableBulletList components + useDirectEditor hook (core editing primitives)
+- [ ] 02-02-PLAN.md -- MedLengthTemplate component (web CV rendering with CSS matching resume.cls)
+- [ ] 02-03-PLAN.md -- useAutoSave hook + SaveIndicator component (auto-save with status indicator)
+- [ ] 02-04-PLAN.md -- DirectEditPage assembly + EB Garamond font + visual verification checkpoint
 
 ### Phase 3: Content Management
 **Goal**: Users can grow and reshape their CV by adding new entries, removing entries, and toggling section visibility -- all directly on the web CV
@@ -126,8 +128,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Model Prep | 2/3 | In Progress | - |
-| 2. Core Editing Surface | 0/0 | Not started | - |
+| 1. Data Model Prep | 3/3 | Complete | - |
+| 2. Core Editing Surface | 0/4 | Planning complete | - |
 | 3. Content Management | 0/0 | Not started | - |
 | 4. Drag and Drop | 0/0 | Not started | - |
 | 5. AI Integration | 0/0 | Not started | - |
