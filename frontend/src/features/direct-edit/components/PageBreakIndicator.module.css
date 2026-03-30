@@ -1,0 +1,28 @@
+/**
+ * PageBreakIndicator.module.css -- Dashed line at page break boundary
+ * with inline "Page 2" label.
+ *
+ * Covers: D-07 (horizontal dashed line at page break point with "Page 2" label).
+ */
+
+.indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 2px dashed var(--text-muted, #6B7280);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.label {
+  position: absolute;
+  right: 8px;
+  top: -10px;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 11px;
+  color: var(--text-muted, #6B7280);
+  background: #FFFFFF;
+  padding: 0 4px;
+  user-select: none;
+}

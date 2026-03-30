@@ -27,6 +27,10 @@ class MockResizeObserver {
 // Store original and override
 const OriginalResizeObserver = globalThis.ResizeObserver;
 
+// Capture native DOM methods from prototype to avoid spy recursion
+const nativeAppendChild = Node.prototype.appendChild;
+const nativeRemoveChild = Node.prototype.removeChild;
+
 beforeEach(() => {
   globalThis.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
   mockDisconnect.mockClear();
@@ -38,6 +42,7 @@ beforeEach(() => {
 afterEach(() => {
   globalThis.ResizeObserver = OriginalResizeObserver;
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 // Helper: create a mock element with a given scrollHeight
@@ -47,21 +52,19 @@ function makeMockElement(scrollHeight: number): HTMLElement {
   return el;
 }
 
-// Helper: mock the probe div to return a known page height in pixels
-// At 96 DPI, 11in = 1056px. We mock offsetWidth of any appended div with style.width = '11in'.
+// Helper: mock the probe div to return a known page height in pixels.
+// At 96 DPI, 11in = 1056px. We intercept appendChild to set offsetWidth
+// on the probe div before it's measured.
 function mockProbeWidth(pxValue: number) {
-  const originalAppendChild = document.body.appendChild.bind(document.body);
-  const originalRemoveChild = document.body.removeChild.bind(document.body);
-
-  vi.spyOn(document.body, 'appendChild').mockImplementation((node: Node) => {
+  vi.spyOn(document.body, 'appendChild').mockImplementation(function (this: Node, node: Node) {
     if (node instanceof HTMLElement && node.style.width === '11in') {
       Object.defineProperty(node, 'offsetWidth', { value: pxValue, configurable: true });
     }
-    return originalAppendChild(node);
+    return nativeAppendChild.call(this, node);
   });
 
-  vi.spyOn(document.body, 'removeChild').mockImplementation((node: Node) => {
-    return originalRemoveChild(node);
+  vi.spyOn(document.body, 'removeChild').mockImplementation(function (this: Node, node: Node) {
+    return nativeRemoveChild.call(this, node);
   });
 }
 
