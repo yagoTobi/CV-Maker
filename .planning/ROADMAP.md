@@ -54,7 +54,7 @@ Plans:
 - [x] 02-01-PLAN.md -- EditableField + EditableBulletList components + useDirectEditor hook (core editing primitives)
 - [x] 02-02-PLAN.md -- MedLengthTemplate component (web CV rendering with CSS matching resume.cls)
 - [x] 02-03-PLAN.md -- useAutoSave hook + SaveIndicator component (auto-save with status indicator)
-- [ ] 02-04-PLAN.md -- DirectEditPage assembly + EB Garamond font + visual verification checkpoint
+- [x] 02-04-PLAN.md -- DirectEditPage assembly + EB Garamond font + visual verification checkpoint
 
 ### Phase 3: Content Management
 **Goal**: Users can grow and reshape their CV by adding new entries, removing entries, and toggling section visibility -- all directly on the web CV
