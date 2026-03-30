@@ -2,7 +2,7 @@ import type { CVFormData, TailorChange } from '../types';
 import { generateId } from './idHelpers';
 
 /** Parse a path like "workExperience[0].bullets[2]" into segments */
-function parsePath(path: string): (string | number)[] {
+export function parsePath(path: string): (string | number)[] {
   const segments: (string | number)[] = [];
   const re = /([^.[]+)|\[(\d+)\]/g;
   let m: RegExpExecArray | null;
@@ -20,7 +20,7 @@ function _isStructuredArray(arr: unknown[]): boolean {
   return typeof first === 'object' && first !== null && 'text' in first && 'id' in first;
 }
 
-function setAtPath(obj: Record<string, unknown>, path: string, value: unknown): void {
+export function setAtPath(obj: Record<string, unknown>, path: string, value: unknown): void {
   const segs = parsePath(path);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let cur: any = obj;
@@ -43,6 +43,17 @@ function setAtPath(obj: Record<string, unknown>, path: string, value: unknown): 
   } else {
     cur[lastSeg] = value;
   }
+}
+
+/** Navigate a dot-bracket path and return the value at that location */
+export function getAtPath(obj: Record<string, unknown>, path: string): unknown {
+  const segs = parsePath(path);
+  let cur: unknown = obj;
+  for (const seg of segs) {
+    if (cur == null) return undefined;
+    cur = (cur as Record<string, unknown>)[seg as string];
+  }
+  return cur;
 }
 
 export function applyTailorChanges(
