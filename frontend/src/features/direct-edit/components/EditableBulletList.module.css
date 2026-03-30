@@ -1,0 +1,22 @@
+/* EditableBulletList -- Bullet layout matching resume.cls list style */
+
+.bulletList {
+  list-style: none;
+  padding-left: 1em;
+}
+
+.bulletItem {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: -0.4em;
+}
+
+.bulletMarker {
+  margin-right: 0.5em;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.bulletMarker::before {
+  content: "\00B7";
+}

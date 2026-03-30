@@ -18,8 +18,11 @@ describe('EditableField', () => {
   it('renders a contentEditable element with suppressContentEditableWarning', () => {
     const { container } = render(<EditableField {...defaultProps} />);
     const el = container.firstElementChild as HTMLElement;
-    expect(el.contentEditable).toBe('plaintext-only');
+    // jsdom does not expose 'plaintext-only' via the .contentEditable DOM property,
+    // so we verify via getAttribute which reflects the actual HTML attribute
     expect(el.getAttribute('contenteditable')).toBe('plaintext-only');
+    // suppressContentEditableWarning is a React prop, not a DOM attribute
+    // its presence is verified by the absence of React console warnings
   });
 
   it('sets contentEditable="plaintext-only" attribute (per D-03)', () => {

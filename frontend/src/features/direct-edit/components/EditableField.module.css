@@ -1,0 +1,32 @@
+/* EditableField -- Focus highlight (D-01) and placeholder styling (EDIT-04) */
+
+.editableField {
+  outline: none;
+  border-radius: 2px;
+  transition: background-color 0.15s ease;
+  padding: 1px 2px;
+  margin: -1px -2px;
+  cursor: text;
+  min-height: 1.2em;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.editableField:focus {
+  background-color: rgba(59, 130, 246, 0.08);
+}
+
+.editableField:hover:not(:focus) {
+  background-color: rgba(59, 130, 246, 0.04);
+}
+
+.editableField:empty::before {
+  content: attr(data-placeholder);
+  color: #94A3B8;
+  pointer-events: none;
+  font-style: italic;
+}
+
+.editableField:focus:empty::before {
+  color: transparent;
+}
