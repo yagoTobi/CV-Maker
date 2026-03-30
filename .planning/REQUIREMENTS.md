@@ -15,12 +15,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Core Editing
 
-- [ ] **EDIT-01**: User can click on any text field in the web CV and edit it inline (contentEditable)
+- [x] **EDIT-01**: User can click on any text field in the web CV and edit it inline (contentEditable)
 - [ ] **EDIT-02**: Web-rendered CV for med-length-proff-cv template visually matches LaTeX PDF output (~95% fidelity — same fonts, margins, layout, section structure)
-- [ ] **EDIT-03**: User can edit multi-line bullet points naturally (Enter creates new bullet, Backspace on empty bullet deletes it)
-- [ ] **EDIT-04**: Empty fields show placeholder text that disappears on focus ("Your Name", "Job Title at Company", etc.)
-- [ ] **EDIT-05**: Edits to the web CV update the hidden CVFormData model in real-time
-- [ ] **EDIT-06**: CVFormData changes re-render the web CV without losing cursor position or focus
+- [x] **EDIT-03**: User can edit multi-line bullet points naturally (Enter creates new bullet, Backspace on empty bullet deletes it)
+- [x] **EDIT-04**: Empty fields show placeholder text that disappears on focus ("Your Name", "Job Title at Company", etc.)
+- [x] **EDIT-05**: Edits to the web CV update the hidden CVFormData model in real-time
+- [x] **EDIT-06**: CVFormData changes re-render the web CV without losing cursor position or focus
 
 ### Content Management
 
@@ -104,12 +104,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-01 | Phase 1: Data Model Prep | Complete |
 | DATA-02 | Phase 1: Data Model Prep | Complete |
 | DATA-03 | Phase 1: Data Model Prep | Complete |
-| EDIT-01 | Phase 2: Core Editing Surface | Pending |
+| EDIT-01 | Phase 2: Core Editing Surface | Complete |
 | EDIT-02 | Phase 2: Core Editing Surface | Pending |
-| EDIT-03 | Phase 2: Core Editing Surface | Pending |
-| EDIT-04 | Phase 2: Core Editing Surface | Pending |
-| EDIT-05 | Phase 2: Core Editing Surface | Pending |
-| EDIT-06 | Phase 2: Core Editing Surface | Pending |
+| EDIT-03 | Phase 2: Core Editing Surface | Complete |
+| EDIT-04 | Phase 2: Core Editing Surface | Complete |
+| EDIT-05 | Phase 2: Core Editing Surface | Complete |
+| EDIT-06 | Phase 2: Core Editing Surface | Complete |
 | UX-01 | Phase 2: Core Editing Surface | Pending |
 | CONT-01 | Phase 3: Content Management | Pending |
 | CONT-02 | Phase 3: Content Management | Pending |

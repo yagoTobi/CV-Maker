@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Phase 2 UI-SPEC approved
-last_updated: "2026-03-29T23:56:48.711Z"
-last_activity: 2026-03-29
+status: executing
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-03-30T06:48:55.939Z"
+last_activity: 2026-03-30
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 7
+  completed_plans: 4
   percent: 67
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** The CV itself is the editor. Users type directly on what they'll download -- no form fields, no split screen.
-**Current focus:** Phase 01 — data-model-prep
+**Current focus:** Phase 02 — core-editing-surface
 
 ## Current Position
 
-Phase: 2
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-03-29
+Phase: 02 (core-editing-surface) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-03-30
 
 Progress: [███████░░░] 67%
 
@@ -55,6 +55,7 @@ Progress: [███████░░░] 67%
 | Phase 01 P01 | 3min | 2 tasks | 7 files |
 | Phase 01 P03 | 6min | 2 tasks | 10 files |
 | Phase 01 P02 | 4min | 2 tasks | 10 files |
+| Phase 02 P01 | 7min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,8 @@ Recent decisions affecting current work:
 - [Phase 01]: Runtime structured array detection (_isStructuredArray) in formDataPatch over path-based detection
 - [Phase 01]: Auto-migration persists to storage on first read for idempotent ID injection
 - [Phase 01]: _flatten_for_template isolates Jinja2 templates from BulletItem/SkillItem data model changes
+- [Phase 02]: Export parsePath, setAtPath, getAtPath from formDataPatch.ts for reuse by useDirectEditor
+- [Phase 02]: EditableField uses forwardRef+useImperativeHandle for parent DOM access (focus management)
 
 ### Pending Todos
 
@@ -84,6 +87,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29T23:56:48.704Z
-Stopped at: Phase 2 UI-SPEC approved
-Resume file: .planning/phases/02-core-editing-surface/02-UI-SPEC.md
+Last session: 2026-03-30T06:48:55.934Z
+Stopped at: Completed 02-01-PLAN.md
+Resume file: None
