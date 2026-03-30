@@ -1,0 +1,29 @@
+/* EntryWrapper -- Hover-reveal delete button positioned outside entry box. */
+
+.entryWrap {
+  position: relative;
+}
+
+.deleteButton {
+  position: absolute;
+  top: 0;
+  right: -20px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.entryWrap:hover > .deleteButton {
+  opacity: 1;
+}
+
+.deleteButton:hover {
+  color: var(--error);
+}
