@@ -1,0 +1,172 @@
+/**
+ * MedLengthTemplate.module.css -- CSS classes reproducing the visual output
+ * of resume.cls + med-length-proff-cv.tex.j2.
+ *
+ * Every value is derived from the LaTeX source files:
+ * - resume.cls: margins, section headers, subsection layout, bullet lists
+ * - med-length-proff-cv.tex.j2: font, color, section order, tabular layouts
+ *
+ * Units use pt/em/in (not px) per UI-SPEC spacing rules to match LaTeX output.
+ */
+
+/* --- Page-level (D-05 full-bleed, D-06 matching resume.cls margins) --- */
+
+.template {
+  max-width: 8.5in;
+  margin: 0 auto;
+  padding: 0.3in 0.2in;
+  background: #FFFFFF;
+  min-height: 100vh;
+  font-family: "EB Garamond Variable", "EB Garamond", Georgia, serif;
+  font-size: 11pt;
+  text-rendering: optimizeLegibility;
+  font-kerning: normal;
+  line-height: 1.2;
+  color: #000000;
+}
+
+/* --- Personal info header (resume.cls printname + printaddress) --- */
+
+.name {
+  font-size: 20.74pt;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 0;
+  /* LaTeX \huge\bfseries at 11pt base = 20.74pt */
+}
+
+.infoBar {
+  text-align: center;
+  margin-bottom: 0.54em; /* parskip from resume.cls line 31: 0.45 * 1.2em */
+}
+
+.infoSeparator {
+  user-select: none;
+  padding: 0 0.25em; /* approximate en-space (\enspace) */
+}
+
+.linkText {
+  color: rgb(21, 88, 176); /* darkblue from tex.j2 line 23 */
+}
+
+/* --- Summary section --- */
+
+.summary {
+  /* Regular body text, no special styling beyond parent font */
+}
+
+/* --- Section header (rSection from resume.cls lines 89-98) --- */
+
+.section {
+  margin-bottom: 0.54em; /* parskip between sections */
+}
+
+.sectionHeader {
+  text-transform: uppercase;
+  font-weight: bold;
+  font-size: 11pt;
+  margin-bottom: 3pt;
+  border-bottom: 0.4pt solid #000000;
+  padding-bottom: 2pt;
+  /* resume.cls: \MakeUppercase{\textbf{#1}} + \smallskip + \hrule */
+}
+
+.sectionContent {
+  padding-left: 0.5em; /* resume.cls line 94: \setlength{\leftmargin}{0.5em} */
+}
+
+/* --- Subsection (rSubsection from resume.cls lines 101-112) --- */
+
+.subsection {
+  margin-bottom: 0.1em; /* resume.cls line 112: \vspace{0.1em} */
+}
+
+.subsectionLine1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.subsectionLine2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-style: italic;
+}
+
+.bold {
+  font-weight: bold;
+}
+
+.italic {
+  font-style: italic;
+}
+
+.dateRange {
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.dateSeparator {
+  user-select: none;
+  padding: 0 0.15em;
+  /* Matches LaTeX \,--\, thin-space around en-dash */
+}
+
+/* --- Skills section (tabular layout from tex.j2 lines 77-81) --- */
+
+.skillsGrid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 2ex;
+  row-gap: 0.2em;
+}
+
+.skillCategory {
+  font-weight: bold;
+}
+
+.skillCategoryLabel {
+  font-weight: bold;
+}
+
+.skillCategoryLabel::after {
+  content: ":";
+}
+
+.skillValues {
+  font-weight: normal;
+}
+
+/* --- Projects section --- */
+
+.projectHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.projectEntry {
+  margin-bottom: 0.5em; /* \vspace{0.5em} from tex.j2 line 97 */
+}
+
+/* --- Awards section (tabular layout from tex.j2 lines 103-107) --- */
+
+.awardsGrid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 2ex;
+  row-gap: 0.2em;
+}
+
+/* --- Education simple variant (no sub-items, tex.j2 lines 67-70) --- */
+
+.educationSimple {
+  margin-bottom: 0.5em; /* \vspace{0.5em} */
+}
+
+/* --- Additional sections simple variant (tex.j2 lines 127-129) --- */
+
+.additionalSimple {
+  margin-bottom: 0.5em; /* \vspace{0.5em} */
+}
