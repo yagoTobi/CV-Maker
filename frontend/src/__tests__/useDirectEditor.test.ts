@@ -3,6 +3,7 @@
  * EditableField callbacks to CVFormData via useCVContext.
  *
  * Covers: EDIT-05 (edits update CVFormData in real-time).
+ * Extended: CONT-01..04 (addEntry, removeEntry, toggleSection).
  */
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
@@ -23,6 +24,17 @@ vi.mock('../contexts/CVContext', () => ({
 let idCounter = 0;
 vi.mock('../utils/idHelpers', () => ({
   generateId: () => `test-id-${++idCounter}`,
+}));
+
+// Mock entryFactories to return predictable objects for addEntry tests
+vi.mock('../utils/entryFactories', () => ({
+  emptyWorkEntry: () => ({ id: 'new-work', company: '', title: '', startDate: '', endDate: '', location: '', bullets: [{ id: 'new-b', text: '' }] }),
+  emptyEducationEntry: () => ({ id: 'new-edu', school: '', degree: '', startDate: '', endDate: '', location: '', gpa: '', details: [] }),
+  emptySkillCategory: () => ({ id: 'new-skill', category: '', skills: [] }),
+  emptyProject: () => ({ id: 'new-proj', name: '', year: '', description: '', technologies: '', bullets: [] }),
+  emptyAward: () => ({ id: 'new-award', year: '', title: '', description: '' }),
+  emptyAdditionalEntry: () => ({ id: 'new-add-entry', title: '', subtitle: '', startDate: '', endDate: '', location: '', description: '', bullets: [{ id: 'new-add-b', text: '' }] }),
+  emptyAdditionalSection: (index: number) => ({ id: 'new-add-sec', title: `Additional Section ${index + 1}`, entries: [{ id: 'new-add-entry', title: '', subtitle: '', startDate: '', endDate: '', location: '', description: '', bullets: [{ id: 'new-add-b', text: '' }] }] }),
 }));
 
 import { useDirectEditor } from '../features/direct-edit/hooks/useDirectEditor';
@@ -201,5 +213,320 @@ describe('useDirectEditor', () => {
     expect(result.current.updateField).toBe(firstUpdateField);
     expect(result.current.addBullet).toBe(firstAddBullet);
     expect(result.current.removeBullet).toBe(firstRemoveBullet);
+  });
+
+  // --- addEntry tests ---
+
+  describe('addEntry', () => {
+    it('addEntry("work") appends emptyWorkEntry() to workExperience', () => {
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.addEntry('work');
+      });
+
+      expect(mockSetFormData).toHaveBeenCalledTimes(1);
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+      expect(newData.workExperience).toHaveLength(2);
+      expect(newData.workExperience[1].id).toBe('new-work');
+    });
+
+    it('addEntry("education") appends emptyEducationEntry() to education', () => {
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.addEntry('education');
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+      expect(newData.education).toHaveLength(2);
+      expect(newData.education[1].id).toBe('new-edu');
+    });
+
+    it('addEntry("skills") appends emptySkillCategory() to skills', () => {
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.addEntry('skills');
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+      expect(newData.skills).toHaveLength(2);
+      expect(newData.skills[1].id).toBe('new-skill');
+    });
+
+    it('addEntry("projects") initializes projects array if undefined and appends', () => {
+      // formData.projects is not set in makeTestFormData
+      mockFormData = { ...makeTestFormData(), projects: undefined };
+
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.addEntry('projects');
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+      expect(newData.projects).toHaveLength(1);
+      expect(newData.projects[0].id).toBe('new-proj');
+    });
+
+    it('addEntry("awards") initializes awards array if undefined and appends', () => {
+      mockFormData = { ...makeTestFormData(), awards: undefined };
+
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.addEntry('awards');
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+      expect(newData.awards).toHaveLength(1);
+      expect(newData.awards[0].id).toBe('new-award');
+    });
+
+    it('addEntry("additional-0") appends entry to existing additionalSections[0].entries', () => {
+      mockFormData = {
+        ...makeTestFormData(),
+        additionalSections: [{
+          id: 'as-1',
+          title: 'Volunteering',
+          entries: [{ id: 'ae-1', title: 'Red Cross', bullets: [{ id: 'ab-1', text: 'Helped' }] }],
+        }],
+      };
+
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.addEntry('additional-0');
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+      expect(newData.additionalSections[0].entries).toHaveLength(2);
+      expect(newData.additionalSections[0].entries[1].id).toBe('new-add-entry');
+    });
+
+    it('addEntry("additional-new") creates a new AdditionalSection and updates sectionOrder', () => {
+      mockFormData = { ...makeTestFormData(), additionalSections: [], sectionOrder: ['work', 'education'] };
+
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.addEntry('additional-new');
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+      expect(newData.additionalSections).toHaveLength(1);
+      expect(newData.additionalSections[0].id).toBe('new-add-sec');
+      expect(newData.additionalSections[0].title).toBe('Additional Section 1');
+      expect(newData.sectionOrder).toContain('additional-0');
+    });
+
+    it('addEntry does nothing when formData is null', () => {
+      mockFormData = null;
+
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.addEntry('work');
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(null) : updater;
+      expect(newData).toBeNull();
+    });
+  });
+
+  // --- removeEntry tests ---
+
+  describe('removeEntry', () => {
+    it('removeEntry("work", 0) removes the first work entry', () => {
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.removeEntry('work', 0);
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+      expect(newData.workExperience).toHaveLength(0);
+    });
+
+    it('removeEntry("skills", 0) removes the first skill category', () => {
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.removeEntry('skills', 0);
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+      expect(newData.skills).toHaveLength(0);
+    });
+
+    it('removeEntry("education", 0) removes the first education entry', () => {
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.removeEntry('education', 0);
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+      expect(newData.education).toHaveLength(0);
+    });
+
+    it('removeEntry("projects", 0) removes from projects array', () => {
+      mockFormData = {
+        ...makeTestFormData(),
+        projects: [{ id: 'p1', name: 'Proj', year: '2023', description: 'Desc' }],
+      };
+
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.removeEntry('projects', 0);
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+      expect(newData.projects).toHaveLength(0);
+    });
+
+    it('removeEntry("awards", 0) removes from awards array', () => {
+      mockFormData = {
+        ...makeTestFormData(),
+        awards: [{ id: 'a1', year: '2023', title: 'Award' }],
+      };
+
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.removeEntry('awards', 0);
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+      expect(newData.awards).toHaveLength(0);
+    });
+
+    it('removeEntry on last entry of a section produces empty array', () => {
+      // Unlike removeBullet (which guards minimum 1), removeEntry allows empty sections
+      mockFormData = makeTestFormData();
+
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.removeEntry('work', 0);
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+      expect(newData.workExperience).toHaveLength(0);
+    });
+
+    it('removeEntry("additional-0", 0) removes entry from additionalSections[0].entries', () => {
+      mockFormData = {
+        ...makeTestFormData(),
+        additionalSections: [{
+          id: 'as-1',
+          title: 'Volunteering',
+          entries: [
+            { id: 'ae-1', title: 'Red Cross', bullets: [{ id: 'ab-1', text: 'Helped' }] },
+            { id: 'ae-2', title: 'Food Bank', bullets: [{ id: 'ab-2', text: 'Served' }] },
+          ],
+        }],
+      };
+
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.removeEntry('additional-0', 0);
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+      expect(newData.additionalSections[0].entries).toHaveLength(1);
+      expect(newData.additionalSections[0].entries[0].id).toBe('ae-2');
+    });
+
+    it('removeEntry does nothing when formData is null', () => {
+      mockFormData = null;
+
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.removeEntry('work', 0);
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(null) : updater;
+      expect(newData).toBeNull();
+    });
+  });
+
+  // --- toggleSection tests ---
+
+  describe('toggleSection', () => {
+    it('toggleSection("skills") adds "skills" to hiddenSections', () => {
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.toggleSection('skills');
+      });
+
+      expect(result.current.hiddenSections.has('skills')).toBe(true);
+    });
+
+    it('toggleSection("skills") twice returns to empty Set (toggle off)', () => {
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.toggleSection('skills');
+      });
+      expect(result.current.hiddenSections.has('skills')).toBe(true);
+
+      act(() => {
+        result.current.toggleSection('skills');
+      });
+      expect(result.current.hiddenSections.has('skills')).toBe(false);
+      expect(result.current.hiddenSections.size).toBe(0);
+    });
+
+    it('multiple sections can be hidden independently', () => {
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.toggleSection('skills');
+        result.current.toggleSection('awards');
+      });
+
+      expect(result.current.hiddenSections.has('skills')).toBe(true);
+      expect(result.current.hiddenSections.has('awards')).toBe(true);
+      expect(result.current.hiddenSections.size).toBe(2);
+    });
+  });
+
+  // --- hiddenSections in return value ---
+
+  describe('hiddenSections', () => {
+    it('hiddenSections is returned from the hook', () => {
+      const { result } = renderHook(() => useDirectEditor());
+
+      expect(result.current.hiddenSections).toBeDefined();
+      expect(result.current.hiddenSections).toBeInstanceOf(Set);
+    });
+
+    it('hiddenSections starts as empty Set', () => {
+      const { result } = renderHook(() => useDirectEditor());
+
+      expect(result.current.hiddenSections.size).toBe(0);
+    });
   });
 });
