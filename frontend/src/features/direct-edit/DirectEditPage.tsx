@@ -11,11 +11,13 @@
  * Covers: EDIT-01 through EDIT-06, UX-01, D-05.
  */
 import '@fontsource-variable/eb-garamond';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDirectEditor } from './hooks/useDirectEditor';
 import { useAutoSave } from './hooks/useAutoSave';
+import { usePageBreak } from './hooks/usePageBreak';
 import { MedLengthTemplate } from './components/MedLengthTemplate';
 import { SaveIndicator } from './components/SaveIndicator';
+import { PageBreakIndicator } from './components/PageBreakIndicator';
 import { useCVContext } from '../../contexts/CVContext';
 import { api } from '../../services/api';
 import { generateId } from '../../utils/idHelpers';
@@ -46,6 +48,8 @@ export default function DirectEditPage() {
   const { formData, updateField, addBullet, removeBullet } = useDirectEditor();
   const saveStatus = useAutoSave(formData, activeVersion?.id ?? null);
   const [isBootstrapping, setIsBootstrapping] = useState(!formData);
+  const cvContainerRef = useRef<HTMLDivElement>(null);
+  const pageBreakY = usePageBreak(cvContainerRef);
 
   // Bootstrap formData if context is empty (direct URL navigation / page refresh)
   useEffect(() => {
@@ -90,13 +94,16 @@ export default function DirectEditPage() {
   return (
     <div className={styles.page}>
       <SaveIndicator status={saveStatus} />
-      <MedLengthTemplate
-        formData={formData}
-        onFieldChange={updateField}
-        onBulletAdd={addBullet}
-        onBulletRemove={removeBullet}
-        onInput={handleInput}
-      />
+      <div ref={cvContainerRef} className={styles.cvContainer}>
+        <MedLengthTemplate
+          formData={formData}
+          onFieldChange={updateField}
+          onBulletAdd={addBullet}
+          onBulletRemove={removeBullet}
+          onInput={handleInput}
+        />
+        {pageBreakY !== null && <PageBreakIndicator offsetY={pageBreakY} />}
+      </div>
     </div>
   );
 }
