@@ -1,6 +1,18 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { api } from '../services/api';
 import { generateId } from '../utils/idHelpers';
+import {
+  emptyBullet,
+  emptyPersonalInfo,
+  emptyWorkEntry,
+  emptyEducationEntry,
+  emptySkillCategory,
+  emptyProject,
+  emptyAward,
+  emptyAdditionalEntry,
+  emptyAdditionalSection,
+  DEFAULT_PERSONAL_ORDER,
+} from '../utils/entryFactories';
 import type {
   CVFormData,
   PersonalInfo,
@@ -11,7 +23,6 @@ import type {
   Award,
   AdditionalSection,
   AdditionalEntry,
-  BulletItem,
   SkillItem,
 } from '../types';
 
@@ -21,50 +32,7 @@ export const DEFAULT_SECTION_ORDER: FormSection[] = [
   'work', 'education', 'skills', 'projects', 'awards',
 ];
 
-export const DEFAULT_PERSONAL_ORDER = ['phone', 'email', 'location', 'links'];
-
-function emptyBullet(): BulletItem {
-  return { id: generateId(), text: '' };
-}
-
-function emptySkillItem(): SkillItem {
-  return { id: generateId(), text: '' };
-}
-
-function emptyPersonalInfo(): PersonalInfo {
-  return {
-    fullName: '', email: '', phone: '', location: '', links: [],
-    summary: '', personalOrder: [...DEFAULT_PERSONAL_ORDER],
-  };
-}
-
-function emptyWorkEntry(): WorkEntry {
-  return { id: generateId(), company: '', title: '', startDate: '', endDate: '', location: '', bullets: [emptyBullet()] };
-}
-
-function emptyEducationEntry(): EducationEntry {
-  return { id: generateId(), school: '', degree: '', startDate: '', endDate: '', location: '', gpa: '', details: [] };
-}
-
-function emptySkillCategory(): SkillCategory {
-  return { id: generateId(), category: '', skills: [] };
-}
-
-function emptyProject(): Project {
-  return { id: generateId(), name: '', year: '', description: '', technologies: '', bullets: [] };
-}
-
-function emptyAward(): Award {
-  return { id: generateId(), year: '', title: '', description: '' };
-}
-
-function emptyAdditionalEntry(): AdditionalEntry {
-  return { id: generateId(), title: '', subtitle: '', startDate: '', endDate: '', location: '', description: '', bullets: [emptyBullet()] };
-}
-
-function emptyAdditionalSection(index: number): AdditionalSection {
-  return { id: generateId(), title: `Additional Section ${index + 1}`, entries: [emptyAdditionalEntry()] };
-}
+export { DEFAULT_PERSONAL_ORDER } from '../utils/entryFactories';
 
 function reorder<T>(arr: T[], from: number, to: number): T[] {
   const result = [...arr];
