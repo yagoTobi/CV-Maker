@@ -65,13 +65,15 @@ Plans:
   2. User can delete any entry via a contextual delete control, with a confirmation prompt for major entries (entire job, education entry) and instant deletion for minor entries (single bullet, skill)
   3. User can toggle any section's visibility on/off, hiding it from the rendered CV without losing the underlying data (toggling back restores it)
   4. A visual warning appears when content exceeds the page boundary, so the user knows their CV is longer than one page
-**Plans**: 3 plans
+**Plans**: 5 plans
 **UI hint**: yes
 
 Plans:
 - [x] 03-01-PLAN.md -- Entry factory extraction + useDirectEditor CRUD extensions (addEntry, removeEntry, toggleSection)
 - [x] 03-02-PLAN.md -- SectionWrapper, EntryWrapper, ConfirmDialog components + MedLengthTemplate integration
 - [ ] 03-03-PLAN.md -- Page break indicator (usePageBreak hook + PageBreakIndicator component + visual checkpoint)
+- [ ] 03-04-PLAN.md -- [GAP CLOSURE] Fix skills crash, grid layout collapse, and date placeholder spacing
+- [ ] 03-05-PLAN.md -- [GAP CLOSURE] UX polish: bullet hint, dialog visual polish, control sizing
 
 ### Phase 4: Drag and Drop
 **Goal**: Users can reorder their CV's sections and entries by dragging directly on the web CV, without conflicting with text editing
@@ -131,7 +133,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 |-------|----------------|--------|-----------|
 | 1. Data Model Prep | 3/3 | Complete | - |
 | 2. Core Editing Surface | 0/4 | Planning complete | - |
-| 3. Content Management | 0/3 | Planning complete | - |
+| 3. Content Management | 2/5 | Executing (gap closure) | - |
 | 4. Drag and Drop | 0/0 | Not started | - |
 | 5. AI Integration | 0/0 | Not started | - |
 | 6. Route Integration | 0/0 | Not started | - |
