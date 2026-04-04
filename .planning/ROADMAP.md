@@ -84,12 +84,12 @@ Plans:
   2. User can reorder entries within a section (e.g., move second job above first job) by dragging individual items
   3. Drag interactions use dedicated grip handles that are visually distinct from editable content -- clicking on text always initiates editing, never dragging
   4. After any drag operation, the CVFormData model (sectionOrder and array positions) reflects the new order and persists correctly on save
-**Plans**: TBD
+**Plans**: 2 plans
 **UI hint**: yes
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
+- [ ] 04-01-PLAN.md -- DnD infrastructure: GripIcon, DropLine, useSectionDrag, useEntryDrag hooks, useDirectEditor reorder functions + tests
+- [ ] 04-02-PLAN.md -- Integration: wire grip handles and drop lines into SectionWrapper, EntryWrapper, MedLengthTemplate, DirectEditPage + visual checkpoint
 
 ### Phase 5: AI Integration
 **Goal**: Existing AI features (import, apply-to-job, tailor suggestions) work seamlessly with the web CV editor, with inline diffs on the CV itself, and AI responses are fast enough to keep users in editing flow
@@ -132,8 +132,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Data Model Prep | 3/3 | Complete | - |
-| 2. Core Editing Surface | 0/4 | Planning complete | - |
-| 3. Content Management | 2/5 | Executing (gap closure) | - |
-| 4. Drag and Drop | 0/0 | Not started | - |
+| 2. Core Editing Surface | 4/4 | Complete | - |
+| 3. Content Management | 5/5 | Complete | - |
+| 4. Drag and Drop | 0/2 | Planning complete | - |
 | 5. AI Integration | 0/0 | Not started | - |
 | 6. Route Integration | 0/0 | Not started | - |
