@@ -7,17 +7,18 @@
 .deleteButton {
   position: absolute;
   top: 0;
-  right: -20px;
+  right: -24px;
   opacity: 0;
   transition: opacity 0.15s ease;
   border: none;
   background: none;
   cursor: pointer;
-  color: var(--text-muted);
-  padding: 2px;
+  color: var(--text-secondary);
+  padding: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 4px;
 }
 
 .entryWrapGrid {
@@ -34,4 +35,5 @@
 
 .deleteButton:hover {
   color: var(--error);
+  background: var(--error-light, #FEE2E2);
 }

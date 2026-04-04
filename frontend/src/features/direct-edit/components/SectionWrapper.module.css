@@ -16,11 +16,12 @@
   border: none;
   background: none;
   cursor: pointer;
-  padding: 2px;
-  color: var(--text-muted);
+  padding: 4px;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  border-radius: 4px;
 }
 
 .sectionHeaderRow:hover .toggleButton {
@@ -33,6 +34,7 @@
 
 .toggleButton:hover {
   color: var(--accent);
+  background: var(--bg-hover);
 }
 
 .sectionContent {
@@ -43,12 +45,12 @@
 .addButton {
   opacity: 0;
   transition: opacity 0.15s ease;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   cursor: pointer;
   border: none;
   background: none;
   font-family: "EB Garamond Variable", "EB Garamond", Georgia, serif;
-  font-size: 11pt;
+  font-size: 10pt;
   padding: 4px 8px;
   margin-top: 4px;
 }
@@ -63,6 +65,8 @@
 
 .addButton:hover {
   color: var(--accent);
+  background: var(--bg-hover);
+  border-radius: 4px;
 }
 
 .hiddenLabel {

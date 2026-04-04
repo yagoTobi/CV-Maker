@@ -5,7 +5,7 @@
  *
  * Covers: EDIT-03 (bullet keyboard handling).
  */
-import { useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { EditableField } from './EditableField';
 import type { BulletItem } from '../../../types';
 import styles from './EditableBulletList.module.css';
@@ -27,6 +27,7 @@ export function EditableBulletList({
   onBulletRemove,
   onInput,
 }: EditableBulletListProps) {
+  const [hasFocus, setHasFocus] = useState(false);
   const bulletRefs = useRef<Map<string, HTMLElement>>(new Map());
   const pendingFocusId = useRef<string | null>(null);
 
@@ -94,7 +95,16 @@ export function EditableBulletList({
   );
 
   return (
-    <div className={styles.bulletList}>
+    <div
+      className={styles.bulletList}
+      onFocus={() => setHasFocus(true)}
+      onBlur={(e) => {
+        // Only blur if focus leaves the bullet list entirely
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+          setHasFocus(false);
+        }
+      }}
+    >
       {bullets.map((bullet, i) => (
         <div key={bullet.id} className={styles.bulletItem}>
           <span className={styles.bulletMarker} />
@@ -110,6 +120,11 @@ export function EditableBulletList({
           />
         </div>
       ))}
+      {hasFocus && (
+        <div className={styles.hint}>
+          Press Enter to add a new bullet
+        </div>
+      )}
     </div>
   );
 }
