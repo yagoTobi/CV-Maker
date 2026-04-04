@@ -34,7 +34,7 @@ const DEFAULT_PERSONAL_ORDER = ['phone', 'email', 'location', 'links'];
 
 interface MedLengthTemplateProps {
   formData: CVFormData;
-  onFieldChange: (path: string, value: string) => void;
+  onFieldChange: (path: string, value: string | SkillItem[]) => void;
   onBulletAdd: (basePath: string, afterIndex: number) => void;
   onBulletRemove: (basePath: string, index: number) => void;
   onAddEntry: (sectionKey: string) => void;
@@ -73,7 +73,7 @@ export function MedLengthTemplate({
         if (matchByText) return matchByText;
         return { id: generateId(), text };
       });
-      onFieldChange(`skills[${skillIndex}].skills`, JSON.stringify(updatedSkills));
+      onFieldChange(`skills[${skillIndex}].skills`, updatedSkills);
     },
     [onFieldChange]
   );
@@ -170,9 +170,7 @@ export function MedLengthTemplate({
         className={styles.bold}
         onInput={onInput}
       />
-      {(startDate || endDate) && (
-        <span className={styles.dateSeparator}>{'\u2013'}</span>
-      )}
+      <span className={styles.dateSeparator}>{'\u2013'}</span>
       <EditableField
         value={endDate}
         fieldPath={endPath}
@@ -806,7 +804,7 @@ function SkillCategoryRow({
 }: {
   category: SkillCategory;
   index: number;
-  onFieldChange: (path: string, value: string) => void;
+  onFieldChange: (path: string, value: string | SkillItem[]) => void;
   onSkillsTextChange: (
     skillIndex: number,
     currentSkills: SkillItem[],
@@ -858,7 +856,7 @@ function AwardRow({
 }: {
   award: Award;
   index: number;
-  onFieldChange: (path: string, value: string) => void;
+  onFieldChange: (path: string, value: string | SkillItem[]) => void;
   onInput?: () => void;
 }) {
   return (

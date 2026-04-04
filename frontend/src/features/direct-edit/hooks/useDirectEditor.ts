@@ -27,14 +27,14 @@ import {
   emptyAdditionalEntry,
   emptyAdditionalSection,
 } from '../../../utils/entryFactories';
-import type { CVFormData, BulletItem } from '../../../types';
+import type { CVFormData, BulletItem, SkillItem } from '../../../types';
 
 export function useDirectEditor() {
   const { formData, setFormData } = useCVContext();
   const [hiddenSections, setHiddenSections] = useState<Set<string>>(new Set());
 
   const updateField = useCallback(
-    (path: string, value: string) => {
+    (path: string, value: string | SkillItem[]) => {
       setFormData((prev: CVFormData | null) => {
         if (!prev) return prev;
         const next = structuredClone(prev);
