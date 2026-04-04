@@ -30,12 +30,13 @@ The CV itself is the editor. Users type directly on what they'll download — no
 - [x] Multi-line bullet editing (Enter/Backspace) -- Phase 2
 - [x] Placeholder text on empty fields -- Phase 2
 - [x] Auto-save with debounce and "Saved"/"Saving..." indicator -- Phase 2
+- [x] Contextual "+" buttons for adding new entries (jobs, education, skills, etc.) -- Phase 3
+- [x] Delete entries with confirmation prompt (major) or instant deletion (minor) -- Phase 3
+- [x] Toggle section visibility on/off without losing data -- Phase 3
+- [x] Page overflow indicator (dashed "Page 2" line via ResizeObserver) -- Phase 3
 
 ### Active
 
-- [ ] Web CV editor with inline text editing (click any text to edit in place)
-- [ ] Pixel-perfect web template matching LaTeX PDF output for first template
-- [ ] Contextual "+" buttons for adding new entries (jobs, education, skills, etc.)
 - [ ] Drag-and-drop reordering on the web CV itself
 - [ ] CVFormData remains hidden source of truth (web CV reads/writes to it)
 - [ ] LaTeX compilation fires only at download time
@@ -105,4 +106,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-30 after Phase 2 completion*
+*Last updated: 2026-04-04 after Phase 3 completion*
