@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-04-PLAN.md
-last_updated: "2026-04-04T21:44:13.933Z"
+stopped_at: Completed 03-05-PLAN.md
+last_updated: "2026-04-04T21:50:39.734Z"
 last_activity: 2026-04-04
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 12
-  completed_plans: 10
-  percent: 83
+  completed_plans: 11
+  percent: 92
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-29)
 ## Current Position
 
 Phase: 03 (content-management) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-04-04
 
@@ -61,6 +61,7 @@ Progress: [███████░░░] 67%
 | Phase 03 P01 | 11min | 2 tasks | 5 files |
 | Phase 03 P02 | 10min | 2 tasks | 11 files |
 | Phase 03 P04 | 4min | 2 tasks | 6 files |
+| Phase 03 P05 | 4min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,9 @@ Recent decisions affecting current work:
 - [Phase 03]: Major vs minor entry classification: skills are minor (instant delete), all others are major (confirm before delete)
 - [Phase 03]: Widen onFieldChange type to string | SkillItem[] (minimal fix) rather than adding separate onSkillsChange prop
 - [Phase 03]: CSS subgrid over display: contents for grid-child EntryWrapper -- preserves position: relative and :hover for delete button
+- [Phase 03]: Bullet hint uses IBM Plex Sans (UI chrome font) at 10px/0.7 opacity for discoverability without distracting from CV content
+- [Phase 03]: ConfirmDialog backdrop at 0.08 opacity -- barely visible overlay that catches clicks to dismiss
+- [Phase 03]: Control sizing standard: section-level 18px/4px, entry-level 16px/4px, --text-secondary default color
 
 ### Pending Todos
 
@@ -103,6 +107,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T21:44:13.922Z
-Stopped at: Completed 03-04-PLAN.md
+Last session: 2026-04-04T21:50:39.727Z
+Stopped at: Completed 03-05-PLAN.md
 Resume file: None

@@ -73,7 +73,7 @@ Plans:
 - [x] 03-02-PLAN.md -- SectionWrapper, EntryWrapper, ConfirmDialog components + MedLengthTemplate integration
 - [ ] 03-03-PLAN.md -- Page break indicator (usePageBreak hook + PageBreakIndicator component + visual checkpoint)
 - [x] 03-04-PLAN.md -- [GAP CLOSURE] Fix skills crash, grid layout collapse, and date placeholder spacing
-- [ ] 03-05-PLAN.md -- [GAP CLOSURE] UX polish: bullet hint, dialog visual polish, control sizing
+- [x] 03-05-PLAN.md -- [GAP CLOSURE] UX polish: bullet hint, dialog visual polish, control sizing
 
 ### Phase 4: Drag and Drop
 **Goal**: Users can reorder their CV's sections and entries by dragging directly on the web CV, without conflicting with text editing
