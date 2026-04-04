@@ -115,4 +115,35 @@ describe('EntryWrapper', () => {
 
     expect(screen.getByLabelText('Delete entry')).toBeInTheDocument();
   });
+
+  it('renders with gridItem prop using grid class for subgrid layout', () => {
+    const { container } = render(
+      <EntryWrapper onDelete={vi.fn()} gridItem>
+        <span>Skill Category</span>
+        <span>Skill Values</span>
+      </EntryWrapper>
+    );
+
+    // The root wrapper should exist and contain children
+    const wrapper = container.firstElementChild as HTMLElement;
+    expect(wrapper).toBeTruthy();
+    expect(screen.getByText('Skill Category')).toBeInTheDocument();
+    expect(screen.getByText('Skill Values')).toBeInTheDocument();
+    // Delete button still present
+    expect(screen.getByLabelText('Delete entry')).toBeInTheDocument();
+  });
+
+  it('gridItem variant still supports instant delete (no confirm)', () => {
+    const onDelete = vi.fn();
+
+    render(
+      <EntryWrapper onDelete={onDelete} gridItem>
+        <span>Category</span>
+        <span>Values</span>
+      </EntryWrapper>
+    );
+
+    fireEvent.click(screen.getByLabelText('Delete entry'));
+    expect(onDelete).toHaveBeenCalledTimes(1);
+  });
 });

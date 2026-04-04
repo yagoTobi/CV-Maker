@@ -20,7 +20,15 @@
   justify-content: center;
 }
 
-.entryWrap:hover > .deleteButton {
+.entryWrapGrid {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+  position: relative;
+}
+
+.entryWrap:hover > .deleteButton,
+.entryWrapGrid:hover > .deleteButton {
   opacity: 1;
 }
 

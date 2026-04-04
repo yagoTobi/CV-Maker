@@ -15,6 +15,8 @@ interface EntryWrapperProps {
   onDelete: () => void;
   requireConfirm?: boolean;
   confirmMessage?: string;
+  /** Use CSS subgrid layout for grid-child contexts (skills/awards grids) */
+  gridItem?: boolean;
   children: React.ReactNode;
 }
 
@@ -22,6 +24,7 @@ export function EntryWrapper({
   onDelete,
   requireConfirm = false,
   confirmMessage = 'Delete this entry?',
+  gridItem = false,
   children,
 }: EntryWrapperProps) {
   const [showConfirm, setShowConfirm] = useState(false);
@@ -44,7 +47,7 @@ export function EntryWrapper({
   }, []);
 
   return (
-    <div className={styles.entryWrap}>
+    <div className={gridItem ? styles.entryWrapGrid : styles.entryWrap}>
       {children}
       <button
         className={styles.deleteButton}

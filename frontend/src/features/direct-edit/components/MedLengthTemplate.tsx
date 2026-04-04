@@ -423,6 +423,7 @@ export function MedLengthTemplate({
               key={cat.id}
               onDelete={() => onRemoveEntry('skills', i)}
               requireConfirm={false}
+              gridItem
             >
               <SkillCategoryRow
                 category={cat}
@@ -540,6 +541,7 @@ export function MedLengthTemplate({
               onDelete={() => onRemoveEntry('awards', i)}
               requireConfirm={true}
               confirmMessage={`Delete "${award.title || 'this award'}"?`}
+              gridItem
             >
               <AwardRow
                 award={award}
