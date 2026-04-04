@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-03-30T10:42:32.355Z"
-last_activity: 2026-03-30
+stopped_at: Completed 03-04-PLAN.md
+last_updated: "2026-04-04T21:44:13.933Z"
+last_activity: 2026-04-04
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 10
-  completed_plans: 9
-  percent: 67
+  total_plans: 12
+  completed_plans: 10
+  percent: 83
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-29)
 ## Current Position
 
 Phase: 03 (content-management) — EXECUTING
-Plan: 3 of 3
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-03-30
+Last activity: 2026-04-04
 
 Progress: [███████░░░] 67%
 
@@ -60,6 +60,7 @@ Progress: [███████░░░] 67%
 | Phase 02 P02 | 5min | 2 tasks | 2 files |
 | Phase 03 P01 | 11min | 2 tasks | 5 files |
 | Phase 03 P02 | 10min | 2 tasks | 11 files |
+| Phase 03 P04 | 4min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,8 @@ Recent decisions affecting current work:
 - [Phase 03]: removeEntry allows empty sections (unlike removeBullet which guards minimum 1)
 - [Phase 03]: SectionWrapper uses headerClassName/renderHeader props for flexible header rendering across standard and additional sections
 - [Phase 03]: Major vs minor entry classification: skills are minor (instant delete), all others are major (confirm before delete)
+- [Phase 03]: Widen onFieldChange type to string | SkillItem[] (minimal fix) rather than adding separate onSkillsChange prop
+- [Phase 03]: CSS subgrid over display: contents for grid-child EntryWrapper -- preserves position: relative and :hover for delete button
 
 ### Pending Todos
 
@@ -100,6 +103,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-30T10:42:32.346Z
-Stopped at: Completed 03-02-PLAN.md
+Last session: 2026-04-04T21:44:13.922Z
+Stopped at: Completed 03-04-PLAN.md
 Resume file: None
