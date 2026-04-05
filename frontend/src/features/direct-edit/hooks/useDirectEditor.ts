@@ -29,6 +29,13 @@ import {
 } from '../../../utils/entryFactories';
 import type { CVFormData, BulletItem, SkillItem } from '../../../types';
 
+function reorder<T>(arr: T[], from: number, to: number): T[] {
+  const result = [...arr];
+  const [item] = result.splice(from, 1);
+  result.splice(to, 0, item);
+  return result;
+}
+
 export function useDirectEditor() {
   const { formData, setFormData } = useCVContext();
   const [hiddenSections, setHiddenSections] = useState<Set<string>>(new Set());
@@ -175,6 +182,57 @@ export function useDirectEditor() {
     [setFormData]
   );
 
+  const reorderSections = useCallback(
+    (from: number, to: number) => {
+      setFormData((prev: CVFormData | null) => {
+        if (!prev) return prev;
+        const currentOrder = prev.sectionOrder ?? ['work', 'education', 'skills', 'projects', 'awards'];
+        return { ...prev, sectionOrder: reorder(currentOrder, from, to) };
+      });
+    },
+    [setFormData]
+  );
+
+  const reorderEntries = useCallback(
+    (sectionKey: string, from: number, to: number) => {
+      setFormData((prev: CVFormData | null) => {
+        if (!prev) return prev;
+        const next = structuredClone(prev);
+        switch (sectionKey) {
+          case 'work':
+            next.workExperience = reorder(next.workExperience, from, to);
+            break;
+          case 'education':
+            next.education = reorder(next.education, from, to);
+            break;
+          case 'skills':
+            next.skills = reorder(next.skills, from, to);
+            break;
+          case 'projects':
+            next.projects = reorder(next.projects || [], from, to);
+            break;
+          case 'awards':
+            next.awards = reorder(next.awards || [], from, to);
+            break;
+          default:
+            if (sectionKey.startsWith('additional-')) {
+              const sIdx = parseInt(sectionKey.split('-')[1], 10);
+              const sections = next.additionalSections || [];
+              if (sIdx < sections.length) {
+                sections[sIdx] = {
+                  ...sections[sIdx],
+                  entries: reorder(sections[sIdx].entries, from, to),
+                };
+                next.additionalSections = sections;
+              }
+            }
+        }
+        return next;
+      });
+    },
+    [setFormData]
+  );
+
   const toggleSection = useCallback(
     (sectionKey: string) => {
       setHiddenSections(prev => {
@@ -197,6 +255,8 @@ export function useDirectEditor() {
     removeBullet,
     addEntry,
     removeEntry,
+    reorderSections,
+    reorderEntries,
     toggleSection,
     hiddenSections,
   };
