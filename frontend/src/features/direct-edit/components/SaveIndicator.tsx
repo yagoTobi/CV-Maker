@@ -9,9 +9,10 @@ import styles from './SaveIndicator.module.css';
 
 interface SaveIndicatorProps {
   status: SaveStatus;
+  inline?: boolean;
 }
 
-export function SaveIndicator({ status }: SaveIndicatorProps) {
+export function SaveIndicator({ status, inline }: SaveIndicatorProps) {
   if (status === 'idle') return null;
 
   const text = status === 'saving' ? 'Saving...'
@@ -23,7 +24,7 @@ export function SaveIndicator({ status }: SaveIndicatorProps) {
                   : styles.error;
 
   return (
-    <div className={`${styles.indicator} ${className}`}>
+    <div className={`${styles.indicator} ${className}${inline ? ` ${styles.inline}` : ''}`}>
       {text}
     </div>
   );

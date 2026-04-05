@@ -29,3 +29,9 @@
 .error {
   color: var(--error);
 }
+
+.inline {
+  position: static;
+  z-index: auto;
+  pointer-events: auto;
+}
