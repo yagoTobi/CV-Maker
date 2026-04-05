@@ -38,6 +38,8 @@ interface SectionWrapperProps {
   };
   /** Whether this section is currently being dragged (for opacity) */
   isDragSource?: boolean;
+  /** When true, suppress all editing UI (add, toggle, drag grip) */
+  readOnly?: boolean;
   children: ReactNode;
 }
 
@@ -70,8 +72,28 @@ export function SectionWrapper({
   sectionIndex,
   dragHandlers,
   isDragSource = false,
+  readOnly = false,
   children,
 }: SectionWrapperProps) {
+  // readOnly mode: render section with header and content only, no interactive controls
+  if (readOnly) {
+    return (
+      <div
+        className={styles.sectionWrap}
+        data-section={sectionKey}
+      >
+        <div className={styles.sectionHeaderRow}>
+          {renderHeader ? renderHeader() : (
+            <div className={headerClassName}>{title}</div>
+          )}
+        </div>
+        <div className={styles.sectionContent}>
+          {children}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`${styles.sectionWrap}${isDragSource ? ` ${styles.dragging}` : ''}`}

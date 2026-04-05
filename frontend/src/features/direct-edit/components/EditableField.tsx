@@ -22,6 +22,7 @@ interface EditableFieldProps {
   multiline?: boolean;
   onInput?: () => void;
   onKeyDown?: (e: React.KeyboardEvent) => void;
+  readOnly?: boolean;
 }
 
 export const EditableField = forwardRef<HTMLElement, EditableFieldProps>(
@@ -36,6 +37,7 @@ export const EditableField = forwardRef<HTMLElement, EditableFieldProps>(
       multiline = false,
       onInput,
       onKeyDown,
+      readOnly,
     },
     forwardedRef
   ) {
@@ -45,6 +47,15 @@ export const EditableField = forwardRef<HTMLElement, EditableFieldProps>(
 
     // Expose the DOM element to parent via forwardRef
     useImperativeHandle(forwardedRef, () => ref.current!, []);
+
+    // readOnly mode: render as plain (non-editable) element with same styling
+    if (readOnly) {
+      const readOnlyClassName = className
+        ? `${styles.editableField} ${className}`
+        : styles.editableField;
+
+      return <Tag ref={ref} className={readOnlyClassName} data-field-path={fieldPath}>{value}</Tag>;
+    }
 
     // Sync value prop to DOM textContent ONLY when not focused (D-04, EDIT-06)
     useEffect(() => {

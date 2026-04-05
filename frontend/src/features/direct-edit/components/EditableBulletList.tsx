@@ -17,6 +17,7 @@ interface EditableBulletListProps {
   onBulletAdd: (afterIndex: number) => void;
   onBulletRemove: (index: number) => void;
   onInput?: () => void;
+  readOnly?: boolean;
 }
 
 export function EditableBulletList({
@@ -26,6 +27,7 @@ export function EditableBulletList({
   onBulletAdd,
   onBulletRemove,
   onInput,
+  readOnly,
 }: EditableBulletListProps) {
   const [hasFocus, setHasFocus] = useState(false);
   const bulletRefs = useRef<Map<string, HTMLElement>>(new Map());
@@ -93,6 +95,20 @@ export function EditableBulletList({
     },
     []
   );
+
+  // readOnly mode: render plain list items without editing capabilities
+  if (readOnly) {
+    return (
+      <div className={styles.bulletList}>
+        {bullets.map((bullet) => (
+          <div key={bullet.id} className={styles.bulletItem}>
+            <span className={styles.bulletMarker} />
+            <div>{bullet.text}</div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div

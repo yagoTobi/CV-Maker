@@ -50,6 +50,8 @@ interface EntryWrapperProps {
   showDropLine?: boolean;
   /** Whether to show grip handle (false for single-entry sections) */
   showGrip?: boolean;
+  /** When true, suppress all editing UI (delete button, drag grip) */
+  readOnly?: boolean;
   children: React.ReactNode;
 }
 
@@ -63,6 +65,7 @@ export function EntryWrapper({
   isDragSource = false,
   showDropLine = false,
   showGrip = true,
+  readOnly = false,
   children,
 }: EntryWrapperProps) {
   const [showConfirm, setShowConfirm] = useState(false);
@@ -85,6 +88,15 @@ export function EntryWrapper({
   }, []);
 
   const handlers = dragHandlers ?? noopDragHandlers;
+
+  // readOnly mode: render entry content without interactive controls
+  if (readOnly) {
+    return (
+      <div className={gridItem ? styles.entryWrapGrid : styles.entryWrap}>
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div
