@@ -49,7 +49,12 @@ export const EditableField = forwardRef<HTMLElement, EditableFieldProps>(
     // Sync value prop to DOM textContent ONLY when not focused (D-04, EDIT-06)
     useEffect(() => {
       if (!isFocused.current && ref.current) {
-        if (ref.current.textContent !== value) {
+        // When value is empty, the browser may leave stray <br> or text nodes
+        // that prevent CSS :empty from matching (so the placeholder won't show).
+        // Explicitly clear childNodes to make :empty work.
+        if (value === '' && ref.current.childNodes.length > 0) {
+          ref.current.textContent = '';
+        } else if (ref.current.textContent !== value) {
           ref.current.textContent = value;
         }
       }
