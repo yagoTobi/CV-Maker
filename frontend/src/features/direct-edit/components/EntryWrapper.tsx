@@ -1,15 +1,31 @@
 /**
  * EntryWrapper -- Wraps a single entry (job, education, project, etc.) with a
- * hover-reveal delete button. Optionally shows ConfirmDialog for major entries.
+ * hover-reveal delete button and drag grip handle in the left gutter.
+ * Optionally shows ConfirmDialog for major entries.
  *
+ * Per D-01: Grip handle is absolutely positioned in the left gutter,
+ * OUTSIDE the CV content area (left: -28px), mirroring the delete button
+ * pattern (absolute at right: -24px).
  * Per D-03: X icon appears in top-right on hover. Invisible when not hovering.
  * Per D-04: Major entries show confirmation, minor entries delete instantly.
  *
- * Covers: CONT-02 (delete entry), CONT-03 (confirm major deletes).
+ * Covers: CONT-02 (delete entry), CONT-03 (confirm major deletes), DND-02 (entry drag).
  */
 import { useState, useCallback } from 'react';
+import { GripIcon } from './GripIcon';
+import { DropLine } from './DropLine';
 import { ConfirmDialog } from './ConfirmDialog';
 import styles from './EntryWrapper.module.css';
+
+/** No-op drag handlers for backward compatibility when drag is not wired */
+const noopDragHandlers = {
+  onGripMouseDown: () => {},
+  onDragStart: () => {},
+  onDragEnter: () => {},
+  onDragOver: () => {},
+  onDrop: () => {},
+  onDragEnd: () => {},
+};
 
 interface EntryWrapperProps {
   onDelete: () => void;
@@ -17,6 +33,23 @@ interface EntryWrapperProps {
   confirmMessage?: string;
   /** Use CSS subgrid layout for grid-child contexts (skills/awards grids) */
   gridItem?: boolean;
+  /** Entry index within section for drag positioning */
+  entryIndex?: number;
+  /** Entry-level drag handlers from useEntryDrag */
+  dragHandlers?: {
+    onGripMouseDown: (e: React.MouseEvent) => void;
+    onDragStart: (e: React.DragEvent, index: number) => void;
+    onDragEnter: (e: React.DragEvent, index: number) => void;
+    onDragOver: (e: React.DragEvent) => void;
+    onDrop: (e: React.DragEvent, index: number) => void;
+    onDragEnd: (e: React.DragEvent) => void;
+  };
+  /** Whether this entry is being dragged */
+  isDragSource?: boolean;
+  /** Whether to show DropLine before this entry */
+  showDropLine?: boolean;
+  /** Whether to show grip handle (false for single-entry sections) */
+  showGrip?: boolean;
   children: React.ReactNode;
 }
 
@@ -25,6 +58,11 @@ export function EntryWrapper({
   requireConfirm = false,
   confirmMessage = 'Delete this entry?',
   gridItem = false,
+  entryIndex = 0,
+  dragHandlers = noopDragHandlers,
+  isDragSource = false,
+  showDropLine = false,
+  showGrip = true,
   children,
 }: EntryWrapperProps) {
   const [showConfirm, setShowConfirm] = useState(false);
@@ -46,8 +84,29 @@ export function EntryWrapper({
     setShowConfirm(false);
   }, []);
 
+  const handlers = dragHandlers ?? noopDragHandlers;
+
   return (
-    <div className={gridItem ? styles.entryWrapGrid : styles.entryWrap}>
+    <div
+      className={`${gridItem ? styles.entryWrapGrid : styles.entryWrap}${isDragSource ? ` ${styles.dragging}` : ''}`}
+      data-drag-entry={entryIndex}
+      onDragStart={(e) => handlers.onDragStart(e, entryIndex)}
+      onDragEnter={(e) => handlers.onDragEnter(e, entryIndex)}
+      onDragOver={handlers.onDragOver}
+      onDrop={(e) => handlers.onDrop(e, entryIndex)}
+      onDragEnd={handlers.onDragEnd}
+    >
+      {showDropLine && <DropLine />}
+      {showGrip && (
+        <button
+          className={styles.entryGrip}
+          onMouseDown={handlers.onGripMouseDown}
+          aria-label="Drag to reorder"
+          type="button"
+        >
+          <GripIcon />
+        </button>
+      )}
       {children}
       <button
         className={styles.deleteButton}

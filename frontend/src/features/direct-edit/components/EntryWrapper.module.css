@@ -1,4 +1,4 @@
-/* EntryWrapper -- Hover-reveal delete button positioned outside entry box. */
+/* EntryWrapper -- Hover-reveal delete button and drag grip positioned outside entry box. */
 
 .entryWrap {
   position: relative;
@@ -36,4 +36,41 @@
 .deleteButton:hover {
   color: var(--error);
   background: var(--error-light, #FEE2E2);
+}
+
+/* Entry grip -- absolutely positioned in the left gutter OUTSIDE the CV content area (D-01).
+   Mirrors the .deleteButton pattern on the right side but placed on the left. */
+.entryGrip {
+  position: absolute;
+  left: -28px;
+  top: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  border: none;
+  background: none;
+  cursor: grab;
+  padding: 4px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+}
+
+.entryWrap:hover > .entryGrip,
+.entryWrapGrid:hover > .entryGrip {
+  opacity: 1;
+}
+
+.entryGrip:hover {
+  color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.entryGrip:active {
+  cursor: grabbing;
+}
+
+.dragging {
+  opacity: 0.4;
+  transition: opacity 0.15s ease;
 }

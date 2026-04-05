@@ -1,15 +1,18 @@
 /**
- * SectionWrapper -- Wraps a CV section with hover-reveal add button and
- * section visibility toggle.
+ * SectionWrapper -- Wraps a CV section with hover-reveal add button,
+ * section visibility toggle, and drag grip handle in the left gutter.
  *
- * Per D-01: Add button appears at bottom of section on hover, invisible otherwise.
- * Per D-02: Button text is contextual ("+ Add work entry", etc.).
+ * Per D-01: Grip handle is absolutely positioned in the left gutter,
+ * OUTSIDE the CV content area (left: -28px), matching the EntryWrapper
+ * delete button pattern (absolute positioned at right: -24px).
+ * Per D-02: Grip appears only on hover.
  * Per D-05: Toggle icon appears on section header hover.
  * Per D-06: Hidden sections collapse to muted label, data preserved.
  *
- * Covers: CONT-01 (add entry), CONT-04 (toggle section).
+ * Covers: CONT-01 (add entry), CONT-04 (toggle section), DND-01 (section drag).
  */
 import type { ReactNode } from 'react';
+import { GripIcon } from './GripIcon';
 import styles from './SectionWrapper.module.css';
 
 interface SectionWrapperProps {
@@ -22,6 +25,19 @@ interface SectionWrapperProps {
   addLabel: string;
   headerClassName?: string;
   renderHeader?: () => ReactNode;
+  /** Section index in sectionOrder for drag positioning */
+  sectionIndex: number;
+  /** Section-level drag handlers from useSectionDrag */
+  dragHandlers: {
+    onGripMouseDown: (e: React.MouseEvent) => void;
+    onDragStart: (e: React.DragEvent, index: number) => void;
+    onDragEnter: (e: React.DragEvent, index: number) => void;
+    onDragOver: (e: React.DragEvent) => void;
+    onDrop: (e: React.DragEvent, index: number) => void;
+    onDragEnd: (e: React.DragEvent) => void;
+  };
+  /** Whether this section is currently being dragged (for opacity) */
+  isDragSource?: boolean;
   children: ReactNode;
 }
 
@@ -51,10 +67,30 @@ export function SectionWrapper({
   addLabel,
   headerClassName,
   renderHeader,
+  sectionIndex,
+  dragHandlers,
+  isDragSource = false,
   children,
 }: SectionWrapperProps) {
   return (
-    <div className={styles.sectionWrap} data-section={sectionKey}>
+    <div
+      className={`${styles.sectionWrap}${isDragSource ? ` ${styles.dragging}` : ''}`}
+      data-section={sectionKey}
+      data-drag-section={sectionKey}
+      onDragStart={(e) => dragHandlers.onDragStart(e, sectionIndex)}
+      onDragEnter={(e) => dragHandlers.onDragEnter(e, sectionIndex)}
+      onDragOver={dragHandlers.onDragOver}
+      onDrop={(e) => dragHandlers.onDrop(e, sectionIndex)}
+      onDragEnd={dragHandlers.onDragEnd}
+    >
+      <button
+        className={styles.gripButton}
+        onMouseDown={dragHandlers.onGripMouseDown}
+        aria-label={`Drag to reorder ${title} section`}
+        type="button"
+      >
+        <GripIcon />
+      </button>
       <div className={styles.sectionHeaderRow}>
         {renderHeader ? renderHeader() : (
           <div className={headerClassName}>{title}</div>

@@ -8,6 +8,15 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { SectionWrapper } from '../features/direct-edit/components/SectionWrapper';
 
 describe('SectionWrapper', () => {
+  const mockDragHandlers = {
+    onGripMouseDown: vi.fn(),
+    onDragStart: vi.fn(),
+    onDragEnter: vi.fn(),
+    onDragOver: vi.fn(),
+    onDrop: vi.fn(),
+    onDragEnd: vi.fn(),
+  };
+
   const defaultProps = {
     sectionKey: 'work',
     title: 'Experience',
@@ -16,6 +25,8 @@ describe('SectionWrapper', () => {
     onToggleVisibility: vi.fn(),
     onAddEntry: vi.fn(),
     addLabel: '+ Add work entry',
+    sectionIndex: 0,
+    dragHandlers: mockDragHandlers,
   };
 
   it('renders children and section header text when not hidden', () => {

@@ -1,4 +1,4 @@
-/* SectionWrapper -- Hover-reveal add button + toggle for CV sections. */
+/* SectionWrapper -- Hover-reveal add button, toggle, and drag grip for CV sections. */
 
 .sectionWrap {
   position: relative;
@@ -8,6 +8,43 @@
   display: flex;
   justify-content: space-between;
   align-items: baseline;
+}
+
+/* Grip button -- absolutely positioned in the left gutter OUTSIDE the CV content area (D-01).
+   Mirrors the EntryWrapper .deleteButton pattern (absolute at right: -24px) but on the left side. */
+.gripButton {
+  position: absolute;
+  left: -28px;
+  top: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  border: none;
+  background: none;
+  cursor: grab;
+  padding: 4px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.sectionWrap:hover > .gripButton {
+  opacity: 1;
+}
+
+.gripButton:hover {
+  color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.gripButton:active {
+  cursor: grabbing;
+}
+
+.dragging {
+  opacity: 0.4;
+  transition: opacity 0.15s ease;
 }
 
 .toggleButton {
