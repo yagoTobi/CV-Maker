@@ -13,15 +13,32 @@ import { useRef, useState, useCallback } from 'react';
 export function useEntryDrag(onReorder: (from: number, to: number) => void) {
   const dragFromRef = useRef<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  /** Track the actual DOM element made draggable so we can reliably reset it */
+  const dragElRef = useRef<HTMLElement | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragFromIndex, setDragFromIndex] = useState<number | null>(null);
+
+  /** Reset draggable attribute on the tracked element and clear all state */
+  const cleanup = useCallback(() => {
+    if (dragElRef.current) {
+      dragElRef.current.draggable = false;
+      dragElRef.current = null;
+    }
+    dragFromRef.current = null;
+    setDropIndex(null);
+    setIsDragging(false);
+    setDragFromIndex(null);
+  }, []);
 
   const onGripMouseDown = useCallback((e: React.MouseEvent) => {
     const entry = (e.currentTarget as HTMLElement).closest(
       '[data-drag-entry]',
     ) as HTMLElement | null;
-    if (entry) entry.draggable = true;
+    if (entry) {
+      entry.draggable = true;
+      dragElRef.current = entry;
+    }
   }, []);
 
   const onDragStart = useCallback((e: React.DragEvent, index: number) => {
@@ -55,23 +72,17 @@ export function useEntryDrag(onReorder: (from: number, to: number) => void) {
 
   const onDrop = useCallback((e: React.DragEvent, index: number) => {
     e.stopPropagation();
+    e.preventDefault();
     if (dragFromRef.current !== null && dragFromRef.current !== index) {
       onReorder(dragFromRef.current, index);
     }
-    dragFromRef.current = null;
-    setDropIndex(null);
-    setIsDragging(false);
-    setDragFromIndex(null);
-  }, [onReorder]);
+    cleanup();
+  }, [onReorder, cleanup]);
 
   const onDragEnd = useCallback((e: React.DragEvent) => {
     e.stopPropagation();
-    (e.currentTarget as HTMLElement).draggable = false;
-    dragFromRef.current = null;
-    setDropIndex(null);
-    setIsDragging(false);
-    setDragFromIndex(null);
-  }, []);
+    cleanup();
+  }, [cleanup]);
 
   return {
     onGripMouseDown,

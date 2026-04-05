@@ -15,7 +15,7 @@
 .gripButton {
   position: absolute;
   left: -28px;
-  top: 0;
+  top: -2px; /* vertically center grip dots with section header text baseline */
   opacity: 0;
   transition: opacity 0.15s ease;
   border: none;

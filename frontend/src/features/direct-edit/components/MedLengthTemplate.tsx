@@ -66,6 +66,37 @@ function EntryDragContainer({
   return <>{children(entryDrag)}</>;
 }
 
+/**
+ * DropZoneTail -- Invisible drop target after the last entry in a section.
+ * Without this, dragging an entry to the bottom has no element to trigger
+ * onDragEnter at index === entryCount, so the "drop below last" position
+ * was unreachable (Bug 3 fix).
+ */
+function DropZoneTail({
+  entryCount,
+  entryDrag,
+}: {
+  entryCount: number;
+  entryDrag: ReturnType<typeof useEntryDrag>;
+}) {
+  if (!entryDrag.isDragging) return null;
+  return (
+    <div
+      style={{ minHeight: '12px' }}
+      onDragEnter={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        entryDrag.onDragEnter(e, entryCount);
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onDrop={(e) => entryDrag.onDrop(e, entryCount)}
+    />
+  );
+}
+
 export function MedLengthTemplate({
   formData,
   onFieldChange,
@@ -291,6 +322,7 @@ export function MedLengthTemplate({
                   </EntryWrapper>
                 </React.Fragment>
               ))}
+              <DropZoneTail entryCount={entries.length} entryDrag={entryDrag} />
               {entryDrag.dropIndex === entries.length && <DropLine />}
             </>
           )}
@@ -459,6 +491,7 @@ export function MedLengthTemplate({
                   </React.Fragment>
                 );
               })}
+              <DropZoneTail entryCount={entries.length} entryDrag={entryDrag} />
               {entryDrag.dropIndex === entries.length && <DropLine />}
             </>
           )}
@@ -511,6 +544,9 @@ export function MedLengthTemplate({
                     </EntryWrapper>
                   </React.Fragment>
                 ))}
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <DropZoneTail entryCount={categories.length} entryDrag={entryDrag} />
+                </div>
                 {entryDrag.dropIndex === categories.length && (
                   <div style={{ gridColumn: '1 / -1' }}><DropLine /></div>
                 )}
@@ -612,6 +648,7 @@ export function MedLengthTemplate({
                   </EntryWrapper>
                 </React.Fragment>
               ))}
+              <DropZoneTail entryCount={entries.length} entryDrag={entryDrag} />
               {entryDrag.dropIndex === entries.length && <DropLine />}
             </>
           )}
@@ -664,6 +701,9 @@ export function MedLengthTemplate({
                     </EntryWrapper>
                   </React.Fragment>
                 ))}
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <DropZoneTail entryCount={entries.length} entryDrag={entryDrag} />
+                </div>
                 {entryDrag.dropIndex === entries.length && (
                   <div style={{ gridColumn: '1 / -1' }}><DropLine /></div>
                 )}
@@ -860,6 +900,7 @@ export function MedLengthTemplate({
                   </React.Fragment>
                 );
               })}
+              <DropZoneTail entryCount={asec.entries.length} entryDrag={entryDrag} />
               {entryDrag.dropIndex === asec.entries.length && <DropLine />}
             </>
           )}
@@ -896,8 +937,18 @@ export function MedLengthTemplate({
     return null;
   };
 
+  /**
+   * Allow drops on the template container itself so that releasing the mouse
+   * between sections still fires the drop event (Bug 2 fix). Without this,
+   * the browser uses the default "no drop" behavior and the drop event never
+   * fires, leaving the drag in a stuck state.
+   */
+  const handleContainerDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+  }, []);
+
   return (
-    <div className={styles.template}>
+    <div className={styles.template} onDragOver={handleContainerDragOver}>
       {/* Personal Info Header */}
       <EditableField
         value={personalInfo.fullName}
