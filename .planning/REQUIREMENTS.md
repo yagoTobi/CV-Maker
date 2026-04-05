@@ -36,8 +36,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Drag and Drop
 
-- [ ] **DND-01**: User can reorder sections by dragging section headers on the web CV
-- [ ] **DND-02**: User can reorder entries within a section by dragging individual items (jobs, education entries, etc.)
+- [x] **DND-01**: User can reorder sections by dragging section headers on the web CV
+- [x] **DND-02**: User can reorder entries within a section by dragging individual items (jobs, education entries, etc.)
 - [x] **DND-03**: Drag-and-drop updates sectionOrder and array positions in CVFormData
 - [x] **DND-04**: Drag interactions do not conflict with inline text editing (grip handles separate from editable content)
 
@@ -116,8 +116,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CONT-03 | Phase 3: Content Management | Complete |
 | CONT-04 | Phase 3: Content Management | Complete |
 | UX-02 | Phase 3: Content Management | Complete |
-| DND-01 | Phase 4: Drag and Drop | Pending |
-| DND-02 | Phase 4: Drag and Drop | Pending |
+| DND-01 | Phase 4: Drag and Drop | Complete |
+| DND-02 | Phase 4: Drag and Drop | Complete |
 | DND-03 | Phase 4: Drag and Drop | Complete |
 | DND-04 | Phase 4: Drag and Drop | Complete |
 | AI-01 | Phase 5: AI Integration | Pending |

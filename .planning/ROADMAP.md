@@ -89,7 +89,7 @@ Plans:
 
 Plans:
 - [x] 04-01-PLAN.md -- DnD infrastructure: GripIcon, DropLine, useSectionDrag, useEntryDrag hooks, useDirectEditor reorder functions + tests
-- [ ] 04-02-PLAN.md -- Integration: wire grip handles and drop lines into SectionWrapper, EntryWrapper, MedLengthTemplate, DirectEditPage + visual checkpoint
+- [x] 04-02-PLAN.md -- Integration: wire grip handles and drop lines into SectionWrapper, EntryWrapper, MedLengthTemplate, DirectEditPage + visual checkpoint
 
 ### Phase 5: AI Integration
 **Goal**: Existing AI features (import, apply-to-job, tailor suggestions) work seamlessly with the web CV editor, with inline diffs on the CV itself, and AI responses are fast enough to keep users in editing flow
