@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 4 UI-SPEC approved
-last_updated: "2026-04-05T07:12:09.961Z"
-last_activity: 2026-04-05 -- Phase 4 planning complete
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-04-05T14:06:08.973Z"
+last_activity: 2026-04-05
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 14
-  completed_plans: 12
-  percent: 86
+  completed_plans: 13
+  percent: 93
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** The CV itself is the editor. Users type directly on what they'll download -- no form fields, no split screen.
-**Current focus:** Phase 03 — content-management
+**Current focus:** Phase 04 — Drag and Drop
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
+Phase: 04 (Drag and Drop) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-04-05 -- Phase 4 planning complete
+Last activity: 2026-04-05
 
 Progress: [███████░░░] 67%
 
@@ -63,6 +63,7 @@ Progress: [███████░░░] 67%
 | Phase 03 P04 | 4min | 2 tasks | 6 files |
 | Phase 03 P05 | 4min | 2 tasks | 8 files |
 | Phase 03-03 Ppage-break-indicator | 3min | 3 tasks | 6 files |
+| Phase 04-drag-and-drop P01 | 4min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -98,6 +99,8 @@ Recent decisions affecting current work:
 - [Phase 03]: Control sizing standard: section-level 18px/4px, entry-level 16px/4px, --text-secondary default color
 - [Phase 03-03]: CSS inch probe for DPI-correct page height measurement rather than hardcoded 96dpi
 - [Phase 03-03]: 10px threshold + 80ms debounce to prevent page break indicator flicker near boundary
+- [Phase 04-drag-and-drop]: reorder<T> helper duplicated locally in useDirectEditor for clean feature separation from form-builder
+- [Phase 04-drag-and-drop]: dragFromIndex tracked as state (not ref) so consumers can apply .dragging CSS class via re-render
 
 ### Pending Todos
 
@@ -110,6 +113,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T22:56:34.645Z
-Stopped at: Phase 4 UI-SPEC approved
-Resume file: .planning/phases/04-drag-and-drop/04-UI-SPEC.md
+Last session: 2026-04-05T14:06:08.965Z
+Stopped at: Completed 04-01-PLAN.md
+Resume file: None

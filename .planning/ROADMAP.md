@@ -88,7 +88,7 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 04-01-PLAN.md -- DnD infrastructure: GripIcon, DropLine, useSectionDrag, useEntryDrag hooks, useDirectEditor reorder functions + tests
+- [x] 04-01-PLAN.md -- DnD infrastructure: GripIcon, DropLine, useSectionDrag, useEntryDrag hooks, useDirectEditor reorder functions + tests
 - [ ] 04-02-PLAN.md -- Integration: wire grip handles and drop lines into SectionWrapper, EntryWrapper, MedLengthTemplate, DirectEditPage + visual checkpoint
 
 ### Phase 5: AI Integration
