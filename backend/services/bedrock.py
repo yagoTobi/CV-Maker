@@ -9,6 +9,14 @@ import boto3
 MODEL_HAIKU = "us.anthropic.claude-haiku-4-5-20251001-v1:0"     # Fast, cheap — extraction
 MODEL_SONNET = "us.anthropic.claude-sonnet-4-6"                  # Quality — analysis, rewriting (CRIS profile)
 
+# Model selection per task (D-15):
+# - Extraction (import): MODEL_HAIKU — fastest available, good for structured extraction
+# - Tailor suggestions: MODEL_TAILOR — defaults to Haiku for speed (Strategy A from research)
+#   Set TAILOR_MODEL_ID env var to override (e.g., to MODEL_SONNET for quality)
+# - Match analysis: MODEL_SONNET — quality matters, user expects brief wait
+# - Chat: MODEL_SONNET — quality conversation
+MODEL_TAILOR = os.environ.get("TAILOR_MODEL_ID", MODEL_HAIKU)
+
 
 class BedrockClient:
     def __init__(self):

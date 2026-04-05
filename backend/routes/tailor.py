@@ -1,5 +1,11 @@
+# AI Speed Decision (Phase 5, D-15, AI-06, AI-07):
+# Tailor suggestions use MODEL_TAILOR (default: Haiku 4.5) for sub-2s response target.
+# If quality is insufficient, set TAILOR_MODEL_ID=us.anthropic.claude-sonnet-4-6
+# in .env to fall back to Sonnet. Match analysis keeps Sonnet (quality, not speed-critical).
+
 import json
 import logging
+import time
 import uuid
 
 from fastapi import APIRouter, HTTPException
@@ -7,7 +13,7 @@ from pydantic import BaseModel
 from typing import List, Optional, Union
 
 from routes.cv_versions import CVFormData
-from services.bedrock import bedrock_client, MODEL_SONNET
+from services.bedrock import bedrock_client, MODEL_TAILOR
 from services import llm_cache
 from services.json_utils import strip_markdown_json, parse_json_with_retry
 from prompts.cv_agent import TAILOR_SUGGEST_PROMPT
@@ -156,17 +162,20 @@ Analyze this CV against the job description and suggest specific field-level cha
             parsed = None
 
         if parsed is None:
+            start_time = time.monotonic()
             parsed = parse_json_with_retry(
                 lambda: bedrock_client.chat(
                     messages=[{"role": "user", "content": user_message}],
                     system_prompt=TAILOR_SUGGEST_PROMPT,
                     stream=False,
                     max_tokens=8192,
-                    model_id=MODEL_SONNET,
+                    model_id=MODEL_TAILOR,
                     temperature=0.5,
                 ),
                 max_retries=1,
             )
+            elapsed = time.monotonic() - start_time
+            logger.info(f"Tailor suggestions generated in {elapsed:.2f}s using model {MODEL_TAILOR}")
             # Cache the raw response for future hits
             llm_cache.put(cache_key, json.dumps(parsed))
 
