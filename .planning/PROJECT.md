@@ -34,10 +34,11 @@ The CV itself is the editor. Users type directly on what they'll download — no
 - [x] Delete entries with confirmation prompt (major) or instant deletion (minor) -- Phase 3
 - [x] Toggle section visibility on/off without losing data -- Phase 3
 - [x] Page overflow indicator (dashed "Page 2" line via ResizeObserver) -- Phase 3
+- [x] Drag-and-drop reordering on the web CV (section + entry level, grip handles in left gutter) -- Phase 4
 
 ### Active
 
-- [ ] Drag-and-drop reordering on the web CV itself
+- [ ] CVFormData remains hidden source of truth (web CV reads/writes to it)
 - [ ] CVFormData remains hidden source of truth (web CV reads/writes to it)
 - [ ] LaTeX compilation fires only at download time
 - [ ] Full replacement of CVFormBuilder (no form fields UI)
