@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Phase 5 context gathered
-last_updated: "2026-04-05T16:27:57.953Z"
+status: executing
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-04-05T19:26:31.498Z"
 last_activity: 2026-04-05
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 14
-  completed_plans: 14
-  percent: 100
+  total_plans: 19
+  completed_plans: 15
+  percent: 79
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** The CV itself is the editor. Users type directly on what they'll download -- no form fields, no split screen.
-**Current focus:** Phase 04 — Drag and Drop
+**Current focus:** Phase 05 — ai-integration
 
 ## Current Position
 
-Phase: 5
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 05 (ai-integration) — EXECUTING
+Plan: 2 of 5
+Status: Ready to execute
 Last activity: 2026-04-05
 
 Progress: [███████░░░] 67%
@@ -66,6 +66,7 @@ Progress: [███████░░░] 67%
 | Phase 03-03 Ppage-break-indicator | 3min | 3 tasks | 6 files |
 | Phase 04-drag-and-drop P01 | 4min | 2 tasks | 7 files |
 | Phase 04-drag-and-drop P02 | 16min | 4 tasks | 9 files |
+| Phase 05-ai-integration P01 | 10min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -106,6 +107,9 @@ Recent decisions affecting current work:
 - [Phase 04-drag-and-drop]: dragElRef tracks actual DOM element made draggable for reliable cleanup, avoiding e.currentTarget mismatch after React reconciliation
 - [Phase 04-drag-and-drop]: Container-level onDragOver with preventDefault() ensures drops register even between sections
 - [Phase 04-drag-and-drop]: DropZoneTail pattern: invisible 12px div after last entry enables drop-to-bottom in list DnD
+- [Phase 05-ai-integration]: SaveIndicator inline mode via optional boolean prop + CSS class for toolbar embedding
+- [Phase 05-ai-integration]: readOnly prop pattern: parent passes boolean, child components suppress interactive UI without changing visual layout
+- [Phase 05-ai-integration]: readOnly EntryDragContainer skip: conditional render avoids unnecessary DnD hook instantiation
 
 ### Pending Todos
 
@@ -118,6 +122,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-05T16:27:57.938Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-ai-integration/05-CONTEXT.md
+Last session: 2026-04-05T19:26:31.486Z
+Stopped at: Completed 05-01-PLAN.md
+Resume file: None

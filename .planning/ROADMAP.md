@@ -105,7 +105,7 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 05-01-PLAN.md -- EditorToolbar, ImportToast, MedLengthTemplate readOnly prop (UI primitives)
+- [x] 05-01-PLAN.md -- EditorToolbar, ImportToast, MedLengthTemplate readOnly prop (UI primitives)
 - [ ] 05-02-PLAN.md -- ChangeCard, ChangePanel, useScrollSync (side panel components)
 - [ ] 05-03-PLAN.md -- DirectEditPage toolbar + import + download integration
 - [ ] 05-04-PLAN.md -- ApplyToJobScreen step 3 rewrite with web CV + ChangePanel
