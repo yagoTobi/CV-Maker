@@ -1,10 +1,23 @@
-import { useState, useEffect, useCallback } from 'react';
+/**
+ * ApplyToJobScreen -- 3-step flow for tailoring a base CV to a specific job.
+ *
+ * Steps 1-2 use a narrow card layout (job details + match analysis).
+ * Step 3 transitions to a full-width two-panel layout with a read-only
+ * MedLengthTemplate on the left and a ChangePanel on the right.
+ *
+ * Accept/reject on ChangePanel cards immediately updates the read-only CV
+ * preview. Save creates a child version with job metadata.
+ */
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../../services/api';
-import { useAppContext } from '../../contexts/AppContext';
-import { applyTailorChanges } from '../../utils/formDataPatch';
-import type { CVVersion, MatchAnalysis, TailorResponse, TailorChange, CVVersionMeta } from '../../types';
+import { useTailor } from '../../hooks/useTailor';
+import { useScrollSync } from '../direct-edit/hooks/useScrollSync';
+import { MedLengthTemplate } from '../direct-edit/components/MedLengthTemplate';
+import { ChangePanel } from '../direct-edit/components/ChangePanel';
+import type { CVVersion, CVFormData, MatchAnalysis, CVVersionMeta, SkillItem } from '../../types';
 import styles from './ApplyToJobScreen.module.css';
+import '@fontsource-variable/eb-garamond';
 
 type Step = 1 | 2 | 3 | 'success';
 
@@ -12,10 +25,13 @@ interface LocationState {
   baseVersionId?: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const noop = (..._args: unknown[]) => {};
+const EMPTY_SET = new Set<string>();
+
 export default function ApplyToJobScreen() {
   const navigate = useNavigate();
   const location = useLocation();
-  const appCtx = useAppContext();
   const baseVersionId = (location.state as LocationState)?.baseVersionId;
 
   // Base version
@@ -35,16 +51,29 @@ export default function ApplyToJobScreen() {
   const [baselineScore, setBaselineScore] = useState(0);
   const [analyzing, setAnalyzing] = useState(false);
 
-  // Step 3 (pre-fetched during step 2)
-  const [tailorResponse, setTailorResponse] = useState<TailorResponse | null>(null);
-  const [tailorLoading, setTailorLoading] = useState(false);
-  const [selectedChanges, setSelectedChanges] = useState<Set<string>>(new Set());
-  const [expandedDiffs, setExpandedDiffs] = useState<Set<string>>(new Set());
+  // Local state for the read-only CV preview
+  const [previewFormData, setPreviewFormData] = useState<CVFormData | null>(null);
 
   // Save / success
   const [saving, setSaving] = useState(false);
   const [savedVersion, setSavedVersion] = useState<CVVersionMeta | null>(null);
   const [finalScore, setFinalScore] = useState(0);
+
+  // Refs for scroll sync
+  const cvPreviewRef = useRef<HTMLDivElement>(null);
+  const changePanelRef = useRef<HTMLDivElement>(null);
+
+  // useTailor hook -- onApply updates the read-only CV preview
+  const tailor = useTailor({
+    originalFormData: baseVersion?.formData ?? null,
+    templateId: baseVersion?.templateId ?? null,
+    onApply: async (newFormData: CVFormData) => {
+      setPreviewFormData(newFormData);
+    },
+  });
+
+  // Scroll sync between CV preview and ChangePanel
+  useScrollSync(cvPreviewRef, changePanelRef, step === 3);
 
   // Load base version on mount
   useEffect(() => {
@@ -65,22 +94,14 @@ export default function ApplyToJobScreen() {
     });
   }, [baseVersionId]);
 
-  // Hand off to the full tune/editor screen with all data prefilled
-  const handleOpenInTuneScreen = useCallback(async () => {
-    if (!baseVersion) return;
-    setAnalyzing(true);
+  // Initialize previewFormData when baseVersion loads
+  useEffect(() => {
+    if (baseVersion?.formData) {
+      setPreviewFormData(baseVersion.formData);
+    }
+  }, [baseVersion]);
 
-    // Load base CV into AppContext
-    appCtx.handleVersionLoad(baseVersion);
-    appCtx.setCompanyName(companyName);
-    appCtx.setRoleName(roleName);
-    appCtx.setJobDescription(jobDescription);
-
-    // Navigate to editor in tune mode — it will auto-compile and user can analyze there
-    navigate('/build/form', { state: { mode: 'tune' } });
-  }, [baseVersion, companyName, roleName, jobDescription, appCtx, navigate]);
-
-  // Step 1 → 2: Analyze (inline flow)
+  // Step 1 -> 2: Analyze (inline flow)
   const handleAnalyze = useCallback(async () => {
     if (!baseVersion?.formData || !jobDescription.trim()) return;
     setAnalyzing(true);
@@ -100,45 +121,27 @@ export default function ApplyToJobScreen() {
     }
     setAnalyzing(false);
 
-    // Pre-fetch tailor suggestions in parallel
-    setTailorLoading(true);
-    const tailor = await api.suggestTailorChanges(
-      baseVersion.formData, jobDescription, companyName, roleName
-    );
-    if (tailor) {
-      setTailorResponse(tailor);
-      setSelectedChanges(new Set(tailor.changes.map(c => c.id)));
-    }
-    setTailorLoading(false);
-  }, [baseVersion, jobDescription, companyName, roleName]);
+    // Pre-fetch tailor suggestions via hook
+    tailor.fetchSuggestions(baseVersion.formData, jobDescription, companyName, roleName);
+  }, [baseVersion, jobDescription, companyName, roleName, tailor]);
 
-  // Step 2 → 3: Tailor CV
+  // Step 2 -> 3: Tailor CV
   const handleTailor = useCallback(() => {
-    // If tailor response already loaded, go to step 3
-    if (tailorResponse) {
-      setStep(3);
-    }
-    // If still loading, the button will be disabled
-  }, [tailorResponse]);
+    if (tailor.tailorResponse) setStep(3);
+  }, [tailor.tailorResponse]);
 
-  // Step 3 → success: Apply & Save
-  const handleApplyAndSave = useCallback(async () => {
-    if (!baseVersion?.formData || !tailorResponse) return;
+  // Step 3 -> success: Save tailored CV
+  const handleSaveTailoredCV = useCallback(async () => {
+    if (!baseVersion?.formData || !previewFormData) return;
     setSaving(true);
 
-    const modifiedFormData = applyTailorChanges(
-      baseVersion.formData, tailorResponse.changes, selectedChanges
-    );
+    // Generate LaTeX from the current preview (with accepted changes applied)
+    const { texContent } = await api.generateLatex(previewFormData);
+    if (!texContent) { setSaving(false); return; }
 
-    // Generate new LaTeX and get accurate final score
-    const { texContent } = await api.generateLatex(modifiedFormData);
-    if (!texContent) {
-      setSaving(false);
-      return;
-    }
-
+    // Get final match score
     const finalAnalysis = await api.getMatchAnalysis(texContent, jobDescription, companyName);
-    const score = finalAnalysis?.match_score ?? tailorResponse.estimatedScore;
+    const score = finalAnalysis?.match_score ?? tailor.estimatedCurrentScore;
     setFinalScore(score);
 
     const versionName = [companyName, roleName].filter(Boolean).join(' ') || 'Job Application';
@@ -146,7 +149,7 @@ export default function ApplyToJobScreen() {
       name: versionName,
       templateId: baseVersion.templateId,
       texContent,
-      formData: modifiedFormData,
+      formData: previewFormData,
       jobDescription,
       companyName,
       role: roleName,
@@ -160,26 +163,7 @@ export default function ApplyToJobScreen() {
       setStep('success');
     }
     setSaving(false);
-  }, [baseVersion, tailorResponse, selectedChanges, jobDescription, companyName, roleName, baselineScore]);
-
-  // Toggle change selection
-  const toggleChange = (id: string) => {
-    setSelectedChanges(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleDiff = (id: string) => {
-    setExpandedDiffs(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
+  }, [baseVersion, previewFormData, jobDescription, companyName, roleName, baselineScore, tailor.estimatedCurrentScore]);
 
   // Reset for "Apply to another job"
   const handleApplyAnother = () => {
@@ -188,10 +172,9 @@ export default function ApplyToJobScreen() {
     setRoleName('');
     setJobDescription('');
     setMatchAnalysis(null);
-    setTailorResponse(null);
-    setSelectedChanges(new Set());
-    setExpandedDiffs(new Set());
     setSavedVersion(null);
+    setPreviewFormData(baseVersion?.formData ?? null);
+    tailor.reset();
   };
 
   // --- Error / loading states ---
@@ -233,11 +216,14 @@ export default function ApplyToJobScreen() {
 
   const scoreColorClass = (s: number) => s >= 80 ? 'good' : s >= 60 ? 'medium' : 'low';
 
+  // Noop field change handler typed for MedLengthTemplate
+  const noopFieldChange = noop as (path: string, value: string | SkillItem[]) => void;
+
   // --- Render ---
   return (
     <div className={styles.container}>
       <div className={styles.background} />
-      <div className={styles.content}>
+      <div className={step === 3 ? styles.contentWide : styles.content}>
         <header className={styles.header}>
           <button className={styles.backBtn} onClick={() => navigate('/dashboard')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -251,269 +237,264 @@ export default function ApplyToJobScreen() {
           </div>
         </header>
 
-        {/* Step 1: Job Details */}
-        <div className={styles.step}>
-          <div
-            className={styles.stepHeader}
-            onClick={() => { if (step !== 1 && step !== 'success') setStep(1); }}
-          >
-            <div className={`${styles.stepNumber} ${step === 1 ? styles.active : ''} ${(step === 2 || step === 3 || step === 'success') ? styles.completed : ''}`}>
-              {step === 2 || step === 3 || step === 'success' ? (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-              ) : '1'}
-            </div>
-            <span className={`${styles.stepTitle} ${step !== 1 && step !== 'success' ? '' : ''} ${step !== 1 ? '' : ''}`}>
-              Job Details
-            </span>
-            {step !== 1 && companyName && (
-              <span className={styles.stepSummary}>{companyName}{roleName ? ` - ${roleName}` : ''}</span>
-            )}
-          </div>
-          {step === 1 && (
-            <div className={styles.stepBody}>
-              <div className={styles.formRow}>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Company Name</label>
-                  <input
-                    className={styles.input}
-                    value={companyName}
-                    onChange={e => setCompanyName(e.target.value)}
-                    placeholder="e.g. Google"
-                  />
-                </div>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Role</label>
-                  <input
-                    className={styles.input}
-                    value={roleName}
-                    onChange={e => setRoleName(e.target.value)}
-                    placeholder="e.g. Senior SWE"
-                  />
-                </div>
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Job Description *</label>
-                <textarea
-                  className={styles.textarea}
-                  value={jobDescription}
-                  onChange={e => setJobDescription(e.target.value)}
-                  placeholder="Paste the full job description here..."
-                />
-              </div>
-              <button
-                className={styles.primaryBtn}
-                onClick={handleAnalyze}
-                disabled={!jobDescription.trim() || analyzing}
-              >
-                {analyzing ? (
-                  <><span className={styles.spinner} /> Analyzing...</>
-                ) : 'Analyze Match'}
-              </button>
-              <button
-                className={styles.secondaryBtn}
-                onClick={handleOpenInTuneScreen}
-                disabled={!jobDescription.trim() || analyzing}
-                style={{ width: '100%', justifyContent: 'center', marginTop: '0.5rem' }}
-              >
-                Open in Tune Screen
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Step 2: Match Analysis */}
-        {(step === 2 || step === 3 || step === 'success') && (
-          <div className={styles.step}>
-            <div
-              className={styles.stepHeader}
-              onClick={() => { if (step === 3) setStep(2); }}
-            >
-              <div className={`${styles.stepNumber} ${step === 2 ? styles.active : ''} ${(step === 3 || step === 'success') ? styles.completed : ''}`}>
-                {step === 3 || step === 'success' ? (
+        {/* Step 3: Full-width two-panel layout */}
+        {step === 3 && (
+          <div className={styles.reviewLayout}>
+            {/* Collapsed steps header */}
+            <div className={styles.collapsedSteps}>
+              <div className={styles.collapsedStep} onClick={() => setStep(1)}>
+                <span className={`${styles.stepNumber} ${styles.completed}`}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="20 6 9 17 4 12"/>
                   </svg>
-                ) : '2'}
+                </span>
+                <span className={styles.stepTitle}>Job Details</span>
+                <span className={styles.stepSummary}>{companyName}{roleName ? ` - ${roleName}` : ''}</span>
               </div>
-              <span className={styles.stepTitle}>Match Analysis</span>
-              {step !== 2 && matchAnalysis && (
+              <div className={styles.collapsedStep} onClick={() => setStep(2)}>
+                <span className={`${styles.stepNumber} ${styles.completed}`}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                </span>
+                <span className={styles.stepTitle}>Match Analysis</span>
                 <span className={styles.stepSummary}>Baseline: {Math.round(baselineScore)}%</span>
-              )}
+              </div>
             </div>
-            {step === 2 && matchAnalysis && (
-              <div className={styles.stepBody}>
-                <div className={styles.analysisContent}>
-                  <div className={styles.scoreSection}>
-                    <div className={`${styles.scoreCircle} ${styles[scoreColorClass(baselineScore)]}`}>
-                      {Math.round(baselineScore)}%
+
+            {/* Two-panel content */}
+            <div className={styles.twoPanelContent}>
+              <div ref={cvPreviewRef} className={styles.cvPreviewPanel}>
+                {previewFormData && (
+                  <MedLengthTemplate
+                    formData={previewFormData}
+                    readOnly={true}
+                    onFieldChange={noopFieldChange}
+                    onBulletAdd={noop as (basePath: string, afterIndex: number) => void}
+                    onBulletRemove={noop as (basePath: string, index: number) => void}
+                    onAddEntry={noop as (sectionKey: string) => void}
+                    onRemoveEntry={noop as (sectionKey: string, index: number) => void}
+                    onToggleSection={noop as (sectionKey: string) => void}
+                    hiddenSections={EMPTY_SET}
+                    onReorderSections={noop as (from: number, to: number) => void}
+                    onReorderEntries={noop as (sectionKey: string, from: number, to: number) => void}
+                  />
+                )}
+              </div>
+              <ChangePanel
+                changes={tailor.tailorResponse?.changes ?? []}
+                appliedChanges={tailor.appliedChanges}
+                skippedChanges={tailor.skippedChanges}
+                selectedAlternatives={tailor.selectedAlternatives}
+                isApplying={tailor.isApplying}
+                isLoading={false}
+                error={tailor.error}
+                onAccept={tailor.acceptChange}
+                onSkip={tailor.skipChange}
+                onUndo={tailor.undoChange}
+                onAcceptAll={tailor.acceptAllRemaining}
+                onSelectAlternative={tailor.selectAlternative}
+                onEditValue={tailor.editChangeValue}
+                onClose={() => setStep(2)}
+                matchAnalysis={matchAnalysis}
+                baselineScore={baselineScore}
+                estimatedScore={tailor.estimatedCurrentScore}
+                panelRef={changePanelRef}
+                isOpen={true}
+              />
+            </div>
+
+            {/* Save button at bottom */}
+            <div className={styles.saveBar}>
+              <button
+                className={styles.primaryBtn}
+                onClick={handleSaveTailoredCV}
+                disabled={saving || tailor.appliedChanges.size === 0}
+              >
+                {saving ? (
+                  <><span className={styles.spinner} /> Saving...</>
+                ) : 'Save Tailored CV'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Steps 1 and 2 (only visible when not in step 3) */}
+        {step !== 3 && (
+          <>
+            {/* Step 1: Job Details */}
+            <div className={styles.step}>
+              <div
+                className={styles.stepHeader}
+                onClick={() => { if (step !== 1 && step !== 'success') setStep(1); }}
+              >
+                <div className={`${styles.stepNumber} ${step === 1 ? styles.active : ''} ${(step === 2 || step === 'success') ? styles.completed : ''}`}>
+                  {step === 2 || step === 'success' ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  ) : '1'}
+                </div>
+                <span className={styles.stepTitle}>
+                  Job Details
+                </span>
+                {step !== 1 && companyName && (
+                  <span className={styles.stepSummary}>{companyName}{roleName ? ` - ${roleName}` : ''}</span>
+                )}
+              </div>
+              {step === 1 && (
+                <div className={styles.stepBody}>
+                  <div className={styles.formRow}>
+                    <div className={styles.formGroup}>
+                      <label className={styles.label}>Company Name</label>
+                      <input
+                        className={styles.input}
+                        value={companyName}
+                        onChange={e => setCompanyName(e.target.value)}
+                        placeholder="e.g. Google"
+                      />
                     </div>
-                    <div className={styles.scoreDetails}>
-                      <div className={styles.scoreLabel}>Baseline Match Score</div>
-                      <div className={styles.scoreText}>
-                        Your CV matches {matchAnalysis.matching.length} of {matchAnalysis.requirements.length} key requirements.
-                        {matchAnalysis.missing.length > 0 && ` ${matchAnalysis.missing.length} gap${matchAnalysis.missing.length > 1 ? 's' : ''} identified.`}
-                      </div>
+                    <div className={styles.formGroup}>
+                      <label className={styles.label}>Role</label>
+                      <input
+                        className={styles.input}
+                        value={roleName}
+                        onChange={e => setRoleName(e.target.value)}
+                        placeholder="e.g. Senior SWE"
+                      />
                     </div>
                   </div>
-
-                  <div className={styles.pillsSection}>
-                    {matchAnalysis.matching.length > 0 && (
-                      <div className={styles.pillGroup}>
-                        <div className={styles.pillGroupLabel}>Matched</div>
-                        <div className={styles.pills}>
-                          {matchAnalysis.matching.map((m, i) => (
-                            <span key={i} className={`${styles.pill} ${styles.matched}`}>{m}</span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {matchAnalysis.missing.length > 0 && (
-                      <div className={styles.pillGroup}>
-                        <div className={styles.pillGroupLabel}>Missing</div>
-                        <div className={styles.pills}>
-                          {matchAnalysis.missing.map((m, i) => (
-                            <span key={i} className={`${styles.pill} ${styles.missing}`}>{m}</span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Job Description *</label>
+                    <textarea
+                      className={styles.textarea}
+                      value={jobDescription}
+                      onChange={e => setJobDescription(e.target.value)}
+                      placeholder="Paste the full job description here..."
+                    />
                   </div>
-
-                  {matchAnalysis.suggestions.length > 0 && (
-                    <div className={styles.suggestionsList}>
-                      {matchAnalysis.suggestions.map((s, i) => (
-                        <div key={i} className={styles.suggestionItem}>{s}</div>
-                      ))}
-                    </div>
-                  )}
-
                   <button
                     className={styles.primaryBtn}
-                    onClick={handleTailor}
-                    disabled={tailorLoading}
+                    onClick={handleAnalyze}
+                    disabled={!jobDescription.trim() || analyzing}
                   >
-                    {tailorLoading ? (
-                      <><span className={styles.spinner} /> Generating changes...</>
-                    ) : 'Tailor CV'}
+                    {analyzing ? (
+                      <><span className={styles.spinner} /> Analyzing...</>
+                    ) : 'Analyze Match'}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Step 2: Match Analysis */}
+            {(step === 2 || step === 'success') && (
+              <div className={styles.step}>
+                <div
+                  className={styles.stepHeader}
+                  onClick={() => { if (step !== 2 && step !== 'success') setStep(2); }}
+                >
+                  <div className={`${styles.stepNumber} ${step === 2 ? styles.active : ''} ${step === 'success' ? styles.completed : ''}`}>
+                    {step === 'success' ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    ) : '2'}
+                  </div>
+                  <span className={styles.stepTitle}>Match Analysis</span>
+                  {step !== 2 && matchAnalysis && (
+                    <span className={styles.stepSummary}>Baseline: {Math.round(baselineScore)}%</span>
+                  )}
+                </div>
+                {step === 2 && matchAnalysis && (
+                  <div className={styles.stepBody}>
+                    <div className={styles.analysisContent}>
+                      <div className={styles.scoreSection}>
+                        <div className={`${styles.scoreCircle} ${styles[scoreColorClass(baselineScore)]}`}>
+                          {Math.round(baselineScore)}%
+                        </div>
+                        <div className={styles.scoreDetails}>
+                          <div className={styles.scoreLabel}>Baseline Match Score</div>
+                          <div className={styles.scoreText}>
+                            Your CV matches {matchAnalysis.matching.length} of {matchAnalysis.requirements.length} key requirements.
+                            {matchAnalysis.missing.length > 0 && ` ${matchAnalysis.missing.length} gap${matchAnalysis.missing.length > 1 ? 's' : ''} identified.`}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className={styles.pillsSection}>
+                        {matchAnalysis.matching.length > 0 && (
+                          <div className={styles.pillGroup}>
+                            <div className={styles.pillGroupLabel}>Matched</div>
+                            <div className={styles.pills}>
+                              {matchAnalysis.matching.map((m, i) => (
+                                <span key={i} className={`${styles.pill} ${styles.matched}`}>{m}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {matchAnalysis.missing.length > 0 && (
+                          <div className={styles.pillGroup}>
+                            <div className={styles.pillGroupLabel}>Missing</div>
+                            <div className={styles.pills}>
+                              {matchAnalysis.missing.map((m, i) => (
+                                <span key={i} className={`${styles.pill} ${styles.missing}`}>{m}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {matchAnalysis.suggestions.length > 0 && (
+                        <div className={styles.suggestionsList}>
+                          {matchAnalysis.suggestions.map((s, i) => (
+                            <div key={i} className={styles.suggestionItem}>{s}</div>
+                          ))}
+                        </div>
+                      )}
+
+                      <button
+                        className={styles.primaryBtn}
+                        onClick={handleTailor}
+                        disabled={tailor.isLoading}
+                      >
+                        {tailor.isLoading ? (
+                          <><span className={styles.spinner} /> Generating changes...</>
+                        ) : 'Tailor CV'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Success */}
+            {step === 'success' && savedVersion && (
+              <div className={`${styles.step} ${styles.successCard}`}>
+                <div className={styles.successIcon}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                </div>
+                <h2 className={styles.successTitle}>CV Tailored Successfully</h2>
+                <p className={styles.successVersion}>
+                  Saved as &quot;{savedVersion.name || [companyName, roleName].filter(Boolean).join(' ')}&quot;
+                </p>
+                <div className={styles.scoreDelta}>
+                  <span className={styles.scoreDeltaOld}>{Math.round(baselineScore)}%</span>
+                  <span className={styles.scoreDeltaArrow}>&rarr;</span>
+                  <span className={styles.scoreDeltaNew}>{Math.round(finalScore)}%</span>
+                </div>
+                <div className={styles.successActions}>
+                  <button className={styles.primaryBtn} style={{ width: 'auto' }} onClick={handleApplyAnother}>
+                    Apply to Another Job
+                  </button>
+                  <button className={styles.secondaryBtn} onClick={() => navigate('/dashboard')}>
+                    Back to Dashboard
                   </button>
                 </div>
               </div>
             )}
-          </div>
-        )}
-
-        {/* Step 3: Review Changes */}
-        {(step === 3 || step === 'success') && tailorResponse && (
-          <div className={styles.step}>
-            <div className={styles.stepHeader}>
-              <div className={`${styles.stepNumber} ${step === 3 ? styles.active : ''} ${step === 'success' ? styles.completed : ''}`}>
-                {step === 'success' ? (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
-                ) : '3'}
-              </div>
-              <span className={styles.stepTitle}>Review Changes</span>
-              {step === 'success' && (
-                <span className={styles.stepSummary}>{selectedChanges.size} changes applied</span>
-              )}
-            </div>
-            {step === 3 && (
-              <div className={styles.stepBody}>
-                <div className={styles.changesSummary}>
-                  {tailorResponse.summary}
-                  <br />
-                  <span className={styles.changesSummaryCount}>
-                    {selectedChanges.size} of {tailorResponse.changes.length}
-                  </span> changes selected
-                </div>
-
-                <div className={styles.changesList}>
-                  {tailorResponse.changes.map((change: TailorChange) => (
-                    <div
-                      key={change.id}
-                      className={`${styles.changeCard} ${selectedChanges.has(change.id) ? styles.selected : ''}`}
-                    >
-                      <input
-                        type="checkbox"
-                        className={styles.changeCheckbox}
-                        checked={selectedChanges.has(change.id)}
-                        onChange={() => toggleChange(change.id)}
-                      />
-                      <div className={styles.changeContent}>
-                        <div className={styles.changeHeader}>
-                          <span className={styles.changeSection}>{change.section}</span>
-                          <span className={`${styles.changeType} ${styles[change.changeType]}`}>
-                            {change.changeType}
-                          </span>
-                        </div>
-                        <div className={styles.changeDesc}>{change.description}</div>
-                        <button
-                          className={styles.diffToggle}
-                          onClick={() => toggleDiff(change.id)}
-                        >
-                          {expandedDiffs.has(change.id) ? 'Hide diff' : 'Show diff'}
-                        </button>
-                        {expandedDiffs.has(change.id) && (() => {
-                          const altValue = change.alternatives[0]?.value;
-                          return (
-                            <div className={styles.diffView}>
-                              <div className={styles.diffOld}>
-                                - {Array.isArray(change.currentValue) ? change.currentValue.join(', ') : change.currentValue}
-                              </div>
-                              <div className={styles.diffNew}>
-                                + {altValue ? (Array.isArray(altValue) ? altValue.join(', ') : altValue) : ''}
-                              </div>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  className={styles.primaryBtn}
-                  onClick={handleApplyAndSave}
-                  disabled={saving || selectedChanges.size === 0}
-                >
-                  {saving ? (
-                    <><span className={styles.spinner} /> Applying & Saving...</>
-                  ) : `Apply ${selectedChanges.size} Change${selectedChanges.size !== 1 ? 's' : ''} & Save`}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Success */}
-        {step === 'success' && savedVersion && (
-          <div className={`${styles.step} ${styles.successCard}`}>
-            <div className={styles.successIcon}>
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-            </div>
-            <h2 className={styles.successTitle}>CV Tailored Successfully</h2>
-            <p className={styles.successVersion}>
-              Saved as "{savedVersion.name || [companyName, roleName].filter(Boolean).join(' ')}"
-            </p>
-            <div className={styles.scoreDelta}>
-              <span className={styles.scoreDeltaOld}>{Math.round(baselineScore)}%</span>
-              <span className={styles.scoreDeltaArrow}>&rarr;</span>
-              <span className={styles.scoreDeltaNew}>{Math.round(finalScore)}%</span>
-            </div>
-            <div className={styles.successActions}>
-              <button className={styles.primaryBtn} style={{ width: 'auto' }} onClick={handleApplyAnother}>
-                Apply to Another Job
-              </button>
-              <button className={styles.secondaryBtn} onClick={() => navigate('/dashboard')}>
-                Back to Dashboard
-              </button>
-            </div>
-          </div>
+          </>
         )}
       </div>
     </div>
