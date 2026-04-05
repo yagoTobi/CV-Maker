@@ -529,4 +529,228 @@ describe('useDirectEditor', () => {
       expect(result.current.hiddenSections.size).toBe(0);
     });
   });
+
+  // --- reorderSections tests ---
+
+  describe('reorderSections', () => {
+    it('reorderSections(0, 2) moves first section to index 2', () => {
+      mockFormData = {
+        ...makeTestFormData(),
+        sectionOrder: ['work', 'education', 'skills', 'projects', 'awards'],
+      };
+
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.reorderSections(0, 2);
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+      expect(newData.sectionOrder).toEqual(['education', 'skills', 'work', 'projects', 'awards']);
+    });
+
+    it('reorderSections(3, 0) moves projects to index 0', () => {
+      mockFormData = {
+        ...makeTestFormData(),
+        sectionOrder: ['work', 'education', 'skills', 'projects', 'awards'],
+      };
+
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.reorderSections(3, 0);
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+      expect(newData.sectionOrder).toEqual(['projects', 'work', 'education', 'skills', 'awards']);
+    });
+
+    it('reorderSections with same from and to returns unchanged sectionOrder', () => {
+      mockFormData = {
+        ...makeTestFormData(),
+        sectionOrder: ['work', 'education', 'skills', 'projects', 'awards'],
+      };
+
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.reorderSections(2, 2);
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+      expect(newData.sectionOrder).toEqual(['work', 'education', 'skills', 'projects', 'awards']);
+    });
+
+    it('reorderSections uses default sectionOrder when sectionOrder is undefined', () => {
+      mockFormData = {
+        ...makeTestFormData(),
+        sectionOrder: undefined,
+      };
+
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.reorderSections(0, 2);
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+      // Default order: ['work', 'education', 'skills', 'projects', 'awards']
+      // Move index 0 ('work') to index 2
+      expect(newData.sectionOrder).toEqual(['education', 'skills', 'work', 'projects', 'awards']);
+    });
+  });
+
+  // --- reorderEntries tests ---
+
+  describe('reorderEntries', () => {
+    it('reorderEntries("work", 1, 0) swaps first two work entries', () => {
+      mockFormData = {
+        ...makeTestFormData(),
+        workExperience: [
+          { id: 'work-1', company: 'Acme', title: 'Engineer', startDate: '', endDate: '', location: '', bullets: [] },
+          { id: 'work-2', company: 'Beta', title: 'Dev', startDate: '', endDate: '', location: '', bullets: [] },
+        ],
+      };
+
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.reorderEntries('work', 1, 0);
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+      expect(newData.workExperience[0].id).toBe('work-2');
+      expect(newData.workExperience[1].id).toBe('work-1');
+    });
+
+    it('reorderEntries("education", 0, 2) moves first education entry to index 2', () => {
+      mockFormData = {
+        ...makeTestFormData(),
+        education: [
+          { id: 'edu-1', school: 'MIT', degree: 'BS', startDate: '', endDate: '', location: '', details: [] },
+          { id: 'edu-2', school: 'Stanford', degree: 'MS', startDate: '', endDate: '', location: '', details: [] },
+          { id: 'edu-3', school: 'Harvard', degree: 'PhD', startDate: '', endDate: '', location: '', details: [] },
+        ],
+      };
+
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.reorderEntries('education', 0, 2);
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+      expect(newData.education[0].id).toBe('edu-2');
+      expect(newData.education[1].id).toBe('edu-3');
+      expect(newData.education[2].id).toBe('edu-1');
+    });
+
+    it('reorderEntries("skills", 0, 1) reorders skill categories', () => {
+      mockFormData = {
+        ...makeTestFormData(),
+        skills: [
+          { id: 'skill-1', category: 'Languages', skills: [] },
+          { id: 'skill-2', category: 'Frameworks', skills: [] },
+        ],
+      };
+
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.reorderEntries('skills', 0, 1);
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+      expect(newData.skills[0].id).toBe('skill-2');
+      expect(newData.skills[1].id).toBe('skill-1');
+    });
+
+    it('reorderEntries("projects", 1, 0) reorders projects array', () => {
+      mockFormData = {
+        ...makeTestFormData(),
+        projects: [
+          { id: 'proj-1', name: 'Alpha', year: '2023', description: '' },
+          { id: 'proj-2', name: 'Beta', year: '2024', description: '' },
+        ],
+      };
+
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.reorderEntries('projects', 1, 0);
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+      expect(newData.projects[0].id).toBe('proj-2');
+      expect(newData.projects[1].id).toBe('proj-1');
+    });
+
+    it('reorderEntries("awards", 0, 1) reorders awards array', () => {
+      mockFormData = {
+        ...makeTestFormData(),
+        awards: [
+          { id: 'award-1', year: '2023', title: 'Best Paper' },
+          { id: 'award-2', year: '2024', title: 'Innovation' },
+        ],
+      };
+
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.reorderEntries('awards', 0, 1);
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+      expect(newData.awards[0].id).toBe('award-2');
+      expect(newData.awards[1].id).toBe('award-1');
+    });
+
+    it('reorderEntries("additional-0", 0, 1) reorders entries within an additional section', () => {
+      mockFormData = {
+        ...makeTestFormData(),
+        additionalSections: [{
+          id: 'as-1',
+          title: 'Volunteering',
+          entries: [
+            { id: 'ae-1', title: 'Red Cross', bullets: [{ id: 'ab-1', text: 'Helped' }] },
+            { id: 'ae-2', title: 'Food Bank', bullets: [{ id: 'ab-2', text: 'Served' }] },
+          ],
+        }],
+      };
+
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.reorderEntries('additional-0', 0, 1);
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+      expect(newData.additionalSections[0].entries[0].id).toBe('ae-2');
+      expect(newData.additionalSections[0].entries[1].id).toBe('ae-1');
+    });
+
+    it('reorderEntries does nothing when formData is null', () => {
+      mockFormData = null;
+
+      const { result } = renderHook(() => useDirectEditor());
+
+      act(() => {
+        result.current.reorderEntries('work', 0, 1);
+      });
+
+      const updater = mockSetFormData.mock.calls[0][0];
+      const newData = typeof updater === 'function' ? updater(null) : updater;
+      expect(newData).toBeNull();
+    });
+  });
 });
