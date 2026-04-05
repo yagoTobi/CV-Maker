@@ -109,7 +109,7 @@ Plans:
 - [x] 05-02-PLAN.md -- ChangeCard, ChangePanel, useScrollSync (side panel components)
 - [ ] 05-03-PLAN.md -- DirectEditPage toolbar + import + download integration
 - [ ] 05-04-PLAN.md -- ApplyToJobScreen step 3 rewrite with web CV + ChangePanel
-- [ ] 05-05-PLAN.md -- Backend model selection and timing instrumentation for AI speed
+- [x] 05-05-PLAN.md -- Backend model selection and timing instrumentation for AI speed
 
 ### Phase 6: Route Integration
 **Goal**: The web CV editor fully replaces the form builder and LaTeX editor across all application routes, completing the end-to-end direct-edit experience

@@ -48,8 +48,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **AI-03**: AI tailor suggestions appear as inline diffs on the web CV itself (not in a side panel)
 - [x] **AI-04**: User can accept or reject individual AI suggestions directly on the web CV
 - [x] **AI-05**: CV import extraction responds in under 2 seconds using fastest available model/provider
-- [ ] **AI-06**: Tailor suggestion generation targets sub-2 second response using fast model/provider
-- [ ] **AI-07**: AI integration phase researches and selects fastest model/provider for each AI task (Bedrock Llama, Groq, etc.)
+- [x] **AI-06**: Tailor suggestion generation targets sub-2 second response using fast model/provider
+- [x] **AI-07**: AI integration phase researches and selects fastest model/provider for each AI task (Bedrock Llama, Groq, etc.)
 
 ### Route Integration
 
@@ -125,8 +125,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AI-03 | Phase 5: AI Integration | Complete |
 | AI-04 | Phase 5: AI Integration | Complete |
 | AI-05 | Phase 5: AI Integration | Complete |
-| AI-06 | Phase 5: AI Integration | Pending |
-| AI-07 | Phase 5: AI Integration | Pending |
+| AI-06 | Phase 5: AI Integration | Complete |
+| AI-07 | Phase 5: AI Integration | Complete |
 | ROUTE-01 | Phase 6: Route Integration | Pending |
 | ROUTE-02 | Phase 6: Route Integration | Pending |
 | ROUTE-03 | Phase 6: Route Integration | Pending |

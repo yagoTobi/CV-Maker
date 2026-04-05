@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-04-05T19:33:10.626Z"
+stopped_at: Completed 05-05-PLAN.md
+last_updated: "2026-04-05T19:37:02.443Z"
 last_activity: 2026-04-05
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 19
-  completed_plans: 16
-  percent: 84
+  completed_plans: 17
+  percent: 89
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-29)
 ## Current Position
 
 Phase: 05 (ai-integration) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-04-05
 
@@ -68,6 +68,7 @@ Progress: [███████░░░] 67%
 | Phase 04-drag-and-drop P02 | 16min | 4 tasks | 9 files |
 | Phase 05-ai-integration P01 | 10min | 3 tasks | 11 files |
 | Phase 05-ai-integration P02 | 4min | 3 tasks | 5 files |
+| Phase 05-ai-integration P05 | 2min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,8 @@ Recent decisions affecting current work:
 - [Phase 05-ai-integration]: ChangePanel is a pure renderer with all state via props from useTailor -- enables reuse in both DirectEditPage and ApplyToJobScreen
 - [Phase 05-ai-integration]: Separate Before/After diff display using filtered computeWordDiff segments rather than inline interleaved diff
 - [Phase 05-ai-integration]: Anti-jitter scroll sync: isAutoScrolling ref + 150ms timeout prevents IntersectionObserver-to-scroll infinite loops
+- [Phase 05-ai-integration]: Haiku 4.5 as default for tailor suggestions (Strategy A) -- speed over quality, with TAILOR_MODEL_ID env var fallback to Sonnet
+- [Phase 05-ai-integration]: time.monotonic() for AI latency instrumentation -- monotonic clock avoids wall-clock drift
 
 ### Pending Todos
 
@@ -126,6 +129,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-05T19:33:10.615Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-04-05T19:37:02.435Z
+Stopped at: Completed 05-05-PLAN.md
 Resume file: None
