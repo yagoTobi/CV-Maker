@@ -3,6 +3,7 @@
  *
  * Overrides app background to white (D-05: full-bleed, no gray background).
  * Enables user-select: text (body has user-select: none from variables.css).
+ * EditorToolbar is sticky at top; contentArea wraps CV + future ChangePanel.
  */
 
 .page {
@@ -13,8 +14,16 @@
   -webkit-user-select: text;
 }
 
+.contentArea {
+  display: flex;
+  /* CV takes full width; ChangePanel slot added alongside in future plan */
+}
+
 .cvContainer {
   position: relative;
+  flex: 1;
+  min-width: 0;
+  padding-top: 0;
 }
 
 .loading {

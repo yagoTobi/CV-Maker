@@ -1,14 +1,17 @@
 /**
  * DirectEditPage -- Top-level page for the web CV editor.
  *
- * Assembles MedLengthTemplate + SaveIndicator + useDirectEditor + useAutoSave
+ * Assembles MedLengthTemplate + EditorToolbar + useDirectEditor + useAutoSave
  * into a full-bleed, white-background page. EB Garamond font is loaded here
  * (not globally) so it only applies to the CV editing surface.
  *
  * If formData is not in context (e.g., direct URL navigation), tries to load
  * the most recent saved version. Falls back to an empty template with placeholders.
  *
- * Covers: EDIT-01 through EDIT-06, UX-01, D-05.
+ * EditorToolbar provides Import CV, Download PDF, and auto-save status.
+ * ImportToast shows a dismissible banner after CV import with confidence info.
+ *
+ * Covers: EDIT-01 through EDIT-06, UX-01, D-05, D-06, D-07, D-13.
  */
 import '@fontsource-variable/eb-garamond';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -16,11 +19,14 @@ import { useDirectEditor } from './hooks/useDirectEditor';
 import { useAutoSave } from './hooks/useAutoSave';
 import { usePageBreak } from './hooks/usePageBreak';
 import { MedLengthTemplate } from './components/MedLengthTemplate';
-import { SaveIndicator } from './components/SaveIndicator';
+import { EditorToolbar } from './components/EditorToolbar';
+import { ImportToast } from './components/ImportToast';
 import { PageBreakIndicator } from './components/PageBreakIndicator';
 import { useCVContext } from '../../contexts/CVContext';
+import { useImport } from '../../hooks/useImport';
 import { api } from '../../services/api';
 import { generateId } from '../../utils/idHelpers';
+import { generateCVFilename } from '../../utils/cvFilename';
 import type { CVFormData } from '../../types';
 import styles from './DirectEditPage.module.css';
 
@@ -47,8 +53,12 @@ export default function DirectEditPage() {
   const { activeVersion, setFormData, savedVersions } = useCVContext();
   const { formData, updateField, addBullet, removeBullet, addEntry, removeEntry, toggleSection, hiddenSections, reorderSections, reorderEntries } = useDirectEditor();
   const saveStatus = useAutoSave(formData, activeVersion?.id ?? null);
+  const { isImporting, importResult, importError, handleFileSelected, reset: resetImport } = useImport();
   const [isBootstrapping, setIsBootstrapping] = useState(!formData);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [showImportToast, setShowImportToast] = useState(false);
   const cvContainerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const pageBreakY = usePageBreak(cvContainerRef);
 
   // Bootstrap formData if context is empty (direct URL navigation / page refresh)
@@ -83,9 +93,81 @@ export default function DirectEditPage() {
     return () => { cancelled = true; };
   }, [formData, savedVersions, setFormData]);
 
+  // Load imported formData into context when import succeeds
+  useEffect(() => {
+    if (!importResult?.success || !importResult.formData) return;
+    // Preserve templateId from current formData (import strips it)
+    const importedData: CVFormData = {
+      ...importResult.formData,
+      templateId: formData?.templateId ?? DEFAULT_TEMPLATE,
+      sectionOrder: importResult.formData.sectionOrder ?? formData?.sectionOrder ?? ['work', 'education', 'skills', 'projects', 'awards'],
+    };
+    setFormData(importedData);
+    setShowImportToast(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [importResult]);
+
+  // Show toast on import error
+  useEffect(() => {
+    if (importError) setShowImportToast(true);
+  }, [importError]);
+
   const handleInput = useCallback(() => {
     // No-op -- useAutoSave watches formData changes directly.
   }, []);
+
+  /** Open native file picker for CV import */
+  const handleImportClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  /** Handle file selection from the hidden input */
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      handleFileSelected(e.target.files[0]);
+      e.target.value = '';
+    }
+  }, [handleFileSelected]);
+
+  /** Generate LaTeX, compile to PDF, and trigger browser download */
+  const handleDownload = useCallback(async () => {
+    if (!formData) return;
+    setIsDownloading(true);
+    try {
+      // Step 1: Generate LaTeX from formData
+      const { texContent, error: genError } = await api.generateLatex(formData);
+      if (!texContent || genError) {
+        console.error('LaTeX generation failed:', genError);
+        setIsDownloading(false);
+        return;
+      }
+      // Step 2: Compile LaTeX to PDF
+      const result = await api.compileLatex(texContent, formData.templateId);
+      if (!result.success || !result.pdf_base64) {
+        console.error('PDF compilation failed:', result.error);
+        setIsDownloading(false);
+        return;
+      }
+      // Step 3: Trigger browser download
+      const byteChars = atob(result.pdf_base64);
+      const byteArray = new Uint8Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) {
+        byteArray[i] = byteChars.charCodeAt(i);
+      }
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = generateCVFilename({ fullName: formData.personalInfo.fullName });
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Download failed:', err);
+    }
+    setIsDownloading(false);
+  }, [formData]);
 
   if (isBootstrapping || !formData) {
     return <div className={styles.loading}>Loading...</div>;
@@ -93,22 +175,45 @@ export default function DirectEditPage() {
 
   return (
     <div className={styles.page}>
-      <SaveIndicator status={saveStatus} />
-      <div ref={cvContainerRef} className={styles.cvContainer}>
-        <MedLengthTemplate
-          formData={formData}
-          onFieldChange={updateField}
-          onBulletAdd={addBullet}
-          onBulletRemove={removeBullet}
-          onAddEntry={addEntry}
-          onRemoveEntry={removeEntry}
-          onToggleSection={toggleSection}
-          hiddenSections={hiddenSections}
-          onReorderSections={reorderSections}
-          onReorderEntries={reorderEntries}
-          onInput={handleInput}
+      <EditorToolbar
+        saveStatus={saveStatus}
+        onImport={handleImportClick}
+        onDownload={handleDownload}
+        isImporting={isImporting}
+        isDownloading={isDownloading}
+      />
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept=".pdf,.docx,.json"
+        style={{ display: 'none' }}
+        onChange={handleFileChange}
+      />
+      {showImportToast && (importResult || importError) && (
+        <ImportToast
+          summary={importResult?.summary ?? { workEntries: 0, educationEntries: 0, skillCategories: 0, projects: 0, awards: 0 }}
+          confidence={importResult?.confidence ?? { overall: 'low', fields: {} }}
+          error={importResult?.success ? null : (importResult?.error || importError)}
+          onDismiss={() => { setShowImportToast(false); resetImport(); }}
         />
-        {pageBreakY !== null && <PageBreakIndicator offsetY={pageBreakY} />}
+      )}
+      <div className={styles.contentArea}>
+        <div ref={cvContainerRef} className={styles.cvContainer}>
+          <MedLengthTemplate
+            formData={formData}
+            onFieldChange={updateField}
+            onBulletAdd={addBullet}
+            onBulletRemove={removeBullet}
+            onAddEntry={addEntry}
+            onRemoveEntry={removeEntry}
+            onToggleSection={toggleSection}
+            hiddenSections={hiddenSections}
+            onReorderSections={reorderSections}
+            onReorderEntries={reorderEntries}
+            onInput={handleInput}
+          />
+          {pageBreakY !== null && <PageBreakIndicator offsetY={pageBreakY} />}
+        </div>
       </div>
     </div>
   );
