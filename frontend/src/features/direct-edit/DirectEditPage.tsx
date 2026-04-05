@@ -45,7 +45,7 @@ function createEmptyFormData(): CVFormData {
 
 export default function DirectEditPage() {
   const { activeVersion, setFormData, savedVersions } = useCVContext();
-  const { formData, updateField, addBullet, removeBullet, addEntry, removeEntry, toggleSection, hiddenSections } = useDirectEditor();
+  const { formData, updateField, addBullet, removeBullet, addEntry, removeEntry, toggleSection, hiddenSections, reorderSections, reorderEntries } = useDirectEditor();
   const saveStatus = useAutoSave(formData, activeVersion?.id ?? null);
   const [isBootstrapping, setIsBootstrapping] = useState(!formData);
   const cvContainerRef = useRef<HTMLDivElement>(null);
@@ -104,6 +104,8 @@ export default function DirectEditPage() {
           onRemoveEntry={removeEntry}
           onToggleSection={toggleSection}
           hiddenSections={hiddenSections}
+          onReorderSections={reorderSections}
+          onReorderEntries={reorderEntries}
           onInput={handleInput}
         />
         {pageBreakY !== null && <PageBreakIndicator offsetY={pageBreakY} />}
