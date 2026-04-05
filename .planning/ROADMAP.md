@@ -92,21 +92,24 @@ Plans:
 - [x] 04-02-PLAN.md -- Integration: wire grip handles and drop lines into SectionWrapper, EntryWrapper, MedLengthTemplate, DirectEditPage + visual checkpoint
 
 ### Phase 5: AI Integration
-**Goal**: Existing AI features (import, apply-to-job, tailor suggestions) work seamlessly with the web CV editor, with inline diffs on the CV itself, and AI responses are fast enough to keep users in editing flow
+**Goal**: Existing AI features (import, apply-to-job, tailor suggestions) work seamlessly with the web CV editor, with section-aligned change cards in a side panel, and AI responses are fast enough to keep users in editing flow
 **Depends on**: Phase 4
 **Requirements**: AI-01, AI-02, AI-03, AI-04, AI-05, AI-06, AI-07
 **Success Criteria** (what must be TRUE):
   1. CV Import flow (PDF/DOCX/JSON upload) populates the web CV editor with extracted data -- the user sees their imported CV rendered in the web template, ready to edit inline
   2. Apply to Job flow applies AI-generated changes that are visible on the web CV (user can see before/after of each change)
-  3. AI tailor suggestions appear as inline diffs directly on the web CV text (highlighted changed text with accept/reject controls), not in a separate side panel
+  3. AI tailor suggestions appear as section-aligned cards in a side panel to the right of the web CV, with accept/reject controls per card
   4. User can accept or reject individual AI suggestions one by one, with each accepted change immediately reflected in the rendered CV
   5. CV import extraction and tailor suggestions respond in under 2 seconds using the fastest available model/provider (research Bedrock Llama, Groq, etc. for best speed/quality tradeoff)
-**Plans**: TBD
+**Plans**: 5 plans
 **UI hint**: yes
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
+- [ ] 05-01-PLAN.md -- EditorToolbar, ImportToast, MedLengthTemplate readOnly prop (UI primitives)
+- [ ] 05-02-PLAN.md -- ChangeCard, ChangePanel, useScrollSync (side panel components)
+- [ ] 05-03-PLAN.md -- DirectEditPage toolbar + import + download integration
+- [ ] 05-04-PLAN.md -- ApplyToJobScreen step 3 rewrite with web CV + ChangePanel
+- [ ] 05-05-PLAN.md -- Backend model selection and timing instrumentation for AI speed
 
 ### Phase 6: Route Integration
 **Goal**: The web CV editor fully replaces the form builder and LaTeX editor across all application routes, completing the end-to-end direct-edit experience
@@ -134,6 +137,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 1. Data Model Prep | 3/3 | Complete | - |
 | 2. Core Editing Surface | 4/4 | Complete | - |
 | 3. Content Management | 5/5 | Complete | - |
-| 4. Drag and Drop | 0/2 | Planning complete | - |
-| 5. AI Integration | 0/0 | Not started | - |
+| 4. Drag and Drop | 2/2 | Complete | - |
+| 5. AI Integration | 0/5 | Planning complete | - |
 | 6. Route Integration | 0/0 | Not started | - |
