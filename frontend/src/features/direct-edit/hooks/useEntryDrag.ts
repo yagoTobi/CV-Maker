@@ -15,6 +15,8 @@ export function useEntryDrag(onReorder: (from: number, to: number) => void) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   /** Track the actual DOM element made draggable so we can reliably reset it */
   const dragElRef = useRef<HTMLElement | null>(null);
+  /** Ref mirror of dropIndex so onDragEnd always reads the latest value */
+  const dropIndexRef = useRef<number | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragFromIndex, setDragFromIndex] = useState<number | null>(null);
@@ -26,6 +28,7 @@ export function useEntryDrag(onReorder: (from: number, to: number) => void) {
       dragElRef.current = null;
     }
     dragFromRef.current = null;
+    dropIndexRef.current = null;
     setDropIndex(null);
     setIsDragging(false);
     setDragFromIndex(null);
@@ -61,6 +64,7 @@ export function useEntryDrag(onReorder: (from: number, to: number) => void) {
     e.stopPropagation();
     e.preventDefault();
     if (dragFromRef.current !== null && dragFromRef.current !== index) {
+      dropIndexRef.current = index;
       setDropIndex(index);
     }
   }, []);
@@ -70,19 +74,20 @@ export function useEntryDrag(onReorder: (from: number, to: number) => void) {
     e.stopPropagation();
   }, []);
 
-  const onDrop = useCallback((e: React.DragEvent, index: number) => {
+  const onDrop = useCallback((e: React.DragEvent, _index: number) => {
     e.stopPropagation();
     e.preventDefault();
-    if (dragFromRef.current !== null && dragFromRef.current !== index) {
-      onReorder(dragFromRef.current, index);
-    }
-    cleanup();
-  }, [onReorder, cleanup]);
+    // Reorder moved to onDragEnd for reliability — contentEditable elements
+    // can absorb drop events, but onDragEnd always fires on the dragged element.
+  }, []);
 
   const onDragEnd = useCallback((e: React.DragEvent) => {
     e.stopPropagation();
+    if (dragFromRef.current !== null && dropIndexRef.current !== null && dragFromRef.current !== dropIndexRef.current) {
+      onReorder(dragFromRef.current, dropIndexRef.current);
+    }
     cleanup();
-  }, [cleanup]);
+  }, [onReorder, cleanup]);
 
   return {
     onGripMouseDown,

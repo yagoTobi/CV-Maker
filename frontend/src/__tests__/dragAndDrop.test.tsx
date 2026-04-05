@@ -110,7 +110,7 @@ describe('useSectionDrag', () => {
     expect(result.current.dropIndex).toBeNull();
   });
 
-  it('onDrop calls onReorder(from, to) and resets all state', () => {
+  it('onDragEnd calls onReorder(from, to) and resets all state', () => {
     const onReorder = vi.fn();
     const { result } = renderHook(() => useSectionDrag(onReorder));
 
@@ -121,7 +121,7 @@ describe('useSectionDrag', () => {
       result.current.onDragEnter(mockDragEvent(), 4);
     });
     act(() => {
-      result.current.onDrop(mockDragEvent(), 4);
+      result.current.onDragEnd(mockDragEvent());
     });
 
     expect(onReorder).toHaveBeenCalledWith(2, 4);
@@ -209,7 +209,7 @@ describe('useEntryDrag', () => {
     expect(result.current.dragFromIndex).toBeNull();
   });
 
-  it('full drag sequence: dragStart -> dragEnter -> drop calls onReorder', () => {
+  it('full drag sequence: dragStart -> dragEnter -> dragEnd calls onReorder', () => {
     const onReorder = vi.fn();
     const { result } = renderHook(() => useEntryDrag(onReorder));
 
@@ -220,7 +220,7 @@ describe('useEntryDrag', () => {
       result.current.onDragEnter(mockDragEvent(), 2);
     });
     act(() => {
-      result.current.onDrop(mockDragEvent(), 2);
+      result.current.onDragEnd(mockDragEvent());
     });
 
     expect(onReorder).toHaveBeenCalledWith(0, 2);
@@ -496,7 +496,7 @@ describe('integration: full drag sequences', () => {
     expect(result.current.dropIndex).toBe(3);
 
     act(() => {
-      result.current.onDrop(mockDragEvent(), 3);
+      result.current.onDragEnd(mockDragEvent());
     });
     expect(onReorder).toHaveBeenCalledWith(1, 3);
     expect(result.current.dropIndex).toBeNull();
@@ -504,7 +504,7 @@ describe('integration: full drag sequences', () => {
     expect(result.current.dragFromIndex).toBeNull();
   });
 
-  it('useEntryDrag: start(0) -> enter(2) -> drop(2) calls onReorder(0, 2) and resets', () => {
+  it('useEntryDrag: start(0) -> enter(2) -> dragEnd calls onReorder(0, 2) and resets', () => {
     const onReorder = vi.fn();
     const { result } = renderHook(() => useEntryDrag(onReorder));
 
@@ -520,7 +520,7 @@ describe('integration: full drag sequences', () => {
     expect(result.current.dropIndex).toBe(2);
 
     act(() => {
-      result.current.onDrop(mockDragEvent(), 2);
+      result.current.onDragEnd(mockDragEvent());
     });
     expect(onReorder).toHaveBeenCalledWith(0, 2);
     expect(result.current.dropIndex).toBeNull();

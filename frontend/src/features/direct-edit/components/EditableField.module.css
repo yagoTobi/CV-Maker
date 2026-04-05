@@ -23,7 +23,6 @@
 .editableField:empty::before {
   content: attr(data-placeholder);
   color: #94A3B8;
-  pointer-events: none;
   font-style: italic;
 }
 
