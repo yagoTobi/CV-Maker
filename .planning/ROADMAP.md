@@ -107,7 +107,7 @@ Plans:
 Plans:
 - [x] 05-01-PLAN.md -- EditorToolbar, ImportToast, MedLengthTemplate readOnly prop (UI primitives)
 - [x] 05-02-PLAN.md -- ChangeCard, ChangePanel, useScrollSync (side panel components)
-- [ ] 05-03-PLAN.md -- DirectEditPage toolbar + import + download integration
+- [x] 05-03-PLAN.md -- DirectEditPage toolbar + import + download integration
 - [ ] 05-04-PLAN.md -- ApplyToJobScreen step 3 rewrite with web CV + ChangePanel
 - [x] 05-05-PLAN.md -- Backend model selection and timing instrumentation for AI speed
 
@@ -138,5 +138,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 2. Core Editing Surface | 4/4 | Complete | - |
 | 3. Content Management | 5/5 | Complete | - |
 | 4. Drag and Drop | 2/2 | Complete | - |
-| 5. AI Integration | 0/5 | Planning complete | - |
+| 5. AI Integration | 4/5 | In Progress|  |
 | 6. Route Integration | 0/0 | Not started | - |

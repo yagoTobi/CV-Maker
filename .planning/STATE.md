@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Checkpoint: 05-03-PLAN.md Task 2 (human-verify)"
-last_updated: "2026-04-05T19:41:33.880Z"
+stopped_at: Completed 05-03-PLAN.md
+last_updated: "2026-04-05T20:04:07.933Z"
 last_activity: 2026-04-05
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 19
-  completed_plans: 17
-  percent: 89
+  completed_plans: 18
+  percent: 95
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-29)
 ## Current Position
 
 Phase: 05 (ai-integration) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-04-05
 
@@ -69,6 +69,7 @@ Progress: [███████░░░] 67%
 | Phase 05-ai-integration P01 | 10min | 3 tasks | 11 files |
 | Phase 05-ai-integration P02 | 4min | 3 tasks | 5 files |
 | Phase 05-ai-integration P05 | 2min | 1 tasks | 2 files |
+| Phase 05-ai-integration P03 | 3min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -117,6 +118,8 @@ Recent decisions affecting current work:
 - [Phase 05-ai-integration]: Anti-jitter scroll sync: isAutoScrolling ref + 150ms timeout prevents IntersectionObserver-to-scroll infinite loops
 - [Phase 05-ai-integration]: Haiku 4.5 as default for tailor suggestions (Strategy A) -- speed over quality, with TAILOR_MODEL_ID env var fallback to Sonnet
 - [Phase 05-ai-integration]: time.monotonic() for AI latency instrumentation -- monotonic clock avoids wall-clock drift
+- [Phase 05-ai-integration]: Replace standalone SaveIndicator with EditorToolbar containing SaveIndicator internally
+- [Phase 05-ai-integration]: Preserve current templateId when importing CV data (import response strips templateId)
 
 ### Pending Todos
 
@@ -129,6 +132,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-05T19:41:33.871Z
-Stopped at: Checkpoint: 05-03-PLAN.md Task 2 (human-verify)
+Last session: 2026-04-05T20:04:07.926Z
+Stopped at: Completed 05-03-PLAN.md
 Resume file: None
