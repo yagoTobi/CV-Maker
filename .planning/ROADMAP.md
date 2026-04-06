@@ -108,7 +108,7 @@ Plans:
 - [x] 05-01-PLAN.md -- EditorToolbar, ImportToast, MedLengthTemplate readOnly prop (UI primitives)
 - [x] 05-02-PLAN.md -- ChangeCard, ChangePanel, useScrollSync (side panel components)
 - [x] 05-03-PLAN.md -- DirectEditPage toolbar + import + download integration
-- [ ] 05-04-PLAN.md -- ApplyToJobScreen step 3 rewrite with web CV + ChangePanel
+- [x] 05-04-PLAN.md -- ApplyToJobScreen step 3 rewrite with web CV + ChangePanel
 - [x] 05-05-PLAN.md -- Backend model selection and timing instrumentation for AI speed
 
 ### Phase 6: Route Integration

@@ -44,7 +44,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### AI Integration
 
 - [x] **AI-01**: CV Import flow populates the web CV editor (imported data loads into web template, not form builder)
-- [ ] **AI-02**: Apply to Job flow works with the web CV editor (changes applied and visible on the web CV)
+- [x] **AI-02**: Apply to Job flow works with the web CV editor (changes applied and visible on the web CV)
 - [x] **AI-03**: AI tailor suggestions appear as inline diffs on the web CV itself (not in a side panel)
 - [x] **AI-04**: User can accept or reject individual AI suggestions directly on the web CV
 - [x] **AI-05**: CV import extraction responds in under 2 seconds using fastest available model/provider
@@ -121,7 +121,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DND-03 | Phase 4: Drag and Drop | Complete |
 | DND-04 | Phase 4: Drag and Drop | Complete |
 | AI-01 | Phase 5: AI Integration | Complete |
-| AI-02 | Phase 5: AI Integration | Pending |
+| AI-02 | Phase 5: AI Integration | Complete |
 | AI-03 | Phase 5: AI Integration | Complete |
 | AI-04 | Phase 5: AI Integration | Complete |
 | AI-05 | Phase 5: AI Integration | Complete |
