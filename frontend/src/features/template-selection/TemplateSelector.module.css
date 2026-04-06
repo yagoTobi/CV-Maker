@@ -108,6 +108,35 @@
   opacity: 0.7;
 }
 
+/* Disabled template card (Coming soon) */
+.card.disabled {
+  opacity: 0.55;
+  cursor: default;
+  pointer-events: none;
+}
+
+.card.disabled .preview img {
+  filter: grayscale(0.2);
+}
+
+/* "Coming soon" badge — positioned in top-right of previewWrapper */
+.comingSoon {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  padding: 4px 8px;
+  background: var(--accent-light);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--accent);
+}
+
 /* Preview Wrapper */
 .previewWrapper {
   position: relative;

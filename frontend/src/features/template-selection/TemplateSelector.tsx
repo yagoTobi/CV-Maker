@@ -10,6 +10,8 @@ export interface Template {
   previewUrl: string;
 }
 
+const SUPPORTED_TEMPLATES = new Set(['med-length-proff-cv']);
+
 export function TemplateSelector() {
   const navigate = useNavigate();
   const { templates, setSelectedTemplateForBuild } = useAppContext();
@@ -17,6 +19,7 @@ export function TemplateSelector() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const handleSelect = (templateId: string) => {
+    if (!SUPPORTED_TEMPLATES.has(templateId)) return;
     setSelectedId(templateId);
     setSelectedTemplateForBuild(templateId);
     // Small delay for the selection animation
@@ -58,13 +61,18 @@ export function TemplateSelector() {
           {templates.templates.map((template, index) => (
             <article
               key={template.id}
-              className={`${styles.card} ${hoveredId === template.id ? styles.hovered : ''} ${selectedId === template.id ? styles.selected : ''}`}
+              className={`${styles.card} ${hoveredId === template.id ? styles.hovered : ''} ${selectedId === template.id ? styles.selected : ''} ${!SUPPORTED_TEMPLATES.has(template.id) ? styles.disabled : ''}`}
               style={{ '--index': index } as React.CSSProperties}
               onMouseEnter={() => setHoveredId(template.id)}
               onMouseLeave={() => setHoveredId(null)}
               onClick={() => handleSelect(template.id)}
+              aria-disabled={!SUPPORTED_TEMPLATES.has(template.id) || undefined}
+              tabIndex={!SUPPORTED_TEMPLATES.has(template.id) ? -1 : undefined}
             >
               <div className={styles.previewWrapper}>
+                {!SUPPORTED_TEMPLATES.has(template.id) && (
+                  <span className={styles.comingSoon}>Coming soon</span>
+                )}
                 <div className={styles.preview}>
                   <img
                     src={template.previewUrl}
