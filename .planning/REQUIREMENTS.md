@@ -53,11 +53,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Route Integration
 
-- [ ] **ROUTE-01**: Web CV editor replaces CVFormBuilder at /build/form route
-- [ ] **ROUTE-02**: Web CV editor replaces EditorScreen as the primary editing experience
+- [x] **ROUTE-01**: Web CV editor replaces CVFormBuilder at /build/form route
+- [x] **ROUTE-02**: Web CV editor replaces EditorScreen as the primary editing experience
 - [ ] **ROUTE-03**: Dashboard version switching loads selected version into web CV editor
 - [ ] **ROUTE-04**: Template selection navigates to web CV editor (not form builder)
-- [ ] **ROUTE-05**: Build flow end-to-end works: Landing -> Template Select -> Web CV Editor -> Download PDF
+- [x] **ROUTE-05**: Build flow end-to-end works: Landing -> Template Select -> Web CV Editor -> Download PDF
 
 ## v2 Requirements
 
@@ -127,11 +127,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AI-05 | Phase 5: AI Integration | Complete |
 | AI-06 | Phase 5: AI Integration | Complete |
 | AI-07 | Phase 5: AI Integration | Complete |
-| ROUTE-01 | Phase 6: Route Integration | Pending |
-| ROUTE-02 | Phase 6: Route Integration | Pending |
+| ROUTE-01 | Phase 6: Route Integration | Complete |
+| ROUTE-02 | Phase 6: Route Integration | Complete |
 | ROUTE-03 | Phase 6: Route Integration | Pending |
 | ROUTE-04 | Phase 6: Route Integration | Pending |
-| ROUTE-05 | Phase 6: Route Integration | Pending |
+| ROUTE-05 | Phase 6: Route Integration | Complete |
 
 **Coverage:**
 - v1 requirements: 31 total
