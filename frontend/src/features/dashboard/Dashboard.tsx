@@ -97,15 +97,10 @@ export default function Dashboard() {
     }
   }, [handleVersionLoad, setSelectedTemplateForBuild, navigate]);
 
-  const handleApplyToJob = useCallback(async (baseId: string, e: React.MouseEvent) => {
+  const handleApplyToJob = useCallback((baseId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const version = await api.getVersion(baseId);
-    if (version) {
-      handleVersionLoad(version);
-      setSelectedTemplateForBuild(version.templateId);
-      navigate('/build/form', { state: { mode: 'tune' } });
-    }
-  }, [handleVersionLoad, setSelectedTemplateForBuild, navigate]);
+    navigate('/apply', { state: { baseVersionId: baseId } });
+  }, [navigate]);
 
   const handleDownload = useCallback(async (versionId: string, meta: CVVersionMeta, e: React.MouseEvent) => {
     e.stopPropagation();
