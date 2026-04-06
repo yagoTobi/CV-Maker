@@ -21,7 +21,7 @@ created: 2026-04-06
 | Preset | not applicable |
 | Component library | none (hand-rolled with CSS Modules) |
 | Icon library | Inline SVG (Lucide-style stroked icons, hand-inlined) |
-| Font | IBM Plex Sans 400/500/600 (body), IBM Plex Mono 400/500 (code) |
+| Font | IBM Plex Sans 400/600 (body), IBM Plex Mono 400 (code) |
 
 Source: variables.css, CLAUDE.md conventions, existing components.
 
@@ -51,10 +51,12 @@ Phase 6 introduces no new typographic roles. All roles below are inherited from 
 
 | Role | Size | Weight | Line Height | Usage in Phase 6 |
 |------|------|--------|-------------|-------------------|
-| Chrome | 13px | 500 | 1.5 | NavBar buttons (Import CV, Download PDF, + New CV), save status text |
+| Chrome | 13px | 400 | 1.5 | NavBar buttons (Import CV, Download PDF, + New CV), save status text |
 | Body | 14px | 400 | 1.5 | NavBar "My CVs" link text |
 | Label | 11px (0.6875rem) | 600 | 1.0 | "Coming soon" badge text (uppercase, letter-spacing 0.1em) |
 | Heading | 16px (1rem) | 600 | 1.2 | NavBar "CV Maker" logo text |
+
+Font weights: 400 (regular) and 600 (semibold) only. No intermediate weights.
 
 Font: IBM Plex Sans for all roles. No EB Garamond in NavBar or template chrome (EB Garamond is reserved for the CV document rendering only).
 
@@ -114,8 +116,8 @@ Source: variables.css, EditorToolbar.module.css, TemplateSelector.module.css.
 - Position: `sticky`, `top: 0`, `z-index: 50`
 - "CV Maker" text: 16px, weight 600, color `var(--text-primary)`, cursor pointer
 - "My CVs" link: 14px, weight 400, color `var(--text-secondary)`, hover color `var(--accent)`
-- Ghost buttons (Import CV, + New CV): transparent background, `1px solid var(--border-color)`, `border-radius: var(--radius-sm)` (6px), padding `6px 16px`, font 13px weight 500, color `var(--text-secondary)`, hover background `var(--bg-hover)`, hover color `var(--accent)`
-- Accent button (Download PDF): background `var(--accent)` (#3B82F6), color `#FFFFFF`, no border, `border-radius: var(--radius-sm)` (6px), padding `6px 16px`, font 13px weight 500, hover background `var(--accent-hover)` (#2563EB)
+- Ghost buttons (Import CV, + New CV): transparent background, `1px solid var(--border-color)`, `border-radius: var(--radius-sm)` (6px), padding `6px 16px`, font 13px weight 400, color `var(--text-secondary)`, hover background `var(--bg-hover)`, hover color `var(--accent)`
+- Accent button (Download PDF): background `var(--accent)` (#3B82F6), color `#FFFFFF`, no border, `border-radius: var(--radius-sm)` (6px), padding `6px 16px`, font 13px weight 400, hover background `var(--accent-hover)` (#2563EB)
 - SaveIndicator: existing component, rendered inline (already has `inline` prop)
 - Disabled state (while importing/downloading): opacity 0.5, cursor not-allowed
 - Loading state on buttons: 14px spinner + loading text (same pattern as EditorToolbar)
@@ -283,7 +285,7 @@ Source: D-09, D-10, D-13, D-06, existing SaveIndicator and EditorToolbar copy.
 | Hover (logo) | opacity 0.8 |
 | Default (link) | text-secondary, cursor pointer |
 | Hover (link) | accent color |
-| Active (link, on /dashboard) | accent color, font-weight 500 |
+| Active (link, on /dashboard) | accent color, weight 600 |
 
 ---
 
