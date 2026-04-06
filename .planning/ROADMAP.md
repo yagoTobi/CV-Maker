@@ -120,12 +120,13 @@ Plans:
   2. The primary editing experience is the web CV editor everywhere -- EditorScreen (LaTeX editor) is no longer the default editing surface
   3. Clicking a version on the Dashboard loads it into the web CV editor with all data intact and ready to edit
   4. The complete build flow works end-to-end: Landing -> Template Select -> Web CV Editor -> edit inline -> Download PDF (LaTeX compiles from CVFormData at download time)
-**Plans**: TBD
+**Plans**: 3 plans
 **UI hint**: yes
 
 Plans:
-- [ ] 06-01: TBD
-- [ ] 06-02: TBD
+- [ ] 06-01-PLAN.md -- NavBar + WorkingLayout + EditorActionsContext + App.tsx route restructure (DirectEditPage replaces CVFormBuilder)
+- [ ] 06-02-PLAN.md -- TemplateSelector "Coming soon" badge + Dashboard handleApplyToJob navigation fix
+- [ ] 06-03-PLAN.md -- Dead code removal (form-builder, editor, cv-import, useFormBuilder) + end-to-end verification
 
 ## Progress
 
@@ -139,4 +140,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 3. Content Management | 5/5 | Complete | - |
 | 4. Drag and Drop | 2/2 | Complete | - |
 | 5. AI Integration | 4/5 | In Progress|  |
-| 6. Route Integration | 0/0 | Not started | - |
+| 6. Route Integration | 0/3 | Not started | - |
