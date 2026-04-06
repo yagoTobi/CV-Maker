@@ -1,0 +1,148 @@
+/* NavBar -- Persistent navigation bar.
+ * Height: 48px, sticky at top. Background: white with bottom border.
+ * Font: IBM Plex Sans (inherited from body in variables.css).
+ * Per UI-SPEC: Logo left, My CVs link, context-specific actions right.
+ */
+
+.navBar {
+  height: 48px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.leftGroup {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.rightGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  transition: opacity 150ms ease;
+}
+
+.logo:hover {
+  opacity: 0.8;
+}
+
+.navLink {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  transition: color 150ms ease;
+  text-decoration: none;
+}
+
+.navLink:hover {
+  color: var(--accent);
+}
+
+.navLinkActive {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.ghostBtn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 6px 16px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.5;
+}
+
+.ghostBtn:hover {
+  background: var(--bg-hover);
+  color: var(--accent);
+}
+
+.ghostBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.accentBtn {
+  background: var(--accent);
+  color: #FFFFFF;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 6px 16px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: background 150ms ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.5;
+}
+
+.accentBtn:hover {
+  background: var(--accent-hover);
+}
+
+.accentBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  flex-shrink: 0;
+}
+
+.spinnerWhite {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #FFFFFF;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
