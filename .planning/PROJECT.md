@@ -42,11 +42,15 @@ The CV itself is the editor. Users type directly on what they'll download — no
 
 ### Active
 
-- [ ] CVFormData remains hidden source of truth (web CV reads/writes to it)
-- [ ] LaTeX compilation fires only at download time
-- [ ] Full replacement of CVFormBuilder (no form fields UI)
-- [ ] Dashboard and version switching load into web CV editor
-- [ ] Route structure updated (web CV editor replaces /build/form and /editor)
+(All requirements validated — milestone v1.0 complete)
+
+### Validated in Phase 6
+
+- [x] CVFormData remains hidden source of truth (web CV reads/writes to it) -- Phase 6
+- [x] LaTeX compilation fires only at download time -- Phase 6
+- [x] Full replacement of CVFormBuilder (no form fields UI) -- Phase 6
+- [x] Dashboard and version switching load into web CV editor -- Phase 6
+- [x] Route structure updated (web CV editor replaces /build/form and /editor) -- Phase 6
 
 ### Out of Scope
 
@@ -107,4 +111,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-06 after Phase 5 completion*
+*Last updated: 2026-04-06 after Phase 6 completion — all 6 phases complete, milestone v1.0 done*
