@@ -35,16 +35,16 @@ The CV itself is the editor. Users type directly on what they'll download — no
 - [x] Toggle section visibility on/off without losing data -- Phase 3
 - [x] Page overflow indicator (dashed "Page 2" line via ResizeObserver) -- Phase 3
 - [x] Drag-and-drop reordering on the web CV (section + entry level, grip handles in left gutter) -- Phase 4
+- [x] AI Import flow adapted to populate web CV editor (EditorToolbar → file picker → ImportToast) -- Phase 5
+- [x] AI Tune for a Job flow adapted to apply changes on web CV (ChangePanel + ChangeCard with word-level diff) -- Phase 5
+- [x] Apply to Job flow adapted to work with web CV editor (step 3 rewritten: read-only CV + ChangePanel) -- Phase 5
+- [x] AI speed optimization: Haiku 4.5 default for tailor suggestions, configurable via TAILOR_MODEL_ID -- Phase 5
 
 ### Active
 
 - [ ] CVFormData remains hidden source of truth (web CV reads/writes to it)
-- [ ] CVFormData remains hidden source of truth (web CV reads/writes to it)
 - [ ] LaTeX compilation fires only at download time
 - [ ] Full replacement of CVFormBuilder (no form fields UI)
-- [ ] AI Import flow adapted to populate web CV editor
-- [ ] AI Tune for a Job flow adapted to apply changes on web CV
-- [ ] Apply to Job flow adapted to work with web CV editor
 - [ ] Dashboard and version switching load into web CV editor
 - [ ] Route structure updated (web CV editor replaces /build/form and /editor)
 
@@ -87,7 +87,7 @@ Key unknowns:
 | Start with 1 template web version | Proves the architecture before investing in all 3 | -- Pending |
 | Inline editing (not popup/modal) | Most natural "typing on a document" experience | -- Pending |
 | Contextual "+" buttons for adding content | Discoverable without cluttering the CV view | -- Pending |
-| Prioritize AI speed over intelligence for in-flow features | Users in editing flow can't tolerate 10s AI calls; sub-2s keeps them engaged. Use fastest available models for import/tailor. | -- Pending |
+| Prioritize AI speed over intelligence for in-flow features | Users in editing flow can't tolerate 10s AI calls; sub-2s keeps them engaged. Use fastest available models for import/tailor. | Haiku 4.5 default for tailor (Phase 5) |
 
 ## Evolution
 
@@ -107,4 +107,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-04 after Phase 3 completion*
+*Last updated: 2026-04-06 after Phase 5 completion*
