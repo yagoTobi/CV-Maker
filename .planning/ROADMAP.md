@@ -125,7 +125,7 @@ Plans:
 
 Plans:
 - [x] 06-01-PLAN.md -- NavBar + WorkingLayout + EditorActionsContext + App.tsx route restructure (DirectEditPage replaces CVFormBuilder)
-- [ ] 06-02-PLAN.md -- TemplateSelector "Coming soon" badge + Dashboard handleApplyToJob navigation fix
+- [x] 06-02-PLAN.md -- TemplateSelector "Coming soon" badge + Dashboard handleApplyToJob navigation fix
 - [ ] 06-03-PLAN.md -- Dead code removal (form-builder, editor, cv-import, useFormBuilder) + end-to-end verification
 
 ## Progress

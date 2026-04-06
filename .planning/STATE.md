@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-04-06T11:17:48.042Z"
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-04-06T11:21:25.965Z"
 last_activity: 2026-04-06
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 22
-  completed_plans: 20
-  percent: 91
+  completed_plans: 21
+  percent: 95
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-29)
 ## Current Position
 
 Phase: 06 (Route Integration) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-04-06
 
@@ -73,6 +73,7 @@ Progress: [███████░░░] 67%
 | Phase 05-ai-integration P03 | 3min | 2 tasks | 2 files |
 | Phase 05-ai-integration P04 | 3min | 2 tasks | 2 files |
 | Phase 06-route-integration P01 | 3min | 2 tasks | 7 files |
+| Phase 06-route-integration P02 | 2min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -127,6 +128,8 @@ Recent decisions affecting current work:
 - [Phase 05-04]: Removed handleOpenInTuneScreen -- Apply to Job now has its own integrated tailor review
 - [Phase 06-route-integration]: NavBar detects editor context via pathname + non-null editorActions (dual condition prevents stale UI)
 - [Phase 06-route-integration]: EditorActionsProvider scoped to WorkingLayout (not AppProvider) to avoid unnecessary re-renders on landing page
+- [Phase 06-route-integration]: SUPPORTED_TEMPLATES as client-side Set for template enablement gating (not security boundary)
+- [Phase 06-route-integration]: handleApplyToJob simplified to navigate-only -- ApplyToJobScreen fetches its own version data
 
 ### Pending Todos
 
@@ -139,6 +142,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-06T11:17:48.037Z
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-04-06T11:21:25.959Z
+Stopped at: Completed 06-02-PLAN.md
 Resume file: None
