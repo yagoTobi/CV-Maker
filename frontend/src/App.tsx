@@ -7,10 +7,9 @@ const LandingScreen = lazy(() => import('./features/landing/LandingScreen'));
 const Dashboard = lazy(() => import('./features/dashboard/Dashboard'));
 const BuildChoiceScreen = lazy(() => import('./features/build-choice/BuildChoiceScreen'));
 const TemplateSelector = lazy(() => import('./features/template-selection/TemplateSelector').then(m => ({ default: m.TemplateSelector })));
-const CVFormBuilder = lazy(() => import('./features/form-builder/CVFormBuilder'));
-const CVImportUpload = lazy(() => import('./features/cv-import/CVImportUpload'));
 const ApplyToJobScreen = lazy(() => import('./features/apply-to-job/ApplyToJobScreen'));
 const DirectEditPage = lazy(() => import('./features/direct-edit/DirectEditPage'));
+const WorkingLayout = lazy(() => import('./components/WorkingLayout'));
 
 function NotFound() {
   return (
@@ -27,13 +26,13 @@ function App() {
       <Suspense fallback={null}>
         <Routes>
           <Route path="/" element={<LandingScreen />} />
-          <Route path="/dashboard" element={<FeatureErrorBoundary><Dashboard /></FeatureErrorBoundary>} />
-          <Route path="/build/start" element={<FeatureErrorBoundary><BuildChoiceScreen /></FeatureErrorBoundary>} />
-          <Route path="/build" element={<FeatureErrorBoundary><TemplateSelector /></FeatureErrorBoundary>} />
-          <Route path="/build/form" element={<FeatureErrorBoundary><CVFormBuilder /></FeatureErrorBoundary>} />
-          <Route path="/import" element={<FeatureErrorBoundary><CVImportUpload /></FeatureErrorBoundary>} />
-          <Route path="/apply" element={<FeatureErrorBoundary><ApplyToJobScreen /></FeatureErrorBoundary>} />
-          <Route path="/direct-edit" element={<FeatureErrorBoundary><DirectEditPage /></FeatureErrorBoundary>} />
+          <Route element={<WorkingLayout />}>
+            <Route path="/dashboard" element={<FeatureErrorBoundary><Dashboard /></FeatureErrorBoundary>} />
+            <Route path="/build/start" element={<FeatureErrorBoundary><BuildChoiceScreen /></FeatureErrorBoundary>} />
+            <Route path="/build" element={<FeatureErrorBoundary><TemplateSelector /></FeatureErrorBoundary>} />
+            <Route path="/build/form" element={<FeatureErrorBoundary><DirectEditPage /></FeatureErrorBoundary>} />
+            <Route path="/apply" element={<FeatureErrorBoundary><ApplyToJobScreen /></FeatureErrorBoundary>} />
+          </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>

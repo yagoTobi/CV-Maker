@@ -1,14 +1,15 @@
 /**
  * DirectEditPage -- Top-level page for the web CV editor.
  *
- * Assembles MedLengthTemplate + EditorToolbar + useDirectEditor + useAutoSave
- * into a full-bleed, white-background page. EB Garamond font is loaded here
- * (not globally) so it only applies to the CV editing surface.
+ * Assembles MedLengthTemplate + useDirectEditor + useAutoSave into a full-bleed,
+ * white-background page. EB Garamond font is loaded here (not globally) so it
+ * only applies to the CV editing surface.
  *
  * If formData is not in context (e.g., direct URL navigation), tries to load
  * the most recent saved version. Falls back to an empty template with placeholders.
  *
- * EditorToolbar provides Import CV, Download PDF, and auto-save status.
+ * Editor actions (Import CV, Download PDF, save status) are lifted into
+ * EditorActionsContext so the NavBar can render them. EditorToolbar is removed.
  * ImportToast shows a dismissible banner after CV import with confidence info.
  *
  * Covers: EDIT-01 through EDIT-06, UX-01, D-05, D-06, D-07, D-13.
@@ -19,8 +20,8 @@ import { useDirectEditor } from './hooks/useDirectEditor';
 import { useAutoSave } from './hooks/useAutoSave';
 import { usePageBreak } from './hooks/usePageBreak';
 import { MedLengthTemplate } from './components/MedLengthTemplate';
-import { EditorToolbar } from './components/EditorToolbar';
 import { ImportToast } from './components/ImportToast';
+import { useSetEditorActions } from '../../contexts/EditorActionsContext';
 import { PageBreakIndicator } from './components/PageBreakIndicator';
 import { useCVContext } from '../../contexts/CVContext';
 import { useImport } from '../../hooks/useImport';
@@ -57,6 +58,7 @@ export default function DirectEditPage() {
   const [isBootstrapping, setIsBootstrapping] = useState(!formData);
   const [isDownloading, setIsDownloading] = useState(false);
   const [showImportToast, setShowImportToast] = useState(false);
+  const setEditorActions = useSetEditorActions();
   const cvContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pageBreakY = usePageBreak(cvContainerRef);
@@ -169,19 +171,24 @@ export default function DirectEditPage() {
     setIsDownloading(false);
   }, [formData]);
 
+  // Lift editor actions into NavBar via EditorActionsContext
+  useEffect(() => {
+    setEditorActions({
+      onImport: handleImportClick,
+      onDownload: handleDownload,
+      saveStatus,
+      isImporting,
+      isDownloading,
+    });
+    return () => setEditorActions(null);
+  }, [setEditorActions, handleImportClick, handleDownload, saveStatus, isImporting, isDownloading]);
+
   if (isBootstrapping || !formData) {
     return <div className={styles.loading}>Loading...</div>;
   }
 
   return (
     <div className={styles.page}>
-      <EditorToolbar
-        saveStatus={saveStatus}
-        onImport={handleImportClick}
-        onDownload={handleDownload}
-        isImporting={isImporting}
-        isDownloading={isDownloading}
-      />
       <input
         type="file"
         ref={fileInputRef}
