@@ -5,7 +5,6 @@ import { FeatureErrorBoundary } from './components/FeatureErrorBoundary';
 
 const LandingScreen = lazy(() => import('./features/landing/LandingScreen'));
 const Dashboard = lazy(() => import('./features/dashboard/Dashboard'));
-const BuildChoiceScreen = lazy(() => import('./features/build-choice/BuildChoiceScreen'));
 const TemplateSelector = lazy(() => import('./features/template-selection/TemplateSelector').then(m => ({ default: m.TemplateSelector })));
 const ApplyToJobScreen = lazy(() => import('./features/apply-to-job/ApplyToJobScreen'));
 const DirectEditPage = lazy(() => import('./features/direct-edit/DirectEditPage'));
@@ -28,7 +27,6 @@ function App() {
           <Route path="/" element={<LandingScreen />} />
           <Route element={<WorkingLayout />}>
             <Route path="/dashboard" element={<FeatureErrorBoundary><Dashboard /></FeatureErrorBoundary>} />
-            <Route path="/build/start" element={<FeatureErrorBoundary><BuildChoiceScreen /></FeatureErrorBoundary>} />
             <Route path="/build" element={<FeatureErrorBoundary><TemplateSelector /></FeatureErrorBoundary>} />
             <Route path="/build/form" element={<FeatureErrorBoundary><DirectEditPage /></FeatureErrorBoundary>} />
             <Route path="/apply" element={<FeatureErrorBoundary><ApplyToJobScreen /></FeatureErrorBoundary>} />

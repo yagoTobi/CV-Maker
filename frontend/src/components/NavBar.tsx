@@ -3,7 +3,7 @@
  *
  * Left side: "CV Maker" logo (navigates to /) + "My CVs" link (navigates to /dashboard).
  * Right side (editor pages): Download PDF accent button + SaveIndicator.
- * Right side (non-editor pages): "+ New CV" ghost button (navigates to /build/start).
+ * Right side (non-editor pages): "+ New CV" ghost button (navigates to /).
  *
  * Editor detection: pathname === '/build/form' AND editorActions is non-null.
  * Per D-08, D-09, D-10, D-12, D-16, D-17 from UI-SPEC.
@@ -70,7 +70,7 @@ export function NavBar() {
         ) : (
           <button
             className={styles.ghostBtn}
-            onClick={() => navigate('/build/start')}
+            onClick={() => navigate('/')}
             type="button"
           >
             + New CV
