@@ -1,29 +1,70 @@
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../contexts/AppContext';
+import { BuildExpansionPanel } from './BuildExpansionPanel';
+import { TuneExpansionPanel } from './TuneExpansionPanel';
 import styles from './LandingScreen.module.css';
 
 export default function LandingScreen() {
   const navigate = useNavigate();
   const { savedVersions, setFormData } = useAppContext();
+  const [expandedPanel, setExpandedPanel] = useState<'build' | 'tune' | null>(null);
+  const switchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const handleBuildCV = () => {
-    setFormData(null);
-    navigate('/build/start');
-  };
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (switchTimeoutRef.current) clearTimeout(switchTimeoutRef.current);
+    };
+  }, []);
 
-  const handleTuneForJob = () => {
-    if (savedVersions.length > 0) {
-      // Has saved CVs — go to dashboard to pick one, then "Apply to Job"
-      navigate('/dashboard');
-    } else {
-      // No saved CVs — build one first
-      navigate('/build/start');
+  const handleBuildClick = useCallback(() => {
+    if (switchTimeoutRef.current) clearTimeout(switchTimeoutRef.current);
+    if (expandedPanel === 'build') {
+      setExpandedPanel(null);
+      return;
     }
-  };
+    if (expandedPanel !== null) {
+      // Sequential: collapse current first, then expand build after 200ms
+      setExpandedPanel(null);
+      switchTimeoutRef.current = setTimeout(() => setExpandedPanel('build'), 200);
+      return;
+    }
+    setFormData(null);
+    setExpandedPanel('build');
+  }, [expandedPanel, setFormData]);
+
+  const handleTuneClick = useCallback(() => {
+    if (switchTimeoutRef.current) clearTimeout(switchTimeoutRef.current);
+    const baseCVs = savedVersions.filter(v => !v.parentVersionId);
+    if (baseCVs.length === 1) {
+      navigate('/apply', { state: { baseVersionId: baseCVs[0].id } });
+      return;
+    }
+    if (expandedPanel === 'tune') {
+      setExpandedPanel(null);
+      return;
+    }
+    if (expandedPanel !== null) {
+      setExpandedPanel(null);
+      switchTimeoutRef.current = setTimeout(() => setExpandedPanel('tune'), 200);
+      return;
+    }
+    setExpandedPanel('tune');
+  }, [expandedPanel, savedVersions, navigate]);
+
+  const handleBuildFromTune = useCallback(() => {
+    setExpandedPanel(null);
+    switchTimeoutRef.current = setTimeout(() => {
+      setFormData(null);
+      setExpandedPanel('build');
+    }, 200);
+  }, [setFormData]);
 
   const handleMyCV = () => {
     navigate('/dashboard');
   };
+
   return (
     <div className={styles.container}>
       <div className={styles.background} />
@@ -45,7 +86,11 @@ export default function LandingScreen() {
 
         <div className={styles.actions}>
           <div className={styles.cards}>
-            <button className={`${styles.card} ${styles.cardPrimary}`} onClick={handleBuildCV}>
+            <button
+              className={`${styles.card} ${styles.cardPrimary}${expandedPanel === 'build' ? ` ${styles.cardExpanded}` : ''}`}
+              onClick={handleBuildClick}
+              aria-expanded={expandedPanel === 'build'}
+            >
               <div className={styles.cardIcon}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 20h9"/>
@@ -64,7 +109,11 @@ export default function LandingScreen() {
               </div>
             </button>
 
-            <button className={`${styles.card} ${styles.cardSecondary}`} onClick={handleTuneForJob}>
+            <button
+              className={`${styles.card} ${styles.cardSecondary}${expandedPanel === 'tune' ? ` ${styles.cardSecondaryExpanded}` : ''}`}
+              onClick={handleTuneClick}
+              aria-expanded={expandedPanel === 'tune'}
+            >
               <div className={styles.cardIcon}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="11" cy="11" r="8"/>
@@ -82,6 +131,16 @@ export default function LandingScreen() {
                 </svg>
               </div>
             </button>
+          </div>
+
+          <div className={`${styles.expansionPanel}${expandedPanel === 'build' ? ` ${styles.expansionPanelOpen}` : ''}`}>
+            {expandedPanel === 'build' && <BuildExpansionPanel />}
+          </div>
+
+          <div className={`${styles.expansionPanel}${expandedPanel === 'tune' ? ` ${styles.expansionPanelOpen}` : ''}`}>
+            {expandedPanel === 'tune' && (
+              <TuneExpansionPanel onBuildClick={handleBuildFromTune} />
+            )}
           </div>
 
           {savedVersions.length > 0 && (
