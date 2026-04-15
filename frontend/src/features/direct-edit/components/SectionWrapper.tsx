@@ -13,6 +13,7 @@
  */
 import { useState } from 'react';
 import type { ReactNode } from 'react';
+import { ConfirmDialog } from './ConfirmDialog';
 import { GripIcon } from './GripIcon';
 import styles from './SectionWrapper.module.css';
 
@@ -127,50 +128,37 @@ export function SectionWrapper({
       >
         <GripIcon />
       </button>
-      {isConfirming ? (
-        <div className={styles.removeConfirm}>
-          <span className={styles.removeConfirmText}>Remove section?</span>
+      <div className={styles.sectionHeaderRow}>
+        {renderHeader ? renderHeader() : (
+          <div className={headerClassName}>{title}</div>
+        )}
+        <div className={styles.sectionControls}>
           <button
-            className={styles.removeConfirmYes}
-            onClick={() => { onRemoveSection?.(); setIsConfirming(false); }}
+            className={`${styles.toggleButton}${isHidden ? ` ${styles.toggleButtonVisible}` : ''}`}
+            onClick={onToggleVisibility}
+            aria-label={isHidden ? `Show ${title}` : `Hide ${title}`}
             type="button"
           >
-            Remove
+            {isHidden ? <EyeOffIcon /> : <EyeIcon />}
           </button>
-          <button
-            className={styles.removeConfirmNo}
-            onClick={() => setIsConfirming(false)}
-            type="button"
-          >
-            Cancel
-          </button>
-        </div>
-      ) : (
-        <div className={styles.sectionHeaderRow}>
-          {renderHeader ? renderHeader() : (
-            <div className={headerClassName}>{title}</div>
-          )}
-          <div className={styles.sectionControls}>
+          {onRemoveSection && (
             <button
-              className={`${styles.toggleButton}${isHidden ? ` ${styles.toggleButtonVisible}` : ''}`}
-              onClick={onToggleVisibility}
-              aria-label={isHidden ? `Show ${title}` : `Hide ${title}`}
+              className={styles.removeButton}
+              onClick={() => setIsConfirming(true)}
               type="button"
+              title="Remove section"
             >
-              {isHidden ? <EyeOffIcon /> : <EyeIcon />}
+              <TrashIcon />
             </button>
-            {onRemoveSection && (
-              <button
-                className={styles.removeButton}
-                onClick={() => setIsConfirming(true)}
-                type="button"
-                title="Remove section"
-              >
-                <TrashIcon />
-              </button>
-            )}
-          </div>
+          )}
         </div>
+      </div>
+      {isConfirming && (
+        <ConfirmDialog
+          message={`Remove "${title}" section?`}
+          onConfirm={() => { onRemoveSection?.(); setIsConfirming(false); }}
+          onCancel={() => setIsConfirming(false)}
+        />
       )}
 
       {isHidden ? (
