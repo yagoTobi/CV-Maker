@@ -141,3 +141,13 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 4. Drag and Drop | 2/2 | Complete | - |
 | 5. AI Integration | 4/5 | In Progress|  |
 | 6. Route Integration | 0/3 | Not started | - |
+
+### Phase 7: Navigation flow consolidation: collapse BuildChoiceScreen into Landing inline expansion (eliminate /build/start route), and reframe Dashboard as a management-only screen (not a required flow step). When Tune for a role is clicked on landing, check if exactly one base CV exists and navigate to /apply directly; otherwise show a selection UI without full dashboard chrome. Dashboard stays accessible via My CVs nav link only.
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 6
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 7 to break down)

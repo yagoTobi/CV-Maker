@@ -134,6 +134,10 @@ Recent decisions affecting current work:
 - [Phase 06-route-integration]: handleApplyToJob simplified to navigate-only -- ApplyToJobScreen fetches its own version data
 - [Phase 06-route-integration]: No surviving production imports of deleted modules -- safe full deletion confirmed by dead code audit
 
+### Roadmap Evolution
+
+- Phase 7 added: Navigation flow consolidation — collapse BuildChoiceScreen into Landing, reframe Dashboard as management-only screen
+
 ### Pending Todos
 
 None yet.
