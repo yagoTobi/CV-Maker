@@ -146,6 +146,7 @@ None yet.
 | 260415-ou9 | Fix delete UX consistency in form editor and restore Download PDF functionality | 2026-04-15 | f5fe1b0 | [260415-ou9-fix-delete-ux-consistency-in-form-editor](./quick/260415-ou9-fix-delete-ux-consistency-in-form-editor/) |
 | 260415-p98 | Improve section delete confirm UX: section-scoped highlight instead of full-screen backdrop, dialog anchored right of section | 2026-04-15 | ab6be8d | [260415-p98-improve-section-delete-confirm-ux-sectio](./quick/260415-p98-improve-section-delete-confirm-ux-sectio/) |
 | 260415-pmj | Remove section confirm red ring; fix SaveIndicator auto-fade; add Tune for Job nav action to editor | 2026-04-15 | 6532cf2 | [260415-pmj-remove-section-confirm-red-ring-fix-save](./quick/260415-pmj-remove-section-confirm-red-ring-fix-save/) |
+| 260415-q5j | Fix handleTuneForJob navigate to /apply with current version ID | 2026-04-15 | b0179f1 | [260415-q5j-fix-handletuneforjob-navigate-to-apply-w](./quick/260415-q5j-fix-handletuneforjob-navigate-to-apply-w/) |
 
 ### Blockers/Concerns
 
@@ -155,5 +156,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-15
-Stopped at: Completed quick task 260415-ou9: Fix delete UX consistency + Download PDF dead code cleanup
+Stopped at: Completed quick task 260415-q5j: Fix handleTuneForJob navigate to /apply with current version ID
 Resume file: None
