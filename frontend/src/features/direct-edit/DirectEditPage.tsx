@@ -9,8 +9,7 @@
  * the most recent saved version. Falls back to an empty template with placeholders.
  *
  * Editor actions (Download PDF, save status) are lifted into
- * EditorActionsContext so the NavBar can render them. EditorToolbar is removed.
- * ImportToast shows a dismissible banner after CV import with confidence info.
+ * EditorActionsContext so the NavBar can render them.
  *
  * Covers: EDIT-01 through EDIT-06, UX-01, D-05, D-06, D-07, D-13.
  */
@@ -20,11 +19,9 @@ import { useDirectEditor } from './hooks/useDirectEditor';
 import { useAutoSave } from './hooks/useAutoSave';
 import { usePageBreak } from './hooks/usePageBreak';
 import { MedLengthTemplate } from './components/MedLengthTemplate';
-import { ImportToast } from './components/ImportToast';
 import { useSetEditorActions } from '../../contexts/EditorActionsContext';
 import { PageBreakIndicator } from './components/PageBreakIndicator';
 import { useCVContext } from '../../contexts/CVContext';
-import { useImport } from '../../hooks/useImport';
 import { api } from '../../services/api';
 import { generateId } from '../../utils/idHelpers';
 import { generateCVFilename } from '../../utils/cvFilename';
@@ -54,13 +51,10 @@ export default function DirectEditPage() {
   const { activeVersion, setFormData, savedVersions, selectedTemplateForBuild } = useCVContext();
   const { formData, updateField, addBullet, removeBullet, addEntry, removeEntry, toggleSection, hiddenSections, reorderSections, reorderEntries, removeSection } = useDirectEditor();
   const saveStatus = useAutoSave(formData, activeVersion?.id ?? null);
-  const { isImporting, importResult, importError, handleFileSelected, reset: resetImport } = useImport();
   const [isBootstrapping, setIsBootstrapping] = useState(!formData);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [showImportToast, setShowImportToast] = useState(false);
   const setEditorActions = useSetEditorActions();
   const cvContainerRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const pageBreakY = usePageBreak(cvContainerRef);
 
   // Bootstrap formData if context is empty (direct URL navigation / page refresh)
@@ -109,41 +103,9 @@ export default function DirectEditPage() {
     return () => { cancelled = true; };
   }, [formData, savedVersions, setFormData, selectedTemplateForBuild]);
 
-  // Load imported formData into context when import succeeds
-  useEffect(() => {
-    if (!importResult?.success || !importResult.formData) return;
-    // Preserve templateId from current formData (import strips it)
-    const importedData: CVFormData = {
-      ...importResult.formData,
-      templateId: formData?.templateId ?? DEFAULT_TEMPLATE,
-      sectionOrder: importResult.formData.sectionOrder ?? formData?.sectionOrder ?? ['work', 'education', 'skills', 'projects', 'awards'],
-    };
-    setFormData(importedData);
-    setShowImportToast(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [importResult]);
-
-  // Show toast on import error
-  useEffect(() => {
-    if (importError) setShowImportToast(true);
-  }, [importError]);
-
   const handleInput = useCallback(() => {
     // No-op -- useAutoSave watches formData changes directly.
   }, []);
-
-  /** Open native file picker for CV import */
-  const handleImportClick = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
-
-  /** Handle file selection from the hidden input */
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-      handleFileSelected(e.target.files[0]);
-      e.target.value = '';
-    }
-  }, [handleFileSelected]);
 
   /** Generate LaTeX, compile to PDF, and trigger browser download */
   const handleDownload = useCallback(async () => {
@@ -201,21 +163,6 @@ export default function DirectEditPage() {
 
   return (
     <div className={styles.page}>
-      <input
-        type="file"
-        ref={fileInputRef}
-        accept=".pdf,.docx,.json"
-        style={{ display: 'none' }}
-        onChange={handleFileChange}
-      />
-      {showImportToast && (importResult || importError) && (
-        <ImportToast
-          summary={importResult?.summary ?? { workEntries: 0, educationEntries: 0, skillCategories: 0, projects: 0, awards: 0 }}
-          confidence={importResult?.confidence ?? { overall: 'low', fields: {} }}
-          error={importResult?.success ? null : (importResult?.error || importError)}
-          onDismiss={() => { setShowImportToast(false); resetImport(); }}
-        />
-      )}
       <div className={styles.contentArea}>
         <div ref={cvContainerRef} className={styles.cvContainer}>
           <MedLengthTemplate
