@@ -1,15 +1,11 @@
 /**
  * Integration tests for navigation flow and state management in App.tsx.
  *
- * Updated for React Router architecture:
- * - App uses <Routes> with path-based navigation
- * - All state lives in AppContext (no props)
- * - "Build my CV" -> /build/start (BuildChoiceScreen) -> /build (TemplateSelector) -> /build/form
- * - Landing has 2 cards: "Build my CV" and "Tune for a job" (no "Import existing CV")
- * - Import is accessed via BuildChoiceScreen's drop zone
- *
- * Approach: Render the full App component wrapped in MemoryRouter and simulate
- * user navigation. We mock the api module to avoid network calls.
+ * Updated for Phase 7 inline expansion architecture:
+ * - "Build my CV" click expands inline BuildExpansionPanel (no route navigation)
+ * - "Tune for a role" click behavior depends on base CV count
+ * - /build/start route removed entirely
+ * - TemplateSelector back button navigates to / (landing)
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -50,23 +46,19 @@ describe('Navigation Flow State Management', () => {
   });
 
   describe('Landing screen', () => {
-    it('renders the two action cards: "Build my CV" and "Tune for a job"', async () => {
+    it('renders two action cards: "Build my CV" and "Tune for a role" (NAV-01 partial)', async () => {
       renderApp();
 
       await waitFor(() => {
         expect(screen.getByText('Build my CV')).toBeInTheDocument();
-        expect(screen.getByText('Tune for a job')).toBeInTheDocument();
-      });
-    });
-
-    it('does not show "Import existing CV" button on landing (import moved to BuildChoiceScreen)', async () => {
-      renderApp();
-
-      await waitFor(() => {
-        expect(screen.getByText('Build my CV')).toBeInTheDocument();
+        expect(screen.getByText('Tune for a role')).toBeInTheDocument();
       });
 
-      expect(screen.queryByText('Import existing CV')).not.toBeInTheDocument();
+      // Both cards start collapsed
+      const buildCard = screen.getByText('Build my CV').closest('button');
+      const tuneCard = screen.getByText('Tune for a role').closest('button');
+      expect(buildCard).toHaveAttribute('aria-expanded', 'false');
+      expect(tuneCard).toHaveAttribute('aria-expanded', 'false');
     });
 
     it('does not show "My Saved CVs" link when there are no saved versions', async () => {
@@ -80,176 +72,159 @@ describe('Navigation Flow State Management', () => {
     });
   });
 
-  describe('Build flow: Landing -> BuildChoiceScreen -> TemplateSelector', () => {
-    it('"Build my CV" navigates to BuildChoiceScreen showing "Build your CV"', async () => {
+  describe('Build flow: inline expansion', () => {
+    it('"Build my CV" expands inline panel with drop zone and scratch card (NAV-01)', async () => {
       renderApp();
 
       await waitFor(() => {
         expect(screen.getByText('Build my CV')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText('Build my CV'));
+      const buildCard = screen.getByText('Build my CV').closest('button')!;
+      fireEvent.click(buildCard);
 
       await waitFor(() => {
-        expect(screen.getByText('Build your CV')).toBeInTheDocument();
+        expect(screen.getByText(/Drag your CV here/)).toBeInTheDocument();
+        expect(screen.getByText('Start from scratch')).toBeInTheDocument();
+      });
+
+      // Should NOT show old BuildChoiceScreen heading
+      expect(screen.queryByText('Build your CV')).not.toBeInTheDocument();
+
+      // Card should now be expanded
+      expect(buildCard).toHaveAttribute('aria-expanded', 'true');
+    });
+
+    it('"Start from scratch" navigates to template selector (NAV-02)', async () => {
+      renderApp();
+
+      await waitFor(() => {
+        expect(screen.getByText('Build my CV')).toBeInTheDocument();
+      });
+
+      const buildCard = screen.getByText('Build my CV').closest('button')!;
+      fireEvent.click(buildCard);
+
+      await waitFor(() => {
+        expect(screen.getByText('Start from scratch')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Start from scratch'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Choose Your Template')).toBeInTheDocument();
       });
     });
 
-    it('BuildChoiceScreen shows import drop zone and "Start from scratch" button', async () => {
+    it('clicking Build card again collapses the panel', async () => {
       renderApp();
 
       await waitFor(() => {
         expect(screen.getByText('Build my CV')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText('Build my CV'));
+      const buildCard = screen.getByText('Build my CV').closest('button')!;
+      fireEvent.click(buildCard);
 
       await waitFor(() => {
-        expect(screen.getByText('Build your CV')).toBeInTheDocument();
-        expect(screen.getByText('Start from scratch')).toBeInTheDocument();
         expect(screen.getByText(/Drag your CV here/)).toBeInTheDocument();
       });
-    });
 
-    it('"Start from scratch" navigates to template selector showing "Choose Your Template"', async () => {
-      renderApp();
-
-      await waitFor(() => {
-        expect(screen.getByText('Build my CV')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Build my CV'));
+      // Click again to collapse
+      fireEvent.click(buildCard);
 
       await waitFor(() => {
-        expect(screen.getByText('Start from scratch')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Start from scratch'));
-
-      await waitFor(() => {
-        expect(screen.getByText('Choose Your Template')).toBeInTheDocument();
+        expect(screen.queryByText(/Drag your CV here/)).not.toBeInTheDocument();
       });
     });
   });
 
-  describe('Back button navigation', () => {
-    it('Back from BuildChoiceScreen returns to landing', async () => {
+  describe('Tune flow: branching by base CV count', () => {
+    it('Tune with 0 base CVs shows empty state panel (NAV-04)', async () => {
+      // Default mock returns empty versions
       renderApp();
 
       await waitFor(() => {
-        expect(screen.getByText('Build my CV')).toBeInTheDocument();
+        expect(screen.getByText('Tune for a role')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText('Build my CV'));
+      const tuneCard = screen.getByText('Tune for a role').closest('button')!;
+      fireEvent.click(tuneCard);
 
       await waitFor(() => {
-        expect(screen.getByText('Build your CV')).toBeInTheDocument();
+        expect(screen.getByText('No CV to tune yet')).toBeInTheDocument();
       });
 
-      // Click the Back button in BuildChoiceScreen
-      fireEvent.click(screen.getByText('Back'));
+      // The CTA button inside the panel also says "Build my CV"
+      const ctaButtons = screen.getAllByText('Build my CV');
+      // At least 2: one in the card heading, one in the CTA
+      expect(ctaButtons.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('Tune with exactly 1 base CV navigates directly to /apply (NAV-03)', async () => {
+      const { api } = await import('../services/api');
+      vi.mocked(api.listVersions).mockResolvedValue({
+        versions: [
+          { id: 'base-1', name: 'My CV', templateId: 'med-length-proff-cv', createdAt: '2026-01-01T00:00:00Z', children: [] },
+        ],
+        ungrouped: [],
+      });
+
+      renderApp();
 
       await waitFor(() => {
-        expect(screen.getByText('Build my CV')).toBeInTheDocument();
+        expect(screen.getByText('Tune for a role')).toBeInTheDocument();
+      });
+
+      const tuneCard = screen.getByText('Tune for a role').closest('button')!;
+      fireEvent.click(tuneCard);
+
+      // Should navigate away from landing — Tune for a role card should disappear
+      await waitFor(() => {
+        expect(screen.queryByText('Tune for a role')).not.toBeInTheDocument();
       });
     });
 
-    it('Back from template selector returns to BuildChoiceScreen', async () => {
+    it('Tune with 2+ base CVs shows CV picker panel (NAV-05)', async () => {
+      const { api } = await import('../services/api');
+      vi.mocked(api.listVersions).mockResolvedValue({
+        versions: [
+          { id: 'base-1', name: 'My Professional CV', templateId: 'med-length-proff-cv', createdAt: '2026-01-01T00:00:00Z', children: [] },
+          { id: 'base-2', name: 'My Technical CV', templateId: 'med-length-proff-cv', createdAt: '2026-02-01T00:00:00Z', children: [] },
+        ],
+        ungrouped: [],
+      });
+
       renderApp();
 
       await waitFor(() => {
-        expect(screen.getByText('Build my CV')).toBeInTheDocument();
+        expect(screen.getByText('Tune for a role')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText('Build my CV'));
+      const tuneCard = screen.getByText('Tune for a role').closest('button')!;
+      fireEvent.click(tuneCard);
 
       await waitFor(() => {
-        expect(screen.getByText('Start from scratch')).toBeInTheDocument();
+        expect(screen.getByText('Choose a base CV')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText('Start from scratch'));
-
-      await waitFor(() => {
-        expect(screen.getByText('Choose Your Template')).toBeInTheDocument();
-      });
-
-      // TemplateSelector Back button navigates to /build/start (BuildChoiceScreen)
-      fireEvent.click(screen.getByText('Back'));
-
-      await waitFor(() => {
-        expect(screen.getByText('Build your CV')).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('State isolation: Build path starts with clean state', () => {
-    it('"Build my CV" -> BuildChoiceScreen -> "Start from scratch" -> template selector (formData stays null)', async () => {
-      /**
-       * Verifies the state management in the new architecture:
-       * - LandingScreen.handleBuildCV calls setFormData(null) before navigating to /build/start
-       * - BuildChoiceScreen.handleStartFromScratch calls setFormData(null) + setSelectedTemplateForBuild(null)
-       * - At no point is formData set, so CVFormBuilder would receive undefined -> blank form
-       */
-      renderApp();
-
-      await waitFor(() => {
-        expect(screen.getByText('Build my CV')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Build my CV'));
-
-      await waitFor(() => {
-        expect(screen.getByText('Build your CV')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Start from scratch'));
-
-      await waitFor(() => {
-        expect(screen.getByText('Choose Your Template')).toBeInTheDocument();
-      });
-    });
-
-    it('navigating to BuildChoiceScreen and back does not leak state into Build path', async () => {
-      /**
-       * Flow:
-       * 1. Landing -> BuildChoiceScreen (do NOT import or start from scratch)
-       * 2. Back to Landing
-       * 3. Build my CV -> BuildChoiceScreen -> Start from scratch -> Template Selector
-       * 4. Verify template selector shows (formData never set)
-       */
-      renderApp();
-
-      await waitFor(() => {
-        expect(screen.getByText('Build my CV')).toBeInTheDocument();
-      });
-
-      // Go to BuildChoiceScreen
-      fireEvent.click(screen.getByText('Build my CV'));
-      await waitFor(() => {
-        expect(screen.getByText('Build your CV')).toBeInTheDocument();
-      });
-
-      // Go back without doing anything
-      fireEvent.click(screen.getByText('Back'));
-      await waitFor(() => {
-        expect(screen.getByText('Build my CV')).toBeInTheDocument();
-      });
-
-      // Start the build path again
-      fireEvent.click(screen.getByText('Build my CV'));
-      await waitFor(() => {
-        expect(screen.getByText('Build your CV')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Start from scratch'));
-      await waitFor(() => {
-        expect(screen.getByText('Choose Your Template')).toBeInTheDocument();
-      });
+      expect(screen.getByText('My Professional CV')).toBeInTheDocument();
+      expect(screen.getByText('My Technical CV')).toBeInTheDocument();
     });
   });
 
-  describe('Direct URL navigation', () => {
-    it('renders landing screen at /', async () => {
+  describe('Route removal and redirects', () => {
+    it('/build/start returns 404 (NAV-06)', async () => {
+      renderApp('/build/start');
+
+      await waitFor(() => {
+        expect(screen.getByText(/Page not found/)).toBeInTheDocument();
+      });
+
+      expect(screen.getByText('Go to home')).toBeInTheDocument();
+    });
+
+    it('renders landing at / (unchanged)', async () => {
       renderApp('/');
 
       await waitFor(() => {
@@ -257,19 +232,41 @@ describe('Navigation Flow State Management', () => {
       });
     });
 
-    it('renders BuildChoiceScreen at /build/start', async () => {
-      renderApp('/build/start');
-
-      await waitFor(() => {
-        expect(screen.getByText('Build your CV')).toBeInTheDocument();
-      });
-    });
-
-    it('renders TemplateSelector at /build', async () => {
+    it('renders TemplateSelector at /build (unchanged)', async () => {
       renderApp('/build');
 
       await waitFor(() => {
         expect(screen.getByText('Choose Your Template')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('NavBar and TemplateSelector navigation', () => {
+    it('TemplateSelector Back button navigates to landing (NAV-08)', async () => {
+      renderApp('/build');
+
+      await waitFor(() => {
+        expect(screen.getByText('Choose Your Template')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Back'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Build my CV')).toBeInTheDocument();
+      });
+    });
+
+    it('NavBar + New CV navigates to landing (NAV-07)', async () => {
+      renderApp('/dashboard');
+
+      await waitFor(() => {
+        expect(screen.getByText('+ New CV')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('+ New CV'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Build my CV')).toBeInTheDocument();
       });
     });
   });
