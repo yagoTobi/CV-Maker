@@ -129,4 +129,49 @@ describe('SectionWrapper', () => {
 
     expect(screen.getByTestId('custom-header')).toBeInTheDocument();
   });
+
+  it('clicking remove button applies sectionConfirming class to wrapper', () => {
+    const { container } = render(
+      <SectionWrapper {...defaultProps} onRemoveSection={vi.fn()}>
+        <div>Content</div>
+      </SectionWrapper>
+    );
+
+    const wrapper = container.querySelector('[data-section="work"]');
+    expect(wrapper).toBeInTheDocument();
+    // Before clicking, sectionConfirming should not be present
+    expect(wrapper!.className).not.toMatch(/sectionConfirming/);
+
+    const removeBtn = screen.getByTitle('Remove section');
+    fireEvent.click(removeBtn);
+
+    // After clicking, sectionConfirming class should be applied
+    expect(wrapper!.className).toMatch(/sectionConfirming/);
+  });
+
+  it('section confirm dialog uses noBackdrop (no dimming backdrop)', () => {
+    const { container } = render(
+      <SectionWrapper {...defaultProps} onRemoveSection={vi.fn()}>
+        <div>Content</div>
+      </SectionWrapper>
+    );
+
+    const removeBtn = screen.getByTitle('Remove section');
+    fireEvent.click(removeBtn);
+
+    // Confirm dialog should be present
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+
+    // Should have the transparent backdrop (noBackdrop mode), not the dimming one.
+    // CSS modules mangle class names, so check for the substring pattern.
+    const allDivs = container.querySelectorAll('div');
+    const hasTransparentBackdrop = Array.from(allDivs).some(
+      (div) => div.className.includes('backdropTransparent')
+    );
+    const hasDimmingBackdrop = Array.from(allDivs).some(
+      (div) => div.className.includes('backdrop') && !div.className.includes('backdropTransparent')
+    );
+    expect(hasTransparentBackdrop).toBe(true);
+    expect(hasDimmingBackdrop).toBe(false);
+  });
 });
