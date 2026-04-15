@@ -138,6 +138,12 @@ Recent decisions affecting current work:
 
 None yet.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260415-ofh | Remove import CV button from /build/form page - only show Download PDF, Prep for Tuning, and Save actions | 2026-04-15 | 90256e7 | [260415-ofh-remove-import-cv-button-from-build-form-](./quick/260415-ofh-remove-import-cv-button-from-build-form-/) |
+
 ### Blockers/Concerns
 
 - Phase 2 carries highest technical risk: React + contentEditable contract must be validated via spike before full implementation
@@ -145,6 +151,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-06T11:25:44.105Z
-Stopped at: Completed 06-03-PLAN.md
+Last session: 2026-04-15
+Stopped at: Completed quick task 260415-ofh: Remove import CV button from /build/form page
 Resume file: None
