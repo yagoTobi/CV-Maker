@@ -78,3 +78,11 @@
   background: var(--bg-tertiary);
   color: var(--text-primary);
 }
+
+/* Transparent backdrop -- invisible click target for noBackdrop mode */
+.backdropTransparent {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  /* No background color -- invisible click target */
+}

@@ -12,13 +12,24 @@ interface ConfirmDialogProps {
   message: string;
   onConfirm: () => void;
   onCancel: () => void;
+  /** When true, skip the dimming backdrop and use a transparent click target instead */
+  noBackdrop?: boolean;
+  /** Additional CSS class appended to the dialog element for caller-controlled positioning */
+  dialogClassName?: string;
 }
 
-export function ConfirmDialog({ message, onConfirm, onCancel }: ConfirmDialogProps) {
+export function ConfirmDialog({ message, onConfirm, onCancel, noBackdrop, dialogClassName }: ConfirmDialogProps) {
   return (
     <>
-      <div className={styles.backdrop} onClick={onCancel} />
-      <div className={styles.dialog} role="alertdialog" aria-label={message}>
+      {noBackdrop
+        ? <div className={styles.backdropTransparent} onClick={onCancel} />
+        : <div className={styles.backdrop} onClick={onCancel} />
+      }
+      <div
+        className={dialogClassName ? `${styles.dialog} ${dialogClassName}` : styles.dialog}
+        role="alertdialog"
+        aria-label={message}
+      >
         <p className={styles.message}>{message}</p>
         <div className={styles.actions}>
           <button className={styles.cancelBtn} onClick={onCancel}>
