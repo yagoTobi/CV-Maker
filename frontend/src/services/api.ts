@@ -152,12 +152,17 @@ export const api = {
     companyName: string,
     signal?: AbortSignal
   ): Promise<MatchAnalysis | null> {
-    const response = await axiosInstance.post<MatchAnalysis>(`${API_BASE}/chat/match-analysis`, {
-      cv_content: cvContent,
-      job_description: jobDescription,
-      company_name: companyName,
-    }, { signal });
-    return response.data;
+    try {
+      const response = await axiosInstance.post<MatchAnalysis>(`${API_BASE}/chat/match-analysis`, {
+        cv_content: cvContent,
+        job_description: jobDescription,
+        company_name: companyName,
+      }, { signal });
+      return response.data;
+    } catch (err) {
+      console.error('[api:getMatchAnalysis]', err);
+      return null;
+    }
   },
 
   async loadUserData(): Promise<UserProfile | null> {
@@ -191,16 +196,22 @@ export const api = {
     role?: string,
     signal?: AbortSignal
   ): Promise<TailorResponse | null> {
-    const response = await axiosInstance.post<TailorResponse>(`${API_BASE}/tailor/suggest-changes`, {
-      form_data: formData,
-      job_description: jobDescription,
-      company_name: companyName,
-      role: role,
-    }, {
-      timeout: 60000,
-      signal,
-    });
-    return response.data;
+    try {
+      const response = await axiosInstance.post<TailorResponse>(`${API_BASE}/tailor/suggest-changes`, {
+        form_data: formData,
+        job_description: jobDescription,
+        company_name: companyName,
+        role: role,
+      }, {
+        timeout: 60000,
+        signal,
+      });
+      return response.data;
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') throw err;
+      console.error('[api:suggestTailorChanges]', err);
+      return null;
+    }
   },
 
   async saveVersion(data: {
@@ -227,13 +238,23 @@ export const api = {
       baseline_match_score: data.baselineMatchScore,
       parent_version_id: data.parentVersionId,
     };
-    const response = await axiosInstance.post<CVVersion>(`${API_BASE}/cv-versions`, payload);
-    return response.data;
+    try {
+      const response = await axiosInstance.post<CVVersion>(`${API_BASE}/cv-versions`, payload);
+      return response.data;
+    } catch (err) {
+      console.error('[api:saveVersion]', err);
+      return null;
+    }
   },
 
   async getVersion(id: string): Promise<CVVersion | null> {
-    const response = await axiosInstance.get<CVVersion>(`${API_BASE}/cv-versions/${id}`);
-    return response.data;
+    try {
+      const response = await axiosInstance.get<CVVersion>(`${API_BASE}/cv-versions/${id}`);
+      return response.data;
+    } catch (err) {
+      console.error('[api:getVersion]', err);
+      return null;
+    }
   },
 
   async deleteVersion(id: string): Promise<boolean> {

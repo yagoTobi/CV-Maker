@@ -18,6 +18,7 @@ interface EditableBulletListProps {
   onBulletRemove: (index: number) => void;
   onInput?: () => void;
   readOnly?: boolean;
+  rich?: boolean;
 }
 
 export function EditableBulletList({
@@ -28,6 +29,7 @@ export function EditableBulletList({
   onBulletRemove,
   onInput,
   readOnly,
+  rich,
 }: EditableBulletListProps) {
   const [hasFocus, setHasFocus] = useState(false);
   const bulletRefs = useRef<Map<string, HTMLElement>>(new Map());
@@ -57,9 +59,9 @@ export function EditableBulletList({
     (e: React.KeyboardEvent, index: number) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        // Commit current text before adding
+        // Commit current text before adding (innerHTML for rich, textContent for plain)
         const el = e.currentTarget as HTMLElement;
-        onBulletChange(index, el.textContent ?? '');
+        onBulletChange(index, rich ? (el.innerHTML ?? '') : (el.textContent ?? ''));
         onBulletAdd(index);
         // The new bullet will be at index+1; we need to know its ID
         // after the state update. Set pending focus to be resolved in useEffect.
@@ -82,7 +84,7 @@ export function EditableBulletList({
         }
       }
     },
-    [bullets, onBulletChange, onBulletAdd, onBulletRemove]
+    [bullets, onBulletChange, onBulletAdd, onBulletRemove, rich]
   );
 
   const setRef = useCallback(
@@ -103,7 +105,10 @@ export function EditableBulletList({
         {bullets.map((bullet) => (
           <div key={bullet.id} className={styles.bulletItem}>
             <span className={styles.bulletMarker} />
-            <div>{bullet.text}</div>
+            {rich
+              ? <div dangerouslySetInnerHTML={{ __html: bullet.text }} />
+              : <div>{bullet.text}</div>
+            }
           </div>
         ))}
       </div>
@@ -133,6 +138,7 @@ export function EditableBulletList({
             onKeyDown={(e) => handleKeyDown(e, i)}
             onInput={onInput}
             placeholder="Describe an achievement..."
+            rich={rich}
           />
         </div>
       ))}

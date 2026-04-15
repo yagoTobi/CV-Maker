@@ -44,7 +44,7 @@
     \begin{rSubsection}{(( job.company | latex_escape ))}{\textbf{(( job.startDate | latex_escape ))(% if job.endDate %)\,--\,(( job.endDate | latex_escape ))(% endif %)}}{(( job.title | latex_escape ))}{(( job.location | latex_escape ))}
 (% if job.bullets %)
 (% for bullet in job.bullets %)
-    \item (( bullet | latex_escape ))
+    \item (( bullet | html_latex ))
 (% endfor %)
 (% endif %)
     \end{rSubsection}
@@ -61,7 +61,7 @@
     \item GPA: (( edu.gpa | latex_escape ))
 (% endif %)
 (% for detail in edu.details %)
-    \item (( detail | latex_escape ))
+    \item (( detail | html_latex ))
 (% endfor %)
     \end{rSubsection}
 (% else %)
@@ -90,7 +90,7 @@
     \begin{list}{$\cdot$}{\leftmargin=1em}
     \setlength{\itemsep}{-0.4em} \vspace{-0.4em}
     (% for bullet in proj.bullets %)
-    \item (( bullet | latex_escape ))
+    \item (( bullet | html_latex ))
     (% endfor %)
     \end{list}
     (% endif %)
@@ -120,7 +120,7 @@
     \item (( entry.description | latex_escape ))
 (% endif %)
 (% for bullet in entry.bullets %)
-    \item (( bullet | latex_escape ))
+    \item (( bullet | html_latex ))
 (% endfor %)
     \end{rSubsection}
 (% else %)

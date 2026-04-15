@@ -35,6 +35,8 @@ export function useAutoSave(
 
   useEffect(() => {
     if (!formData) return;
+    // Skip saves with invalid/sentinel templateIds (e.g. '_import')
+    if (!['med-length-proff-cv', 'deedy-resume', 'mcdowell-cv'].includes(formData.templateId)) return;
 
     const serialized = JSON.stringify(formData);
     if (serialized === lastSavedRef.current) return;

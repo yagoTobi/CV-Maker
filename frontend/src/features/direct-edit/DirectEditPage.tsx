@@ -51,8 +51,8 @@ function createEmptyFormData(): CVFormData {
 }
 
 export default function DirectEditPage() {
-  const { activeVersion, setFormData, savedVersions } = useCVContext();
-  const { formData, updateField, addBullet, removeBullet, addEntry, removeEntry, toggleSection, hiddenSections, reorderSections, reorderEntries } = useDirectEditor();
+  const { activeVersion, setFormData, savedVersions, selectedTemplateForBuild } = useCVContext();
+  const { formData, updateField, addBullet, removeBullet, addEntry, removeEntry, toggleSection, hiddenSections, reorderSections, reorderEntries, removeSection } = useDirectEditor();
   const saveStatus = useAutoSave(formData, activeVersion?.id ?? null);
   const { isImporting, importResult, importError, handleFileSelected, reset: resetImport } = useImport();
   const [isBootstrapping, setIsBootstrapping] = useState(!formData);
@@ -70,6 +70,15 @@ export default function DirectEditPage() {
       return;
     }
 
+    // User came from template selector — start fresh with chosen template
+    if (selectedTemplateForBuild) {
+      const empty = createEmptyFormData();
+      empty.templateId = selectedTemplateForBuild;
+      setFormData(empty);
+      setIsBootstrapping(false);
+      return;
+    }
+
     let cancelled = false;
 
     async function bootstrap() {
@@ -78,7 +87,12 @@ export default function DirectEditPage() {
         const mostRecent = savedVersions[0];
         const full = await api.getVersion(mostRecent.id);
         if (!cancelled && full?.formData) {
-          setFormData(full.formData);
+          const loadedData = full.formData;
+          // Sanitize sentinel/invalid templateIds that would cause backend 400
+          if (!loadedData.templateId || !['med-length-proff-cv', 'deedy-resume', 'mcdowell-cv'].includes(loadedData.templateId)) {
+            loadedData.templateId = DEFAULT_TEMPLATE;
+          }
+          setFormData(loadedData);
           setIsBootstrapping(false);
           return;
         }
@@ -93,7 +107,7 @@ export default function DirectEditPage() {
 
     bootstrap();
     return () => { cancelled = true; };
-  }, [formData, savedVersions, setFormData]);
+  }, [formData, savedVersions, setFormData, selectedTemplateForBuild]);
 
   // Load imported formData into context when import succeeds
   useEffect(() => {
@@ -218,6 +232,7 @@ export default function DirectEditPage() {
             onReorderSections={reorderSections}
             onReorderEntries={reorderEntries}
             onInput={handleInput}
+            onRemoveSection={removeSection}
           />
           {pageBreakY !== null && <PageBreakIndicator offsetY={pageBreakY} />}
         </div>

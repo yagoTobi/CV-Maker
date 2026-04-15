@@ -248,6 +248,36 @@ export function useDirectEditor() {
     []
   );
 
+  const removeSection = useCallback(
+    (sectionKey: string) => {
+      setFormData((prev: CVFormData | null) => {
+        if (!prev) return prev;
+        const next = structuredClone(prev);
+        const currentOrder = next.sectionOrder ?? ['work', 'education', 'skills', 'projects', 'awards'];
+        next.sectionOrder = currentOrder.filter(k => k !== sectionKey);
+        switch (sectionKey) {
+          case 'work': next.workExperience = []; break;
+          case 'education': next.education = []; break;
+          case 'skills': next.skills = []; break;
+          case 'projects': next.projects = []; break;
+          case 'awards': next.awards = []; break;
+          default:
+            if (sectionKey.startsWith('additional-')) {
+              const idx = parseInt(sectionKey.split('-')[1], 10);
+              next.additionalSections = (next.additionalSections ?? []).filter((_, i) => i !== idx);
+              // Re-index remaining additional-N keys in sectionOrder
+              let counter = 0;
+              next.sectionOrder = next.sectionOrder.map(k =>
+                k.startsWith('additional-') ? `additional-${counter++}` : k
+              );
+            }
+        }
+        return next;
+      });
+    },
+    [setFormData]
+  );
+
   return {
     formData,
     updateField,
@@ -259,5 +289,6 @@ export function useDirectEditor() {
     reorderEntries,
     toggleSection,
     hiddenSections,
+    removeSection,
   };
 }

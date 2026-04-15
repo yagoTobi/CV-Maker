@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from jinja2 import Environment, FileSystemLoader
+import html.parser
 import logging
 import os
 import re
@@ -82,8 +83,58 @@ def latex_url_escape(value: str) -> str:
     return value
 
 
+def html_latex(value: str) -> str:
+    """Convert HTML-formatted text to LaTeX with proper escaping.
+
+    Handles <strong>, <em>, <a href="..."> tags and HTML entities.
+    With convert_charrefs=True, entities like &amp; are decoded before
+    latex_escape is applied, so round-trips from innerHTML are safe.
+    Falls back to plain latex_escape for strings with no HTML/entities.
+    """
+    if not isinstance(value, str):
+        value = str(value)
+    if '<' not in value and '&' not in value:
+        return latex_escape(value)
+
+    class _Parser(html.parser.HTMLParser):
+        def __init__(self):
+            super().__init__(convert_charrefs=True)
+            self.parts = []
+            self.tag_stack = []
+
+        def handle_starttag(self, tag, attrs):
+            attrs_dict = dict(attrs)
+            if tag in ('strong', 'b'):
+                self.parts.append(r'\textbf{')
+                self.tag_stack.append(tag)
+            elif tag in ('em', 'i'):
+                self.parts.append(r'\textit{')
+                self.tag_stack.append(tag)
+            elif tag == 'a' and 'href' in attrs_dict:
+                escaped_url = latex_url_escape(attrs_dict['href'])
+                self.parts.append(f'\\href{{{escaped_url}}}{{')
+                self.tag_stack.append(tag)
+
+        def handle_endtag(self, tag):
+            if tag in ('strong', 'b', 'em', 'i', 'a'):
+                if self.tag_stack and self.tag_stack[-1] == tag:
+                    self.parts.append('}')
+                    self.tag_stack.pop()
+
+        def handle_data(self, data):
+            self.parts.append(latex_escape(data))
+
+        def get_result(self):
+            return ''.join(self.parts)
+
+    parser = _Parser()
+    parser.feed(value)
+    return parser.get_result()
+
+
 _jinja_env.filters["latex_escape"] = latex_escape
 _jinja_env.filters["latex_url_escape"] = latex_url_escape
+_jinja_env.filters["html_latex"] = html_latex
 
 _DEFAULT_PERSONAL_ORDER = ["phone", "email", "location", "links"]
 

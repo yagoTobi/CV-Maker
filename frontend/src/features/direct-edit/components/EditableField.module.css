@@ -29,3 +29,21 @@
 .editableField:focus:empty::before {
   color: transparent;
 }
+
+/* Rich text formatting styles */
+.editableField strong,
+.editableField b {
+  font-weight: 700;
+}
+
+.editableField em,
+.editableField i {
+  font-style: italic;
+}
+
+.editableField a[data-editor-link] {
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: text;
+  pointer-events: none;
+}

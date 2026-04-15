@@ -11,6 +11,7 @@
  *
  * Covers: CONT-01 (add entry), CONT-04 (toggle section), DND-01 (section drag).
  */
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { GripIcon } from './GripIcon';
 import styles from './SectionWrapper.module.css';
@@ -40,8 +41,18 @@ interface SectionWrapperProps {
   isDragSource?: boolean;
   /** When true, suppress all editing UI (add, toggle, drag grip) */
   readOnly?: boolean;
+  /** Callback to permanently remove this section */
+  onRemoveSection?: () => void;
   children: ReactNode;
 }
+
+/** Trash icon (remove section) */
+const TrashIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6"/>
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+  </svg>
+);
 
 /** Eye icon (section visible) */
 const EyeIcon = () => (
@@ -73,8 +84,11 @@ export function SectionWrapper({
   dragHandlers,
   isDragSource = false,
   readOnly = false,
+  onRemoveSection,
   children,
 }: SectionWrapperProps) {
+  const [isConfirming, setIsConfirming] = useState(false);
+
   // readOnly mode: render section with header and content only, no interactive controls
   if (readOnly) {
     return (
@@ -113,19 +127,49 @@ export function SectionWrapper({
       >
         <GripIcon />
       </button>
-      <div className={styles.sectionHeaderRow}>
-        {renderHeader ? renderHeader() : (
-          <div className={headerClassName}>{title}</div>
-        )}
-        <button
-          className={`${styles.toggleButton}${isHidden ? ` ${styles.toggleButtonVisible}` : ''}`}
-          onClick={onToggleVisibility}
-          aria-label={isHidden ? `Show ${title}` : `Hide ${title}`}
-          type="button"
-        >
-          {isHidden ? <EyeOffIcon /> : <EyeIcon />}
-        </button>
-      </div>
+      {isConfirming ? (
+        <div className={styles.removeConfirm}>
+          <span className={styles.removeConfirmText}>Remove section?</span>
+          <button
+            className={styles.removeConfirmYes}
+            onClick={() => { onRemoveSection?.(); setIsConfirming(false); }}
+            type="button"
+          >
+            Remove
+          </button>
+          <button
+            className={styles.removeConfirmNo}
+            onClick={() => setIsConfirming(false)}
+            type="button"
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <div className={styles.sectionHeaderRow}>
+          {renderHeader ? renderHeader() : (
+            <div className={headerClassName}>{title}</div>
+          )}
+          <button
+            className={`${styles.toggleButton}${isHidden ? ` ${styles.toggleButtonVisible}` : ''}`}
+            onClick={onToggleVisibility}
+            aria-label={isHidden ? `Show ${title}` : `Hide ${title}`}
+            type="button"
+          >
+            {isHidden ? <EyeOffIcon /> : <EyeIcon />}
+          </button>
+          {onRemoveSection && (
+            <button
+              className={styles.removeButton}
+              onClick={() => setIsConfirming(true)}
+              type="button"
+              title="Remove section"
+            >
+              <TrashIcon />
+            </button>
+          )}
+        </div>
+      )}
 
       {isHidden ? (
         <div className={styles.hiddenLabel}>{title} (hidden)</div>

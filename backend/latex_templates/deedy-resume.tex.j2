@@ -27,7 +27,7 @@
 \subsection{(( edu.school | latex_escape ))}
 \descript{(( edu.degree | latex_escape ))}
 \location{(( edu.startDate | latex_escape ))(% if edu.endDate %)\,--\,(( edu.endDate | latex_escape ))(% endif %)(% if edu.location %)\,|\,(( edu.location | latex_escape ))(% endif %)(% if edu.gpa %)\\ GPA: (( edu.gpa | latex_escape ))(% endif %)}
-(% for detail in edu.details %)(( detail | latex_escape ))\\(% endfor %)
+(% for detail in edu.details %)(( detail | html_latex ))\\(% endfor %)
 \sectionsep
 (% endfor %)
 (% endif %)
@@ -64,7 +64,7 @@
 (% if job.bullets %)
 \begin{tightemize}
 (% for bullet in job.bullets %)
-\item (( bullet | latex_escape ))
+\item (( bullet | html_latex ))
 (% endfor %)
 \end{tightemize}
 (% endif %)
@@ -79,7 +79,7 @@
 (% if proj.bullets %)
 \begin{tightemize}
 (% for bullet in proj.bullets %)
-\item (( bullet | latex_escape ))
+\item (( bullet | html_latex ))
 (% endfor %)
 \end{tightemize}
 (% else %)
@@ -99,7 +99,7 @@
 (% if entry.bullets %)
 \begin{tightemize}
 (% for bullet in entry.bullets %)
-\item (( bullet | latex_escape ))
+\item (( bullet | html_latex ))
 (% endfor %)
 \end{tightemize}
 (% endif %)

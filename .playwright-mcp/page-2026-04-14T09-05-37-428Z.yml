@@ -1,0 +1,256 @@
+- generic [ref=e2]:
+  - navigation "Main navigation" [ref=e3]:
+    - generic [ref=e4]:
+      - button "CV Maker" [ref=e5] [cursor=pointer]
+      - button "My CVs" [ref=e6] [cursor=pointer]
+    - generic [ref=e7]:
+      - button "Import CV" [ref=e8] [cursor=pointer]
+      - button "Download PDF" [ref=e9] [cursor=pointer]
+      - generic [ref=e10]: Saved
+  - generic [ref=e14]:
+    - heading "Yago Tobio Souto" [level=1] [ref=e15]
+    - generic [ref=e16]: +447887636994|yagotobiosouto@gmail.com|London, UK|LinkedIn|GitHub
+    - paragraph [ref=e17]: Write a brief professional summary...
+    - generic [ref=e18]:
+      - button "Drag to reorder Experience section" [ref=e19]:
+        - img [ref=e20]
+      - generic [ref=e27]:
+        - generic [ref=e28]: Experience
+        - button "Hide Experience" [ref=e29] [cursor=pointer]:
+          - img [ref=e30]
+        - button "Remove section" [ref=e33] [cursor=pointer]:
+          - img [ref=e34]
+      - generic [ref=e36]:
+        - generic [ref=e37]:
+          - button "Drag to reorder" [ref=e38]:
+            - img [ref=e39]
+          - generic [ref=e46]:
+            - generic [ref=e47]:
+              - generic [ref=e48]: Amazon Web Services (AWS)
+              - generic [ref=e49]:
+                - generic [ref=e50]: October 2024
+                - generic [ref=e51]: –
+                - generic [ref=e52]: Present
+            - generic [ref=e53]:
+              - generic [ref=e54]: Solutions Architect
+              - generic [ref=e55]: London, United Kingdom
+            - generic [ref=e56]:
+              - generic [ref=e57]:
+                - generic [ref=e58]: ·
+                - generic [ref=e59]: Technical advisor to 66 EMEA customers, driving $2.5M ARR with 79% win rate across a $4.8M pipeline through technical discovery, architecture guidance and POC development.
+              - generic [ref=e60]:
+                - generic [ref=e61]: ·
+                - generic [ref=e62]: Built full-stack GenAI architecture demos on Amazon Bedrock with MCP integrations for AI-native startups; including architecting PickMyCall's production voice agent for Roojoom on Amazon Nova Sonic, cutting response latency by 82% in under 2 weeks (published).
+              - generic [ref=e63]:
+                - generic [ref=e64]: ·
+                - generic [ref=e65]: Designed and delivered 20+ technical sessions at AWS EMEA events (Stockholm Dev Day, London Summit, GenAI & Data Day) reaching 500+ attendees on GenAI, RAG and agentic architectures for production.
+              - generic [ref=e66]:
+                - generic [ref=e67]: ·
+                - generic [ref=e68]: Identified 35%+ cost reduction opportunities across logistics, POS and consultancy clients through database & VM rightsizing, usage optimisation and S3 Intelligent-Tiering.
+          - button "Delete entry" [ref=e69] [cursor=pointer]:
+            - img [ref=e70]
+        - generic [ref=e73]:
+          - button "Drag to reorder" [ref=e74]:
+            - img [ref=e75]
+          - generic [ref=e82]:
+            - generic [ref=e83]:
+              - generic [ref=e84]: Self-Directed Investor
+              - generic [ref=e85]:
+                - generic [ref=e86]: September 2025
+                - generic [ref=e87]: –
+                - generic [ref=e88]: Present
+            - generic [ref=e89]:
+              - generic [ref=e90]: Self-Directed Investor
+              - generic [ref=e91]: Location
+            - generic [ref=e92]:
+              - generic [ref=e93]:
+                - generic [ref=e94]: ·
+                - generic [ref=e95]: Manage a discretionary multi-asset portfolio with full responsibility for strategy, execution and risk across 60+ positions spanning equities, fixed income, commodities and digital assets.
+              - generic [ref=e96]:
+                - generic [ref=e97]: ·
+                - generic [ref=e98]: Top-down factor-based framework combining UCITS smart-beta ETFs (core) with satellite exposure in precious metals, emerging markets, and European infrastructure.
+          - button "Delete entry" [ref=e99] [cursor=pointer]:
+            - img [ref=e100]
+        - generic [ref=e103]:
+          - button "Drag to reorder" [ref=e104]:
+            - img [ref=e105]
+          - generic [ref=e112]:
+            - generic [ref=e113]:
+              - generic [ref=e114]: Salesforce - Tableau
+              - generic [ref=e115]:
+                - generic [ref=e116]: September 2023
+                - generic [ref=e117]: –
+                - generic [ref=e118]: June 2024
+            - generic [ref=e119]:
+              - generic [ref=e120]: Sales Programs and Strategy Associate
+              - generic [ref=e121]: Madrid, Spain
+            - generic [ref=e123]:
+              - generic [ref=e124]: ·
+              - generic [ref=e125]: Redesigned sales plays platform through discovery interviews with 30+ EMEA AEs and C-level collaboration at Seattle HQ; built Tableau CRM dashboards delivering forecasting, pipeline analytics and renewal insights to 300+ account executives.
+          - button "Delete entry" [ref=e126] [cursor=pointer]:
+            - img [ref=e127]
+        - generic [ref=e130]:
+          - button "Drag to reorder" [ref=e131]:
+            - img [ref=e132]
+          - generic [ref=e139]:
+            - generic [ref=e140]:
+              - generic [ref=e141]: VML (WPP Group)
+              - generic [ref=e142]:
+                - generic [ref=e143]: June 2023
+                - generic [ref=e144]: –
+                - generic [ref=e145]: September 2023
+            - generic [ref=e146]:
+              - generic [ref=e147]: Data Engineer Intern - Operations Department
+              - generic [ref=e148]: Madrid, Spain
+            - generic [ref=e150]:
+              - generic [ref=e151]: ·
+              - generic [ref=e152]: Built Python Excel automation and SQL pipelines reducing financial report generation by 60% while ensuring GDPR data anonymization.
+          - button "Delete entry" [ref=e153] [cursor=pointer]:
+            - img [ref=e154]
+        - generic [ref=e157]:
+          - button "Drag to reorder" [ref=e158]:
+            - img [ref=e159]
+          - generic [ref=e166]:
+            - generic [ref=e167]:
+              - generic [ref=e168]: ICAPUNTES
+              - generic [ref=e169]:
+                - generic [ref=e170]: September 2022
+                - generic [ref=e171]: –
+                - generic [ref=e172]: June 2024
+            - generic [ref=e173]:
+              - generic [ref=e174]: Founder
+              - generic [ref=e175]: Madrid, Spain
+            - generic [ref=e177]:
+              - generic [ref=e178]: ·
+              - generic [ref=e179]: Founded online education platform serving 30+ Engineering & Business university students. (85% reported as their primary study resource)
+          - button "Delete entry" [ref=e180] [cursor=pointer]:
+            - img [ref=e181]
+      - button "+ Add work entry" [ref=e184] [cursor=pointer]
+    - generic [ref=e185]:
+      - button "Drag to reorder Education section" [ref=e186]:
+        - img [ref=e187]
+      - generic [ref=e194]:
+        - generic [ref=e195]: Education
+        - button "Hide Education" [ref=e196] [cursor=pointer]:
+          - img [ref=e197]
+        - button "Remove section" [ref=e200] [cursor=pointer]:
+          - img [ref=e201]
+      - generic [ref=e203]:
+        - generic [ref=e204]:
+          - button "Drag to reorder" [ref=e205]:
+            - img [ref=e206]
+          - generic [ref=e213]:
+            - generic [ref=e214]:
+              - generic [ref=e215]: ICAI School of Engineering (Universidad Pontificia Comillas)
+              - generic [ref=e216]:
+                - generic [ref=e217]: September 2018
+                - generic [ref=e218]: –
+                - generic [ref=e219]: June 2024
+            - generic [ref=e220]:
+              - generic [ref=e221]: B.Eng in Computer Engineering | B.B.A in Business Analytics
+              - generic [ref=e222]: Madrid, Spain
+            - generic [ref=e223]:
+              - generic [ref=e224]: ·
+              - generic [ref=e225]: "GPA:"
+              - generic [ref=e226]: Top 15% of the class
+            - generic [ref=e227]:
+              - generic [ref=e228]:
+                - generic [ref=e229]: ·
+                - generic [ref=e230]: "Virtual Q - B.Eng Thesis (Grade: 95%): Built microservice theme park application with Django API & React Native, implementing virtual queue systems and interactive maps - reducing ride wait times by 50%."
+              - generic [ref=e231]:
+                - generic [ref=e232]: ·
+                - generic [ref=e233]: "Factify - B.B.A Thesis (Grade: 94%): Developed news platform using open-source LLMs and Python NLP for fact extraction. Built financial models with Monte Carlo simulations for startup validation."
+          - button "Delete entry" [ref=e234] [cursor=pointer]:
+            - img [ref=e235]
+        - generic [ref=e238]:
+          - button "Drag to reorder" [ref=e239]:
+            - img [ref=e240]
+          - generic [ref=e247]:
+            - generic [ref=e248]:
+              - generic [ref=e249]: City University of Hong Kong
+              - generic [ref=e250]:
+                - generic [ref=e251]: September 2022
+                - generic [ref=e252]: –
+                - generic [ref=e253]: June 2023
+            - generic [ref=e254]:
+              - generic [ref=e255]: Exchange Program - Computer Engineering and Business Management
+              - generic [ref=e256]: Hong Kong, China
+            - generic [ref=e258]:
+              - generic [ref=e259]: ·
+              - generic [ref=e260]: "Additional Certificates: Deloitte & HSBC FinTech Olympiad"
+          - button "Delete entry" [ref=e261] [cursor=pointer]:
+            - img [ref=e262]
+      - button "+ Add education" [ref=e265] [cursor=pointer]
+    - generic [ref=e266]:
+      - button "Drag to reorder Skills section" [ref=e267]:
+        - img [ref=e268]
+      - generic [ref=e275]:
+        - generic [ref=e276]: Skills
+        - button "Hide Skills" [ref=e277] [cursor=pointer]:
+          - img [ref=e278]
+        - button "Remove section" [ref=e281] [cursor=pointer]:
+          - img [ref=e282]
+      - generic [ref=e285]:
+        - generic [ref=e286]:
+          - button "Drag to reorder" [ref=e287]:
+            - img [ref=e288]
+          - generic [ref=e295]: "Languages:"
+          - generic [ref=e296]: Spanish (Native), English (Bilingual - Settled Status), French (Advanced C1)
+          - button "Delete entry" [ref=e297] [cursor=pointer]:
+            - img [ref=e298]
+        - generic [ref=e301]:
+          - button "Drag to reorder" [ref=e302]:
+            - img [ref=e303]
+          - generic [ref=e310]: "Programming:"
+          - generic [ref=e311]: Python, Java, C, SQL, TypeScript
+          - button "Delete entry" [ref=e312] [cursor=pointer]:
+            - img [ref=e313]
+        - generic [ref=e316]:
+          - button "Drag to reorder" [ref=e317]:
+            - img [ref=e318]
+          - generic [ref=e325]: "Frameworks:"
+          - generic [ref=e326]: Django, SpringBoot, React Native
+          - button "Delete entry" [ref=e327] [cursor=pointer]:
+            - img [ref=e328]
+        - generic [ref=e331]:
+          - button "Drag to reorder" [ref=e332]:
+            - img [ref=e333]
+          - generic [ref=e340]: "Cloud & AI:"
+          - generic [ref=e341]: Containers, Serverless, Data Architecture, Infrastructure-as-Code, LLM Gateways & LLMOps, RAG & Evals
+          - button "Delete entry" [ref=e342] [cursor=pointer]:
+            - img [ref=e343]
+        - generic [ref=e346]:
+          - button "Drag to reorder" [ref=e347]:
+            - img [ref=e348]
+          - generic [ref=e355]: "Tools:"
+          - generic [ref=e356]: Claude Code, Cursor, Kiro IDE, TradingView, IBKR TWS, Seeking Alpha
+          - button "Delete entry" [ref=e357] [cursor=pointer]:
+            - img [ref=e358]
+        - generic [ref=e361]:
+          - button "Drag to reorder" [ref=e362]:
+            - img [ref=e363]
+          - generic [ref=e370]: "Certifications:"
+          - generic [ref=e371]: AWS Solutions Architect Professional, BCG Data Science & Analytics, Bloomberg Market Concepts, DofE Gold
+          - button "Delete entry" [ref=e372] [cursor=pointer]:
+            - img [ref=e373]
+      - button "+ Add skill category" [ref=e376] [cursor=pointer]
+    - generic [ref=e377]:
+      - button "Drag to reorder Projects section" [ref=e378]:
+        - img [ref=e379]
+      - generic [ref=e386]:
+        - generic [ref=e387]: Projects
+        - button "Hide Projects" [ref=e388] [cursor=pointer]:
+          - img [ref=e389]
+        - button "Remove section" [ref=e392] [cursor=pointer]:
+          - img [ref=e393]
+      - button "+ Add project" [ref=e395] [cursor=pointer]
+    - generic [ref=e396]:
+      - button "Drag to reorder Awards section" [ref=e397]:
+        - img [ref=e398]
+      - generic [ref=e405]:
+        - generic [ref=e406]: Awards
+        - button "Hide Awards" [ref=e407] [cursor=pointer]:
+          - img [ref=e408]
+        - button "Remove section" [ref=e411] [cursor=pointer]:
+          - img [ref=e412]
+      - button "+ Add award" [ref=e414] [cursor=pointer]

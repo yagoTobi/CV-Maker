@@ -19,6 +19,7 @@ import { EditableBulletList } from './EditableBulletList';
 import { SectionWrapper } from './SectionWrapper';
 import { EntryWrapper } from './EntryWrapper';
 import { DropLine } from './DropLine';
+import { FloatingFormatToolbar } from './FloatingFormatToolbar';
 import { useSectionDrag } from '../hooks/useSectionDrag';
 import { useEntryDrag } from '../hooks/useEntryDrag';
 import { generateId } from '../../../utils/idHelpers';
@@ -50,6 +51,7 @@ interface MedLengthTemplateProps {
   onReorderSections: (from: number, to: number) => void;
   onReorderEntries: (sectionKey: string, from: number, to: number) => void;
   onInput?: () => void;
+  onRemoveSection?: (sectionKey: string) => void;
 }
 
 /**
@@ -111,6 +113,7 @@ export function MedLengthTemplate({
   onReorderSections,
   onReorderEntries,
   onInput,
+  onRemoveSection,
 }: MedLengthTemplateProps) {
   const { personalInfo } = formData;
   const sectionOrder = formData.sectionOrder ?? DEFAULT_SECTION_ORDER;
@@ -314,6 +317,7 @@ export function MedLengthTemplate({
                   }
                   onInput={onInput}
                   readOnly={readOnly}
+                  rich={true}
                 />
               </div>
             </EntryWrapper>
@@ -343,6 +347,7 @@ export function MedLengthTemplate({
         addLabel="+ Add work entry"
         headerClassName={styles.sectionHeader}
         readOnly={readOnly}
+        onRemoveSection={readOnly ? undefined : () => onRemoveSection?.('work')}
       >
         {readOnly ? (
           renderWorkEntries()
@@ -443,6 +448,7 @@ export function MedLengthTemplate({
                         }
                         onInput={onInput}
                         readOnly={readOnly}
+                        rich={true}
                       />
                     )}
                   </div>
@@ -533,6 +539,7 @@ export function MedLengthTemplate({
         addLabel="+ Add education"
         headerClassName={styles.sectionHeader}
         readOnly={readOnly}
+        onRemoveSection={readOnly ? undefined : () => onRemoveSection?.('education')}
       >
         {readOnly ? (
           renderEduEntries()
@@ -602,6 +609,7 @@ export function MedLengthTemplate({
         addLabel="+ Add skill category"
         headerClassName={styles.sectionHeader}
         readOnly={readOnly}
+        onRemoveSection={readOnly ? undefined : () => onRemoveSection?.('skills')}
       >
         <div className={styles.skillsGrid}>
           {readOnly ? (
@@ -690,6 +698,7 @@ export function MedLengthTemplate({
                     }
                     onInput={onInput}
                     readOnly={readOnly}
+                    rich={true}
                   />
                 )}
               </div>
@@ -720,6 +729,7 @@ export function MedLengthTemplate({
         addLabel="+ Add project"
         headerClassName={styles.sectionHeader}
         readOnly={readOnly}
+        onRemoveSection={readOnly ? undefined : () => onRemoveSection?.('projects')}
       >
         {readOnly ? (
           renderProjEntries()
@@ -789,6 +799,7 @@ export function MedLengthTemplate({
         addLabel="+ Add award"
         headerClassName={styles.sectionHeader}
         readOnly={readOnly}
+        onRemoveSection={readOnly ? undefined : () => onRemoveSection?.('awards')}
       >
         <div className={styles.awardsGrid}>
           {readOnly ? (
@@ -903,6 +914,7 @@ export function MedLengthTemplate({
                         }
                         onInput={onInput}
                         readOnly={readOnly}
+                        rich={true}
                       />
                     )}
                   </div>
@@ -995,6 +1007,7 @@ export function MedLengthTemplate({
         onToggleVisibility={() => onToggleSection(sectionKey)}
         onAddEntry={() => onAddEntry(sectionKey)}
         addLabel="+ Add entry"
+        onRemoveSection={readOnly ? undefined : () => onRemoveSection?.(sectionKey)}
         renderHeader={() => (
           <EditableField
             value={asec.title}
@@ -1060,6 +1073,7 @@ export function MedLengthTemplate({
 
   return (
     <div className={styles.template} onDragOver={readOnly ? undefined : handleContainerDragOver}>
+      {!readOnly && <FloatingFormatToolbar />}
       {/* Personal Info Header */}
       <EditableField
         value={personalInfo.fullName}

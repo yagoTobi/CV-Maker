@@ -37,7 +37,7 @@
 (% if job.bullets %)
         \begin{itemize}
 (% for bullet in job.bullets %)
-            \item (( bullet | latex_escape ))
+            \item (( bullet | html_latex ))
 (% endfor %)
         \end{itemize}
 (% endif %)
@@ -52,7 +52,7 @@
         \begin{itemize}
             \item (( edu.degree | latex_escape ))(% if edu.gpa %). GPA: (( edu.gpa | latex_escape ))(% endif %)
 (% for detail in edu.details %)
-            \item (( detail | latex_escape ))
+            \item (( detail | html_latex ))
 (% endfor %)
         \end{itemize}
     \end{cvsubsection}
@@ -79,7 +79,7 @@
             (% if proj.bullets %)
             \begin{itemize}
             (% for bullet in proj.bullets %)
-                \item (( bullet | latex_escape ))
+                \item (( bullet | html_latex ))
             (% endfor %)
             \end{itemize}
             (% endif %)
@@ -112,7 +112,7 @@
             \item (( entry.description | latex_escape ))
             (% endif %)
             (% for bullet in entry.bullets %)
-            \item (( bullet | latex_escape ))
+            \item (( bullet | html_latex ))
             (% endfor %)
         \end{itemize}
         (% endif %)
