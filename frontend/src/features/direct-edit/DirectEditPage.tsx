@@ -150,8 +150,8 @@ export default function DirectEditPage() {
   }, [formData]);
 
   const handleTuneForJob = useCallback(() => {
-    navigate('/dashboard');
-  }, [navigate]);
+    navigate('/apply', { state: { baseVersionId: activeVersion?.id } });
+  }, [navigate, activeVersion?.id]);
 
   // Lift editor actions into NavBar via EditorActionsContext
   useEffect(() => {
