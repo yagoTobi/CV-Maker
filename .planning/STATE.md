@@ -143,6 +143,7 @@ None yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260415-ofh | Remove import CV button from /build/form page - only show Download PDF, Prep for Tuning, and Save actions | 2026-04-15 | 90256e7 | [260415-ofh-remove-import-cv-button-from-build-form-](./quick/260415-ofh-remove-import-cv-button-from-build-form-/) |
+| 260415-ou9 | Fix delete UX consistency in form editor and restore Download PDF functionality | 2026-04-15 | f5fe1b0 | [260415-ou9-fix-delete-ux-consistency-in-form-editor](./quick/260415-ou9-fix-delete-ux-consistency-in-form-editor/) |
 
 ### Blockers/Concerns
 
@@ -152,5 +153,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-15
-Stopped at: Completed quick task 260415-ofh: Remove import CV button from /build/form page
+Stopped at: Completed quick task 260415-ou9: Fix delete UX consistency + Download PDF dead code cleanup
 Resume file: None
