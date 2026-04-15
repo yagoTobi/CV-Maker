@@ -131,7 +131,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -142,12 +142,23 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 5. AI Integration | 4/5 | In Progress|  |
 | 6. Route Integration | 0/3 | Not started | - |
 
-### Phase 7: Navigation flow consolidation: collapse BuildChoiceScreen into Landing inline expansion (eliminate /build/start route), and reframe Dashboard as a management-only screen (not a required flow step). When Tune for a role is clicked on landing, check if exactly one base CV exists and navigate to /apply directly; otherwise show a selection UI without full dashboard chrome. Dashboard stays accessible via My CVs nav link only.
+### Phase 7: Navigation Flow Consolidation
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** Collapse BuildChoiceScreen into Landing inline expansion panels, eliminate /build/start route, add smart Tune-for-role branching by base CV count, and reframe Dashboard as management-only screen
+**Requirements**: NAV-01, NAV-02, NAV-03, NAV-04, NAV-05, NAV-06, NAV-07, NAV-08
 **Depends on:** Phase 6
-**Plans:** 0 plans
+**Plans:** 3 plans
+**UI hint**: yes
+
+**Success Criteria** (what must be TRUE):
+  1. Clicking "Build my CV" on landing expands an inline panel with import drop zone and "Start from scratch" option (no route navigation to /build/start)
+  2. Clicking "Tune for a role" with exactly 1 base CV navigates directly to /apply (bypassing Dashboard)
+  3. Clicking "Tune for a role" with 0 base CVs shows inline empty state, with 2+ shows inline CV picker
+  4. /build/start route no longer exists (returns 404)
+  5. NavBar "+ New CV" and TemplateSelector "Back" both navigate to / (not /build/start)
+  6. Dashboard is accessible only via "My CVs" nav link, no longer an intermediate Tune step
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 7 to break down)
+- [ ] 07-01-PLAN.md -- BuildExpansionPanel + TuneExpansionPanel components and CSS modules
+- [ ] 07-02-PLAN.md -- LandingScreen integration + route/nav updates + dead code removal
+- [ ] 07-03-PLAN.md -- Integration test rewrite (NAV-01 through NAV-08) + visual checkpoint
