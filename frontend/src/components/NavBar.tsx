@@ -58,6 +58,13 @@ export function NavBar() {
                 'Download PDF'
               )}
             </button>
+            <button
+              className={styles.ghostBtn}
+              onClick={editorActions.onTuneForJob}
+              type="button"
+            >
+              Tune for Job
+            </button>
             <SaveIndicator status={editorActions.saveStatus} inline />
           </>
         ) : (
