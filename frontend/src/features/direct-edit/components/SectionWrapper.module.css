@@ -144,3 +144,18 @@
   background: var(--bg-hover);
 }
 
+/* Section confirm highlight -- red ring around section targeted for deletion */
+.sectionConfirming {
+  outline: 2px solid var(--error);
+  outline-offset: 4px;
+  border-radius: 4px;
+  transition: outline 0.15s ease;
+}
+
+/* Section dialog -- positions confirm dialog to the right of the CV paper */
+.sectionDialog {
+  top: -4px;
+  right: auto;
+  left: calc(100% + 20px);
+}
+

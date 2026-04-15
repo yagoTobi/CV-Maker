@@ -111,7 +111,7 @@ export function SectionWrapper({
 
   return (
     <div
-      className={`${styles.sectionWrap}${isDragSource ? ` ${styles.dragging}` : ''}`}
+      className={`${styles.sectionWrap}${isDragSource ? ` ${styles.dragging}` : ''}${isConfirming ? ` ${styles.sectionConfirming}` : ''}`}
       data-section={sectionKey}
       data-drag-section={sectionKey}
       onDragStart={(e) => dragHandlers.onDragStart(e, sectionIndex)}
@@ -158,6 +158,8 @@ export function SectionWrapper({
           message={`Remove "${title}" section?`}
           onConfirm={() => { onRemoveSection?.(); setIsConfirming(false); }}
           onCancel={() => setIsConfirming(false)}
+          noBackdrop
+          dialogClassName={styles.sectionDialog}
         />
       )}
 
