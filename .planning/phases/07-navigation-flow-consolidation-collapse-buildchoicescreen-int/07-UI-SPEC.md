@@ -21,7 +21,7 @@ created: 2026-04-15
 | Preset | not applicable |
 | Component library | none (custom CSS Modules) |
 | Icon library | Inline SVG (project convention) |
-| Font | IBM Plex Sans 400/500/600 (body), IBM Plex Mono 400/500 (code) |
+| Font | IBM Plex Sans 400/600 (body), IBM Plex Mono 400 (code) |
 
 Source: `frontend/src/styles/variables.css` -- existing design system.
 
@@ -34,14 +34,14 @@ Declared values (must be multiples of 4):
 | Token | Value | Usage |
 |-------|-------|-------|
 | xs | 4px | Icon gaps, inline padding |
-| sm | 8px | Compact element spacing, rightGroup gap |
-| md | 16px | Default element spacing, navBar horizontal padding |
+| sm | 8px | Compact element spacing, rightGroup gap, format chip padding, compact panel inner padding |
+| md | 16px | Default element spacing, navBar horizontal padding, card body padding, container padding |
 | lg | 24px | Section padding, card internal spacing |
-| xl | 32px | Layout gaps |
+| xl | 32px | Layout gaps, drop zone padding |
 | 2xl | 48px | Major section breaks |
 | 3xl | 64px | Page-level spacing (landing branding-to-actions gap) |
 
-Exceptions: 12px for expanded panel inner vertical padding (3 * 4), 20px for card-body combined padding (5 * 4).
+Exceptions: none
 
 Source: Existing variables.css `--radius` (8px), `--radius-sm` (6px), `--radius-lg` (12px) plus existing component spacing patterns.
 
@@ -52,7 +52,7 @@ Source: Existing variables.css `--radius` (8px), `--radius-sm` (6px), `--radius-
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 15px (0.9375rem) | 400 | 1.5 |
-| Label / Small | 13px (0.8125rem) | 500 | 1.45 |
+| Label / Small | 13px (0.8125rem) | 400 | 1.45 |
 | Card Heading | 16px (1rem) | 600 | 1.3 |
 | Page Title | 30px (1.875rem) | 600 | 1.2 |
 
@@ -98,18 +98,18 @@ Appears below the "Build my CV" card when it is clicked. Replaces BuildChoiceScr
 
 | Element | Spec |
 |---------|------|
-| Container | `background: var(--bg-secondary)`, `border: 1px solid var(--border-color)`, `border-radius: var(--radius-lg)`, `padding: 20px`, `box-shadow: var(--shadow-sm)` |
+| Container | `background: var(--bg-secondary)`, `border: 1px solid var(--border-color)`, `border-radius: var(--radius-lg)`, `padding: 16px`, `box-shadow: var(--shadow-sm)` |
 | Drop zone | 2px dashed border `var(--border-strong)`, `border-radius: var(--radius-lg)`, `min-height: 160px`, `padding: 32px 24px`, centered content |
 | Drop zone hover | `border-color: var(--accent)`, `box-shadow: var(--shadow-md)` |
 | Drop zone drag-over | `border-color: var(--accent)`, `border-style: solid`, `background: var(--accent-light)` |
 | Upload icon | 48x48px SVG, `color: var(--text-muted)` |
-| Drop text | 15px/400, `color: var(--text-secondary)`. "Drag your CV here or **click to browse**" where "click to browse" is `color: var(--accent)`, `font-weight: 500` |
+| Drop text | 15px/400, `color: var(--text-secondary)`. "Drag your CV here or **click to browse**" where "click to browse" is `color: var(--accent)`, `font-weight: 600` |
 | Help text | 13px/400, `color: var(--text-muted)`. "PDF, DOCX, or JSON -- Max 10MB" |
-| Format chips row | Flex row, `gap: 10px`, centered. Each chip: `padding: 6px 12px`, `background: var(--bg-tertiary)`, `border: 1px solid var(--border-color)`, `border-radius: var(--radius-sm)`, 13px/500, `color: var(--text-secondary)`. Blue dot (5px circle `var(--accent)`) before label |
-| Divider | Horizontal line with centered "or" text. Line: `var(--border-color)` 1px. Text: 13px/500 `var(--text-muted)`, `text-transform: lowercase` |
+| Format chips row | Flex row, `gap: 8px`, centered. Each chip: `padding: 8px`, `background: var(--bg-tertiary)`, `border: 1px solid var(--border-color)`, `border-radius: var(--radius-sm)`, 13px/600, `color: var(--text-secondary)`. Blue dot (5px circle `var(--accent)`) before label |
+| Divider | Horizontal line with centered "or" text. Line: `var(--border-color)` 1px. Text: 13px/600 `var(--text-muted)`, `text-transform: lowercase` |
 | "Start from scratch" card | Same pattern as existing `scratchCard` in BuildChoiceScreen: flex row, icon left (48x48 rounded, `var(--bg-tertiary)` bg), text center, arrow right. Hover: `translateY(-2px)`, `border-color: var(--accent)` |
-| Loading state (during import) | Spinner (36x36, 3px border), progress text (15px/500 `var(--text-secondary)`), step counter (13px/500 `var(--text-muted)`), progress bar (6px height, `var(--bg-tertiary)` track, `var(--accent)` fill, 3px radius) |
-| Error message | `background: var(--error-light)`, `border: 1px solid var(--error)`, `border-radius: var(--radius)`, `padding: 12px 16px`, 14px `color: var(--error)`. Error icon (16x16) left-aligned |
+| Loading state (during import) | Spinner (36x36, 3px border), progress text (15px/600 `var(--text-secondary)`), step counter (13px/600 `var(--text-muted)`), progress bar (6px height, `var(--bg-tertiary)` track, `var(--accent)` fill, 3px radius) |
+| Error message | `background: var(--error-light)`, `border: 1px solid var(--error)`, `border-radius: var(--radius)`, `padding: 8px 16px`, 15px `color: var(--error)`. Error icon (16x16) left-aligned |
 | Collapse control | Clicking the "Build my CV" card again collapses the panel. The card itself acts as the toggle |
 | Enter animation | `max-height` transition from 0 to measured height over 250ms ease-out, plus `opacity` 0 to 1 over 200ms ease-out |
 | Exit animation | `max-height` to 0 over 200ms ease-in, `opacity` 1 to 0 over 150ms ease-in |
@@ -124,7 +124,7 @@ Appears below the "Tune for a role" card when clicked and user has no saved base
 | Illustration icon | 48x48px document icon SVG, `color: var(--text-muted)`, centered |
 | Heading | 16px/600, `color: var(--text-primary)`. Copy: "No CV to tune yet" |
 | Body text | 15px/400, `color: var(--text-secondary)`, `line-height: 1.5`, `max-width: 340px`, centered. Copy: "Build or import a CV first, then come back to tailor it for a specific role." |
-| CTA button | `background: var(--accent)`, `color: white`, `border: none`, `border-radius: var(--radius-sm)`, `padding: 10px 20px`, 14px/500. Copy: "Build my CV". On click: collapse this panel, expand build panel (or navigate to /build/start -- implementation detail) |
+| CTA button | `background: var(--accent)`, `color: white`, `border: none`, `border-radius: var(--radius-sm)`, `padding: 8px 16px`, 15px/600. Copy: "Build my CV". On click: collapse this panel, expand build panel (or navigate to /build/start -- implementation detail) |
 | Enter/exit animation | Same as C-02 |
 
 ### C-04: TuneExpansionPanel (2+ CVs state -- CV Picker)
@@ -136,7 +136,7 @@ Appears below the "Tune for a role" card when clicked and user has 2+ base CVs. 
 | Container | Same styling as C-02 container |
 | Heading | 13px/600, `color: var(--text-muted)`, `text-transform: uppercase`, `letter-spacing: 0.04em`. Copy: "Choose a base CV" |
 | CV list | Vertical stack, `gap: 0`. Each item separated by `border-top: 1px solid var(--border-color)` (except first) |
-| CV item | Flex row, `padding: 12px 16px`. Name: 15px/500 `var(--text-primary)`. Date: 12px/400 `var(--text-muted)`, right-aligned. Hover: `background: var(--bg-tertiary)`, `cursor: pointer` |
+| CV item | Flex row, `padding: 8px 16px`. Name: 15px/600 `var(--text-primary)`. Date: 13px/400 `var(--text-muted)`, right-aligned. Hover: `background: var(--bg-tertiary)`, `cursor: pointer` |
 | CV item click | Navigate to `/apply` with `state: { baseVersionId: item.id }` |
 | CV item arrow | 18x18 chevron-right SVG, `color: var(--text-muted)`. On hover: `color: var(--accent)`, `transform: translateX(3px)` with 180ms ease transition |
 | Max visible items | Show all base CVs (no scroll limit). If more than 6, add `max-height: 360px` with `overflow-y: auto` |
