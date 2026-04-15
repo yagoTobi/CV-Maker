@@ -150,24 +150,26 @@ export function SectionWrapper({
           {renderHeader ? renderHeader() : (
             <div className={headerClassName}>{title}</div>
           )}
-          <button
-            className={`${styles.toggleButton}${isHidden ? ` ${styles.toggleButtonVisible}` : ''}`}
-            onClick={onToggleVisibility}
-            aria-label={isHidden ? `Show ${title}` : `Hide ${title}`}
-            type="button"
-          >
-            {isHidden ? <EyeOffIcon /> : <EyeIcon />}
-          </button>
-          {onRemoveSection && (
+          <div className={styles.sectionControls}>
             <button
-              className={styles.removeButton}
-              onClick={() => setIsConfirming(true)}
+              className={`${styles.toggleButton}${isHidden ? ` ${styles.toggleButtonVisible}` : ''}`}
+              onClick={onToggleVisibility}
+              aria-label={isHidden ? `Show ${title}` : `Hide ${title}`}
               type="button"
-              title="Remove section"
             >
-              <TrashIcon />
+              {isHidden ? <EyeOffIcon /> : <EyeIcon />}
             </button>
-          )}
+            {onRemoveSection && (
+              <button
+                className={styles.removeButton}
+                onClick={() => setIsConfirming(true)}
+                type="button"
+                title="Remove section"
+              >
+                <TrashIcon />
+              </button>
+            )}
+          </div>
         </div>
       )}
 
