@@ -144,6 +144,7 @@ None yet.
 |---|-------------|------|--------|-----------|
 | 260415-ofh | Remove import CV button from /build/form page - only show Download PDF, Prep for Tuning, and Save actions | 2026-04-15 | 90256e7 | [260415-ofh-remove-import-cv-button-from-build-form-](./quick/260415-ofh-remove-import-cv-button-from-build-form-/) |
 | 260415-ou9 | Fix delete UX consistency in form editor and restore Download PDF functionality | 2026-04-15 | f5fe1b0 | [260415-ou9-fix-delete-ux-consistency-in-form-editor](./quick/260415-ou9-fix-delete-ux-consistency-in-form-editor/) |
+| 260415-p98 | Improve section delete confirm UX: section-scoped highlight instead of full-screen backdrop, dialog anchored right of section | 2026-04-15 | ab6be8d | [260415-p98-improve-section-delete-confirm-ux-sectio](./quick/260415-p98-improve-section-delete-confirm-ux-sectio/) |
 
 ### Blockers/Concerns
 
