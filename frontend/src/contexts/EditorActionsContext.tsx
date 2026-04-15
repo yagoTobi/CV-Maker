@@ -2,7 +2,7 @@
  * EditorActionsContext -- Lightweight context for DirectEditPage to pass
  * toolbar actions up to NavBar.
  *
- * The editor page needs Import CV, Download PDF, and save status in the NavBar.
+ * The editor page needs Download PDF and save status in the NavBar.
  * When the editor is mounted, it registers its actions via useSetEditorActions().
  * When unmounted, it clears them (sets null). NavBar reads via useEditorActions().
  */
@@ -11,10 +11,8 @@ import type { ReactNode } from 'react';
 import type { SaveStatus } from '../features/direct-edit/hooks/useAutoSave';
 
 interface EditorActions {
-  onImport: () => void;
   onDownload: () => void;
   saveStatus: SaveStatus;
-  isImporting: boolean;
   isDownloading: boolean;
 }
 

@@ -2,7 +2,7 @@
  * NavBar -- Persistent navigation bar for all working pages.
  *
  * Left side: "CV Maker" logo (navigates to /) + "My CVs" link (navigates to /dashboard).
- * Right side (editor pages): Import CV ghost button + Download PDF accent button + SaveIndicator.
+ * Right side (editor pages): Download PDF accent button + SaveIndicator.
  * Right side (non-editor pages): "+ New CV" ghost button (navigates to /build/start).
  *
  * Editor detection: pathname === '/build/form' AND editorActions is non-null.
@@ -43,21 +43,6 @@ export function NavBar() {
       <div className={styles.rightGroup}>
         {isEditorPage ? (
           <>
-            <button
-              className={styles.ghostBtn}
-              onClick={editorActions.onImport}
-              disabled={editorActions.isImporting}
-              type="button"
-            >
-              {editorActions.isImporting ? (
-                <>
-                  <span className={styles.spinner} aria-hidden="true" />
-                  Extracting CV data...
-                </>
-              ) : (
-                'Import CV'
-              )}
-            </button>
             <button
               className={styles.accentBtn}
               onClick={editorActions.onDownload}

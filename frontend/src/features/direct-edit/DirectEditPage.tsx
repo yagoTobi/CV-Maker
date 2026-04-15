@@ -8,7 +8,7 @@
  * If formData is not in context (e.g., direct URL navigation), tries to load
  * the most recent saved version. Falls back to an empty template with placeholders.
  *
- * Editor actions (Import CV, Download PDF, save status) are lifted into
+ * Editor actions (Download PDF, save status) are lifted into
  * EditorActionsContext so the NavBar can render them. EditorToolbar is removed.
  * ImportToast shows a dismissible banner after CV import with confidence info.
  *
@@ -188,14 +188,12 @@ export default function DirectEditPage() {
   // Lift editor actions into NavBar via EditorActionsContext
   useEffect(() => {
     setEditorActions({
-      onImport: handleImportClick,
       onDownload: handleDownload,
       saveStatus,
-      isImporting,
       isDownloading,
     });
     return () => setEditorActions(null);
-  }, [setEditorActions, handleImportClick, handleDownload, saveStatus, isImporting, isDownloading]);
+  }, [setEditorActions, handleDownload, saveStatus, isDownloading]);
 
   if (isBootstrapping || !formData) {
     return <div className={styles.loading}>Loading...</div>;
