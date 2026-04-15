@@ -249,13 +249,17 @@ sketch
 # Claude Code configuration (user-specific)
 .claude/
 
-# User data (runtime-generated saved CV versions)
-user_data/versions/*.json
+# GSD workflow planning artifacts (local only)
+.planning/
 
-# Test files
-test-cv.json
-**/test-*.json
-!**/__tests__/**/*.json
+# User data (runtime-generated)
+user_data/
+
+# Playwright MCP state
+.playwright-mcp/
+
+# AWS installer packages
+*.pkg
 
 # Vitest
 .vitest/
