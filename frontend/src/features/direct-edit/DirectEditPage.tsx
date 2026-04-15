@@ -15,6 +15,7 @@
  */
 import '@fontsource-variable/eb-garamond';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDirectEditor } from './hooks/useDirectEditor';
 import { useAutoSave } from './hooks/useAutoSave';
 import { usePageBreak } from './hooks/usePageBreak';
@@ -54,6 +55,7 @@ export default function DirectEditPage() {
   const [isBootstrapping, setIsBootstrapping] = useState(!formData);
   const [isDownloading, setIsDownloading] = useState(false);
   const setEditorActions = useSetEditorActions();
+  const navigate = useNavigate();
   const cvContainerRef = useRef<HTMLDivElement>(null);
   const pageBreakY = usePageBreak(cvContainerRef);
 
@@ -147,15 +149,20 @@ export default function DirectEditPage() {
     setIsDownloading(false);
   }, [formData]);
 
+  const handleTuneForJob = useCallback(() => {
+    navigate('/dashboard');
+  }, [navigate]);
+
   // Lift editor actions into NavBar via EditorActionsContext
   useEffect(() => {
     setEditorActions({
       onDownload: handleDownload,
+      onTuneForJob: handleTuneForJob,
       saveStatus,
       isDownloading,
     });
     return () => setEditorActions(null);
-  }, [setEditorActions, handleDownload, saveStatus, isDownloading]);
+  }, [setEditorActions, handleDownload, handleTuneForJob, saveStatus, isDownloading]);
 
   if (isBootstrapping || !formData) {
     return <div className={styles.loading}>Loading...</div>;
