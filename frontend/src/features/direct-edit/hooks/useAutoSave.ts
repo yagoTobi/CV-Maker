@@ -22,6 +22,7 @@ export function useAutoSave(
 ): SaveStatus {
   const [status, setStatus] = useState<SaveStatus>('idle');
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const fadeTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const lastSavedRef = useRef<string>('');
   const isSavingRef = useRef(false);
   const mountedRef = useRef(true);
@@ -30,6 +31,7 @@ export function useAutoSave(
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
     };
   }, []);
 
@@ -63,6 +65,10 @@ export function useAutoSave(
         if (result) {
           lastSavedRef.current = serialized;
           setStatus('saved');
+          if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+          fadeTimerRef.current = setTimeout(() => {
+            if (mountedRef.current) setStatus('idle');
+          }, 2000);
         } else {
           setStatus('error');
         }

@@ -111,7 +111,7 @@ export function SectionWrapper({
 
   return (
     <div
-      className={`${styles.sectionWrap}${isDragSource ? ` ${styles.dragging}` : ''}${isConfirming ? ` ${styles.sectionConfirming}` : ''}`}
+      className={`${styles.sectionWrap}${isDragSource ? ` ${styles.dragging}` : ''}`}
       data-section={sectionKey}
       data-drag-section={sectionKey}
       onDragStart={(e) => dragHandlers.onDragStart(e, sectionIndex)}
