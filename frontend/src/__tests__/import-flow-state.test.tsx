@@ -19,6 +19,7 @@ vi.mock('../services/api', () => ({
   api: {
     loadUserData: vi.fn().mockResolvedValue(null),
     listVersions: vi.fn().mockResolvedValue({ versions: [], ungrouped: [] }),
+    getVersion: vi.fn().mockResolvedValue(null),
     fetchTemplates: vi.fn().mockResolvedValue([
       { id: 'med-length-proff-cv', name: 'Professional CV', description: 'A clean layout', previewUrl: '/preview1.png' },
       { id: 'deedy-resume', name: 'Deedy Resume', description: 'Two column', previewUrl: '/preview2.png' },
@@ -161,7 +162,7 @@ describe('Navigation Flow State Management', () => {
       expect(ctaButtons.length).toBeGreaterThanOrEqual(2);
     });
 
-    it('Tune with exactly 1 base CV navigates directly to /apply (NAV-03)', async () => {
+    it('Tune with exactly 1 base CV loads version and navigates to /build/form with tune state (NAV-03)', async () => {
       const { api } = await import('../services/api');
       vi.mocked(api.listVersions).mockResolvedValue({
         versions: [
@@ -169,6 +170,14 @@ describe('Navigation Flow State Management', () => {
         ],
         ungrouped: [],
       });
+      vi.mocked(api.getVersion).mockResolvedValue({
+        id: 'base-1',
+        name: 'My CV',
+        templateId: 'med-length-proff-cv',
+        texContent: '\\documentclass{article}',
+        formData: null,
+        createdAt: '2026-01-01T00:00:00Z',
+      } as Awaited<ReturnType<typeof api.getVersion>>);
 
       renderApp();
 
@@ -183,6 +192,9 @@ describe('Navigation Flow State Management', () => {
       await waitFor(() => {
         expect(screen.queryByText('Tune for a role')).not.toBeInTheDocument();
       });
+
+      // Verify api.getVersion was called with the base CV id
+      expect(api.getVersion).toHaveBeenCalledWith('base-1');
     });
 
     it('Tune with 2+ base CVs shows CV picker panel (NAV-05)', async () => {
