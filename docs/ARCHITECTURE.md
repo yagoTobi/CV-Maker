@@ -701,3 +701,41 @@ pytest --cov=routes --cov=services tests/
 ### Configuration
 
 `pytest.ini` defines the `slow` marker for compilation tests. Use `-m "not slow"` to skip slow tests during development.
+
+---
+
+## Key Abstractions
+
+The most significant interfaces, patterns, and design abstractions used across the system, with their file locations and roles.
+
+### Data Model Interfaces
+
+| Abstraction | Location | Description |
+|-------------|----------|-------------|
+| `CVFormData` | `frontend/src/types/index.ts`, `backend/routes/cv_versions.py` | Canonical CV content structure shared between frontend and backend. Contains all section data (personal info, work, education, skills, projects, awards, additional sections) plus template and ordering metadata. |
+| `CVVersion` | `frontend/src/types/index.ts`, `backend/routes/cv_versions.py` | A saved snapshot of a CV including LaTeX source, form data, and optional job context. Supports hierarchical parent-child relationships for base CVs and job applications. |
+| `CVVersionMeta` | `frontend/src/types/index.ts` | Lightweight version metadata (`Omit<CVVersion, 'texContent' | 'formData'>`) used in lists and dashboards to avoid loading full version content. |
+| `TailorChange` | `frontend/src/types/index.ts` | A single AI-suggested field-level change with a `fieldPath` (dot-bracket path like `workExperience[0].bullets[2]`), rationale, and one or more `TailorAlternative` values. |
+| `MatchAnalysis` | `frontend/src/types/index.ts` | Structured result of CV-to-job comparison: numeric score, gap list, and improvement suggestions. |
+
+### Backend Patterns
+
+| Abstraction | Location | Pattern | Description |
+|-------------|----------|---------|-------------|
+| `StorageBackend` | `backend/services/storage.py` | Strategy (Protocol) | 11-method async interface for all user data persistence. Two implementations: `FileStorage` (JSON files) and `DynamoStorage` (DynamoDB single-table). Resolved at startup by `storage_factory.py` based on `STORAGE_BACKEND` env var. |
+| `BedrockClient` | `backend/services/bedrock.py` | Singleton | Unified AWS Bedrock access with per-task model selection. Module-level `bedrock_client` instance. Supports streaming and non-streaming chat, plus document-based chat for PDF import. Uses `MODEL_HAIKU` for fast extraction tasks and `MODEL_SONNET` for quality analysis/rewriting. |
+| `TemplateConfig` | `backend/config/templates.py` | Registry | Dataclass holding template metadata (id, name, folder, engine, files). The `TEMPLATES` dict maps template IDs to their configs, serving as the single source of truth for template resolution. |
+| `llm_cache` | `backend/services/llm_cache.py` | Cache (TTL) | In-memory TTL cache (1-hour, 256 entries max) for LLM responses. Cache keys are SHA-256 hashes of concatenated inputs. Used by match-analysis and tailor endpoints to avoid redundant AI calls. |
+| `get_current_user()` | `backend/dependencies.py` | FastAPI Dependency | Extracts user identity from `X-User-Id` header, defaulting to `"local"` for single-user mode. All storage-accessing routes depend on this for user scoping. |
+| `get_storage()` | `backend/services/storage_factory.py` | FastAPI Dependency + Singleton | Returns the singleton `StorageBackend` instance, created once via `@lru_cache` and reused across all requests. |
+
+### Frontend Patterns
+
+| Abstraction | Location | Pattern | Description |
+|-------------|----------|---------|-------------|
+| Domain Contexts | `frontend/src/contexts/JobContext.tsx`, `CVContext.tsx`, `ToolsContext.tsx` | Context + Provider | State split into three domain contexts (job input, CV/version state, shared tools) composed via `AppProvider`. A backwards-compatible `useAppContext()` shim merges all three into a single flat object. |
+| `useFormBuilder` | `frontend/src/hooks/useFormBuilder.ts` | Custom Hook | The largest hook (~700 lines), encapsulating all `CVFormData` state management: section/entry CRUD, array reordering, dirty tracking, and import/export. Returns a memoized object with `useCallback`-wrapped updaters. |
+| `api` object | `frontend/src/services/api.ts` | Facade | Single API client object exposing all backend calls. Methods catch errors internally and return typed failure values (null, empty arrays, error objects) rather than throwing. SSE streaming handled via native `fetch` with `processSSEStream` helper. |
+| `formDataPatch` utilities | `frontend/src/utils/formDataPatch.ts` | Path Resolution | Functions (`parsePath`, `setAtPath`, `getAtPath`, `applyTailorChanges`) that resolve dot-bracket field paths (e.g., `workExperience[0].bullets[2]`) to navigate and mutate the `CVFormData` tree. Used by the tailor and apply-to-job features to apply AI-suggested changes. |
+| Entry factories | `frontend/src/utils/entryFactories.ts` | Factory | Functions like `emptyWorkEntry()`, `emptyPersonalInfo()`, `emptyProject()` that create default-valued instances of each CV section entry type. Used by `useFormBuilder` when adding new entries. |
+| `FeatureErrorBoundary` | `frontend/src/components/FeatureErrorBoundary.tsx` | Error Boundary | React class component wrapping per-route components. Catches render errors and displays retry/home UI, preventing a single feature crash from taking down the entire application. |

@@ -142,6 +142,36 @@ pytest -m "not slow"
 pytest --cov=routes --cov=services tests/
 ```
 
+## Usage Examples
+
+### Building a CV from scratch
+
+1. Open the app at `http://localhost:5173` and click **Build my CV**.
+2. Choose **Start from scratch** in the expansion panel, then select a template (Professional CV, Deedy Resume, or McDowell CV).
+3. The direct-edit page loads a web-rendered CV that matches the final PDF layout. Click any field -- name, job title, bullet point -- and type directly on the CV.
+4. Your changes auto-save. Click **Download PDF** in the navigation bar to compile and download a LaTeX-generated PDF.
+
+### Importing an existing CV
+
+1. From the landing screen, click **Build my CV**, then choose **Import existing CV**.
+2. Upload a PDF, DOCX, or JSON file (up to 10 MB). The AI extraction service parses your document into structured form data.
+3. Review the imported content in the direct-edit view and make any corrections inline.
+
+### Tailoring a CV for a job posting
+
+1. Save at least one base CV version first (auto-save handles this during editing).
+2. From the landing screen, click **Tune for a role**. If you have one base CV, it navigates directly to the apply flow; if you have multiple, select which base CV to tailor.
+3. In Step 1, enter the company name, role title, and paste the full job description.
+4. Step 2 runs a **Match Analysis** showing a quantitative score of how well your CV matches the job requirements.
+5. Step 3 presents AI-generated change suggestions as individual cards. Accept or reject each suggestion -- the read-only CV preview on the left updates in real time.
+6. Click **Save** to create a child version linked to the base CV with the job metadata attached.
+
+### Managing versions from the dashboard
+
+1. Navigate to **My Saved CVs** (visible on the landing screen once you have saved versions).
+2. The dashboard displays base CVs with nested job application versions grouped underneath.
+3. Click any version row to open it in the editor. Use the download button to compile and download a PDF on demand, or click **Apply to Job** to start the tailoring flow from a selected base CV.
+
 ## Contributing
 
 This is a personal project, but feedback and suggestions are welcome via issues.
