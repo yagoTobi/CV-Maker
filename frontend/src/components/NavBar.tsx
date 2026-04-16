@@ -3,7 +3,7 @@
  *
  * Left side: "CV Maker" logo (navigates to /) + "My CVs" link (navigates to /dashboard).
  * Right side (editor pages): Download PDF accent button + SaveIndicator.
- * Right side (non-editor pages): "+ New CV" ghost button (navigates to /).
+ * Right side (non-editor pages): empty (no actions).
  *
  * Editor detection: pathname === '/build/form' AND editorActions is non-null.
  * Per D-08, D-09, D-10, D-12, D-16, D-17 from UI-SPEC.
@@ -19,6 +19,7 @@ export function NavBar() {
   const editorActions = useEditorActions();
 
   const isEditorPage = pathname === '/build/form' && editorActions !== null;
+  const isTuning = editorActions?.isTuning ?? false;
 
   return (
     <nav className={styles.navBar} aria-label="Main navigation">
@@ -59,7 +60,7 @@ export function NavBar() {
               )}
             </button>
             <button
-              className={styles.ghostBtn}
+              className={`${styles.ghostBtn}${isTuning ? ` ${styles.ghostBtnActive}` : ''}`}
               onClick={editorActions.onTuneForJob}
               type="button"
             >
@@ -67,15 +68,7 @@ export function NavBar() {
             </button>
             <SaveIndicator status={editorActions.saveStatus} inline />
           </>
-        ) : (
-          <button
-            className={styles.ghostBtn}
-            onClick={() => navigate('/')}
-            type="button"
-          >
-            + New CV
-          </button>
-        )}
+        ) : null}
       </div>
     </nav>
   );

@@ -95,6 +95,12 @@
   cursor: not-allowed;
 }
 
+.ghostBtnActive {
+  background: var(--accent-light);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 .accentBtn {
   background: var(--accent);
   color: #FFFFFF;

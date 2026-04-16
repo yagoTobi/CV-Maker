@@ -256,18 +256,14 @@ describe('Navigation Flow State Management', () => {
       });
     });
 
-    it('NavBar + New CV navigates to landing (NAV-07)', async () => {
+    it('NavBar does not show + New CV on non-editor pages (D-13)', async () => {
       renderApp('/dashboard');
 
       await waitFor(() => {
-        expect(screen.getByText('+ New CV')).toBeInTheDocument();
+        expect(screen.getByText('My CVs')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText('+ New CV'));
-
-      await waitFor(() => {
-        expect(screen.getByText('Build my CV')).toBeInTheDocument();
-      });
+      expect(screen.queryByText('+ New CV')).not.toBeInTheDocument();
     });
   });
 });
