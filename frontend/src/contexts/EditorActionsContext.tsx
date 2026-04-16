@@ -15,6 +15,7 @@ interface EditorActions {
   onTuneForJob: () => void;
   saveStatus: SaveStatus;
   isDownloading: boolean;
+  isTuning: boolean;
 }
 
 interface EditorActionsContextValue {
