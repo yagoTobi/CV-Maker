@@ -62,6 +62,12 @@ export default function DirectEditPage() {
   // Bootstrap formData if context is empty (direct URL navigation / page refresh)
   useEffect(() => {
     if (formData) {
+      // If formData exists but has a sentinel templateId (e.g. from CV import),
+      // patch it with the selected template before entering the editor
+      const VALID_TEMPLATES = ['med-length-proff-cv', 'deedy-resume', 'mcdowell-cv'];
+      if (!VALID_TEMPLATES.includes(formData.templateId) && selectedTemplateForBuild) {
+        setFormData({ ...formData, templateId: selectedTemplateForBuild });
+      }
       setIsBootstrapping(false);
       return;
     }

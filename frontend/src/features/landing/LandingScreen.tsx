@@ -7,7 +7,7 @@ import styles from './LandingScreen.module.css';
 
 export default function LandingScreen() {
   const navigate = useNavigate();
-  const { savedVersions, setFormData } = useAppContext();
+  const { savedVersions, setFormData, cvImport } = useAppContext();
   const [expandedPanel, setExpandedPanel] = useState<'build' | 'tune' | null>(null);
   const switchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -20,19 +20,20 @@ export default function LandingScreen() {
 
   const handleBuildClick = useCallback(() => {
     if (switchTimeoutRef.current) clearTimeout(switchTimeoutRef.current);
+    // Prevent collapsing while an import is in progress
+    if (expandedPanel === 'build' && cvImport.isImporting) return;
     if (expandedPanel === 'build') {
       setExpandedPanel(null);
       return;
     }
     if (expandedPanel !== null) {
-      // Sequential: collapse current first, then expand build after 200ms
       setExpandedPanel(null);
-      switchTimeoutRef.current = setTimeout(() => setExpandedPanel('build'), 200);
+      switchTimeoutRef.current = setTimeout(() => setExpandedPanel('build'), 250);
       return;
     }
     setFormData(null);
     setExpandedPanel('build');
-  }, [expandedPanel, setFormData]);
+  }, [expandedPanel, setFormData, cvImport.isImporting]);
 
   const handleTuneClick = useCallback(() => {
     if (switchTimeoutRef.current) clearTimeout(switchTimeoutRef.current);
@@ -47,7 +48,7 @@ export default function LandingScreen() {
     }
     if (expandedPanel !== null) {
       setExpandedPanel(null);
-      switchTimeoutRef.current = setTimeout(() => setExpandedPanel('tune'), 200);
+      switchTimeoutRef.current = setTimeout(() => setExpandedPanel('tune'), 250);
       return;
     }
     setExpandedPanel('tune');
@@ -58,7 +59,7 @@ export default function LandingScreen() {
     switchTimeoutRef.current = setTimeout(() => {
       setFormData(null);
       setExpandedPanel('build');
-    }, 200);
+    }, 250);
   }, [setFormData]);
 
   const handleMyCV = () => {
@@ -109,6 +110,13 @@ export default function LandingScreen() {
               </div>
             </button>
 
+            {/* Build expansion panel — directly below its card */}
+            <div className={`${styles.expansionPanel}${expandedPanel === 'build' ? ` ${styles.expansionPanelOpen}` : ''}`}>
+              <div className={styles.expansionPanelInner}>
+                {expandedPanel === 'build' && <BuildExpansionPanel />}
+              </div>
+            </div>
+
             <button
               className={`${styles.card} ${styles.cardSecondary}${expandedPanel === 'tune' ? ` ${styles.cardSecondaryExpanded}` : ''}`}
               onClick={handleTuneClick}
@@ -131,16 +139,15 @@ export default function LandingScreen() {
                 </svg>
               </div>
             </button>
-          </div>
 
-          <div className={`${styles.expansionPanel}${expandedPanel === 'build' ? ` ${styles.expansionPanelOpen}` : ''}`}>
-            {expandedPanel === 'build' && <BuildExpansionPanel />}
-          </div>
-
-          <div className={`${styles.expansionPanel}${expandedPanel === 'tune' ? ` ${styles.expansionPanelOpen}` : ''}`}>
-            {expandedPanel === 'tune' && (
-              <TuneExpansionPanel onBuildClick={handleBuildFromTune} />
-            )}
+            {/* Tune expansion panel — directly below its card */}
+            <div className={`${styles.expansionPanel}${expandedPanel === 'tune' ? ` ${styles.expansionPanelOpen}` : ''}`}>
+              <div className={styles.expansionPanelInner}>
+                {expandedPanel === 'tune' && (
+                  <TuneExpansionPanel onBuildClick={handleBuildFromTune} />
+                )}
+              </div>
+            </div>
           </div>
 
           {savedVersions.length > 0 && (
