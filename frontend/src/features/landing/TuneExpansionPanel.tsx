@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../contexts/AppContext';
+import { api } from '../../services/api';
 import { formatDate } from '../../utils/cvDisplayUtils';
 import styles from './TuneExpansionPanel.module.css';
 
@@ -9,7 +11,8 @@ interface TuneExpansionPanelProps {
 
 export function TuneExpansionPanel({ onBuildClick }: TuneExpansionPanelProps) {
   const navigate = useNavigate();
-  const { savedVersions } = useAppContext();
+  const { savedVersions, handleVersionLoad, setSelectedTemplateForBuild } = useAppContext();
+  const [loadingId, setLoadingId] = useState<string | null>(null);
   const baseCVs = savedVersions.filter(v => !v.parentVersionId);
 
   if (baseCVs.length === 0) {
@@ -39,9 +42,19 @@ export function TuneExpansionPanel({ onBuildClick }: TuneExpansionPanelProps) {
             key={cv.id}
             className={styles.cvItem}
             role="listitem"
-            onClick={() => navigate('/apply', { state: { baseVersionId: cv.id } })}
+            onClick={async () => {
+              setLoadingId(cv.id);
+              const version = await api.getVersion(cv.id);
+              setLoadingId(null);
+              if (version) {
+                handleVersionLoad(version);
+                setSelectedTemplateForBuild(version.templateId);
+                navigate('/build/form', { state: { tune: true } });
+              }
+            }}
+            disabled={loadingId === cv.id}
           >
-            <span className={styles.cvName}>{cv.name}</span>
+            <span className={styles.cvName}>{loadingId === cv.id ? 'Loading...' : cv.name}</span>
             <span className={styles.cvDate}>{formatDate(cv.createdAt)}</span>
             <div className={styles.cvArrow}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../../services/api';
 import { useAppContext } from '../../contexts/AppContext';
 import { generateCVFilename } from '../../utils/cvFilename';
@@ -16,6 +16,8 @@ function displayName(v: CVVersionMeta): string {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const filterBaseId = (location.state as { baseId?: string } | null)?.baseId ?? null;
   const { handleVersionLoad, setSavedVersions, setSelectedTemplateForBuild } = useAppContext();
   const [baseCvs, setBaseCvs] = useState<CVVersionWithChildren[]>([]);
   const [ungrouped, setUngrouped] = useState<CVVersionMeta[]>([]);
@@ -84,10 +86,15 @@ export default function Dashboard() {
     }
   }, [handleVersionLoad, setSelectedTemplateForBuild, navigate]);
 
-  const handleApplyToJob = useCallback((baseId: string, e: React.MouseEvent) => {
+  const handleApplyToJob = useCallback(async (baseId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    navigate('/apply', { state: { baseVersionId: baseId } });
-  }, [navigate]);
+    const version = await api.getVersion(baseId);
+    if (version) {
+      handleVersionLoad(version);
+      setSelectedTemplateForBuild(version.templateId);
+      navigate('/build/form', { state: { tune: true } });
+    }
+  }, [handleVersionLoad, setSelectedTemplateForBuild, navigate]);
 
   const handleDownload = useCallback(async (versionId: string, meta: CVVersionMeta, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -199,8 +206,11 @@ export default function Dashboard() {
     }
   }, [syncVersionsToApp]);
 
-  const totalApps = baseCvs.reduce((sum, b) => sum + (b.children?.length || 0), 0) + ungrouped.length;
-  const totalBases = baseCvs.length;
+  const displayedBases = filterBaseId
+    ? baseCvs.filter(b => b.id === filterBaseId)
+    : baseCvs;
+  const totalApps = displayedBases.reduce((sum, b) => sum + (b.children?.length || 0), 0) + (filterBaseId ? 0 : ungrouped.length);
+  const totalBases = displayedBases.length;
 
   // --- Render helpers ---
 
@@ -355,8 +365,23 @@ export default function Dashboard() {
           </div>
         ) : (
           <>
+            {/* Breadcrumb for scoped base CV view */}
+            {filterBaseId && displayedBases.length > 0 && (
+              <div className={styles.breadcrumb}>
+                <button
+                  className={styles.breadcrumbLink}
+                  onClick={() => navigate('/dashboard', { state: null, replace: true })}
+                  type="button"
+                >
+                  All CVs
+                </button>
+                <span className={styles.breadcrumbSep}>/</span>
+                <span className={styles.breadcrumbCurrent}>{displayedBases[0]?.name}</span>
+              </div>
+            )}
+
             {/* Base CV groups */}
-            {baseCvs.map(base => {
+            {displayedBases.map(base => {
               const isExpanded = expandedGroups.has(base.id);
               const children = base.children || [];
 
@@ -476,8 +501,8 @@ export default function Dashboard() {
               );
             })}
 
-            {/* Ungrouped section */}
-            {ungrouped.length > 0 && (
+            {/* Ungrouped section (hidden when filtered by baseId) */}
+            {!filterBaseId && ungrouped.length > 0 && (
               <div className={styles.ungroupedSection}>
                 <div className={styles.ungroupedHeader} onClick={() => setExpandUngrouped(prev => !prev)}>
                   <div className={`${styles.groupToggle} ${expandUngrouped ? styles.expanded : ''}`}>
