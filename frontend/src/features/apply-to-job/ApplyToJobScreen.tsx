@@ -16,6 +16,7 @@ import { useScrollSync } from '../direct-edit/hooks/useScrollSync';
 import { MedLengthTemplate } from '../direct-edit/components/MedLengthTemplate';
 import { ChangePanel } from '../direct-edit/components/ChangePanel';
 import type { CVVersion, CVFormData, MatchAnalysis, CVVersionMeta, SkillItem } from '../../types';
+import { scoreColorClass, noop, EMPTY_SET } from '../../utils/cvDisplayUtils';
 import styles from './ApplyToJobScreen.module.css';
 import '@fontsource-variable/eb-garamond';
 
@@ -24,10 +25,6 @@ type Step = 1 | 2 | 3 | 'success';
 interface LocationState {
   baseVersionId?: string;
 }
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const noop = (..._args: unknown[]) => {};
-const EMPTY_SET = new Set<string>();
 
 export default function ApplyToJobScreen() {
   const navigate = useNavigate();
@@ -213,8 +210,6 @@ export default function ApplyToJobScreen() {
       </div>
     );
   }
-
-  const scoreColorClass = (s: number) => s >= 80 ? 'good' : s >= 60 ? 'medium' : 'low';
 
   // Noop field change handler typed for MedLengthTemplate
   const noopFieldChange = noop as (path: string, value: string | SkillItem[]) => void;

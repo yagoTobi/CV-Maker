@@ -3,22 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import { useAppContext } from '../../contexts/AppContext';
 import { generateCVFilename } from '../../utils/cvFilename';
+import { formatDate, scoreColorClass } from '../../utils/cvDisplayUtils';
 import type { CVVersionMeta, CVVersionWithChildren } from '../../types';
 import styles from './Dashboard.module.css';
-
-function scoreColor(score: number): string {
-  if (score >= 80) return 'good';
-  if (score >= 60) return 'medium';
-  return 'low';
-}
-
-function formatDate(iso: string): string {
-  try {
-    return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
-}
 
 function displayName(v: CVVersionMeta): string {
   if (v.companyName && v.role) return `${v.companyName} ${v.role}`;
@@ -222,7 +209,7 @@ export default function Dashboard() {
     const delta = baselineScore != null ? Math.round(score - baselineScore) : null;
     return (
       <>
-        <span className={`${styles.scoreBadge} ${styles[scoreColor(score)]}`}>
+        <span className={`${styles.scoreBadge} ${styles[scoreColorClass(score)]}`}>
           {Math.round(score)}%
         </span>
         {delta != null && delta > 0 && (

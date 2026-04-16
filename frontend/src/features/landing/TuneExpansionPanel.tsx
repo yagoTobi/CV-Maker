@@ -1,19 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../contexts/AppContext';
+import { formatDate } from '../../utils/cvDisplayUtils';
 import styles from './TuneExpansionPanel.module.css';
 
 interface TuneExpansionPanelProps {
   onBuildClick: () => void;
-}
-
-function formatDate(iso: string): string {
-  try {
-    return new Intl.DateTimeFormat('en-GB', {
-      day: 'numeric', month: 'short', year: 'numeric'
-    }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
 }
 
 export function TuneExpansionPanel({ onBuildClick }: TuneExpansionPanelProps) {
