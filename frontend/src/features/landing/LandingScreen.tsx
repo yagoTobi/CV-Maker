@@ -1,13 +1,14 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../contexts/AppContext';
+import { api } from '../../services/api';
 import { BuildExpansionPanel } from './BuildExpansionPanel';
 import { TuneExpansionPanel } from './TuneExpansionPanel';
 import styles from './LandingScreen.module.css';
 
 export default function LandingScreen() {
   const navigate = useNavigate();
-  const { savedVersions, setFormData, cvImport } = useAppContext();
+  const { savedVersions, setFormData, cvImport, handleVersionLoad, setSelectedTemplateForBuild } = useAppContext();
   const [expandedPanel, setExpandedPanel] = useState<'build' | 'tune' | null>(null);
   const switchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -35,11 +36,16 @@ export default function LandingScreen() {
     setExpandedPanel('build');
   }, [expandedPanel, setFormData, cvImport.isImporting]);
 
-  const handleTuneClick = useCallback(() => {
+  const handleTuneClick = useCallback(async () => {
     if (switchTimeoutRef.current) clearTimeout(switchTimeoutRef.current);
     const baseCVs = savedVersions.filter(v => !v.parentVersionId);
     if (baseCVs.length === 1) {
-      navigate('/apply', { state: { baseVersionId: baseCVs[0].id } });
+      const version = await api.getVersion(baseCVs[0].id);
+      if (version) {
+        handleVersionLoad(version);
+        setSelectedTemplateForBuild(version.templateId);
+        navigate('/build/form', { state: { tune: true } });
+      }
       return;
     }
     if (expandedPanel === 'tune') {
@@ -52,7 +58,7 @@ export default function LandingScreen() {
       return;
     }
     setExpandedPanel('tune');
-  }, [expandedPanel, savedVersions, navigate]);
+  }, [expandedPanel, savedVersions, navigate, handleVersionLoad, setSelectedTemplateForBuild]);
 
   const handleBuildFromTune = useCallback(() => {
     setExpandedPanel(null);
