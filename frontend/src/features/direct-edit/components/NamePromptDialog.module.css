@@ -1,0 +1,118 @@
+/* NamePromptDialog -- Centered dialog intercepting the first CV save for naming. */
+
+/* Backdrop -- semi-transparent overlay at z-index 200 (above NavBar z-50, above dropdown z-100) */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.12);
+  z-index: 200;
+}
+
+/* Dialog -- centered fixed container */
+.dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 201;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 24px;
+  min-width: 320px;
+  max-width: 420px;
+  font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+  animation: dialogEnter 0.15s ease-out;
+}
+
+@keyframes dialogEnter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateY(0) scale(1);
+  }
+}
+
+/* Heading -- "Give this CV a name" */
+.heading {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* Subtext -- "You can always rename it later." */
+.subtext {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 4px 0 0;
+}
+
+/* Input row wrapper */
+.inputRow {
+  margin-top: 16px;
+}
+
+/* Text input -- full-width, focus highlights with accent border */
+.input {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 14px;
+  font-family: inherit;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  outline: none;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: border-color 150ms ease;
+}
+
+.input:focus {
+  border-color: var(--accent);
+}
+
+/* Actions row -- right-aligned buttons */
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+/* "Skip for now" -- ghost style, matches ConfirmDialog.cancelBtn exactly */
+.cancelBtn {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 5px 14px;
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.cancelBtn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* "Save CV" -- accent style, matches NavBar accentBtn */
+.saveBtn {
+  background: var(--accent);
+  color: #FFFFFF;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 6px 16px;
+  font-size: 13px;
+  font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.saveBtn:hover {
+  background: var(--accent-hover);
+}
