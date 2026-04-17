@@ -269,6 +269,23 @@ export const api = {
     return true;
   },
 
+  async updateVersionFull(
+    id: string,
+    data: { name?: string; formData?: CVFormData; texContent?: string }
+  ): Promise<boolean> {
+    try {
+      await axiosInstance.patch(`${API_BASE}/cv-versions/${id}`, {
+        name: data.name,
+        formData: data.formData,
+        texContent: data.texContent,
+      });
+      return true;
+    } catch (err) {
+      console.error('[api:updateVersionFull]', err);
+      return false;
+    }
+  },
+
   async importCV(file: File, signal?: AbortSignal): Promise<CVImportResponse> {
     try {
       const formData = new FormData();
