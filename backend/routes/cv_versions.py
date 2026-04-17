@@ -359,6 +359,9 @@ async def delete_version(
 
 class UpdateVersionPayload(BaseModel):
     parentVersionId: Optional[str] = None
+    name: Optional[str] = None
+    formData: Optional[CVFormData] = None
+    texContent: Optional[str] = None
 
 
 @router.patch("/cv-versions/{version_id}")
@@ -368,14 +371,17 @@ async def update_version(
     user_id: str = Depends(get_current_user),
     storage: StorageBackend = Depends(get_storage),
 ):
-    """Update a CV version (currently supports re-parenting only)."""
+    """Update a CV version (supports re-parenting, name update, and full content update)."""
     _validate_version_id(version_id)
     version_data = await storage.get_version(user_id, version_id)
     if version_data is None:
         raise HTTPException(status_code=404, detail=f"Version {version_id} not found")
 
-    # Update parent relationship
-    if "parentVersionId" in payload.model_dump(exclude_unset=True):
+    payload_dict = payload.model_dump(exclude_unset=True)
+    updates = {}
+
+    # Update parent relationship (existing validation logic unchanged)
+    if "parentVersionId" in payload_dict:
         new_parent_id = payload.parentVersionId
 
         # Validate new parent exists (if not null)
@@ -392,7 +398,22 @@ async def update_version(
             # Prevent circular references
             await _validate_no_circular_reference(storage, user_id, version_id, new_parent_id)
 
-        await storage.update_version(user_id, version_id, {"parentVersionId": new_parent_id})
+        updates["parentVersionId"] = new_parent_id
+
+    # Update name (only if provided and non-empty)
+    if "name" in payload_dict and payload.name:
+        updates["name"] = payload.name
+
+    # Update formData (only if provided)
+    if "formData" in payload_dict and payload.formData:
+        updates["formData"] = payload.formData.model_dump()
+
+    # Update texContent (only if provided; empty string is a valid value)
+    if "texContent" in payload_dict and payload.texContent is not None:
+        updates["texContent"] = payload.texContent
+
+    if updates:
+        await storage.update_version(user_id, version_id, updates)
 
     return {
         "id": version_id,
