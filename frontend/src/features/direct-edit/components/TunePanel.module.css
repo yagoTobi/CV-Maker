@@ -121,7 +121,7 @@
 }
 
 .tierBodyOpen {
-  max-height: 800px;
+  max-height: 4000px;
 }
 
 .tierBodyInner {
@@ -267,13 +267,18 @@
   color: var(--text-muted);
 }
 
-/* ChangePanel embed -- trap position:fixed children within the embed container.
-   transform: translateZ(0) creates a new containing block that makes position:fixed
-   behave like position:absolute relative to this container. */
-.changePanelEmbed {
-  position: relative;
-  transform: translateZ(0);
-  overflow: visible;
+/* ChangePanel inline override -- force static layout when embedded in TunePanel tier */
+.changePanelInline {
+  position: static !important;
+  width: 100% !important;
+  height: auto !important;
+  overflow: visible !important;
+  border-left: none !important;
+  transform: none !important;
+  top: auto !important;
+  right: auto !important;
+  padding: 0 !important;
+  max-height: none !important;
 }
 
 /* Save bar at bottom of Tier 3 */

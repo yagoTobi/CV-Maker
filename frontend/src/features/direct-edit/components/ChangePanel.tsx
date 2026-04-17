@@ -35,6 +35,7 @@ interface ChangePanelProps {
   estimatedScore?: number;
   panelRef?: React.RefObject<HTMLDivElement>;
   isOpen?: boolean;
+  className?: string;
 }
 
 /** Chevron right SVG icon */
@@ -74,6 +75,7 @@ export function ChangePanel({
   estimatedScore,
   panelRef: externalPanelRef,
   isOpen = true,
+  className: classNameOverride,
 }: ChangePanelProps) {
   const internalPanelRef = useRef<HTMLDivElement>(null);
   const panelRef = externalPanelRef ?? internalPanelRef;
@@ -118,7 +120,7 @@ export function ChangePanel({
   return (
     <div
       ref={panelRef}
-      className={`${styles.panel}${isOpen ? '' : ` ${styles.closed}`}`}
+      className={`${styles.panel}${isOpen ? '' : ` ${styles.closed}`}${classNameOverride ? ` ${classNameOverride}` : ''}`}
       role="complementary"
       aria-label="AI suggestion review panel"
     >

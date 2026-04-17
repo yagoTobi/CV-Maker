@@ -339,8 +339,7 @@ export function TunePanel({
               </div>
             ) : (
               <>
-                <div className={styles.changePanelEmbed}>
-                  <ChangePanel
+                <ChangePanel
                     changes={tailor.tailorResponse?.changes ?? []}
                     appliedChanges={tailor.appliedChanges}
                     skippedChanges={tailor.skippedChanges}
@@ -360,8 +359,8 @@ export function TunePanel({
                     estimatedScore={tailor.estimatedCurrentScore}
                     panelRef={changePanelRef}
                     isOpen={true}
+                    className={styles.changePanelInline}
                   />
-                </div>
                 <div className={styles.saveBarSticky}>
                   <button
                     className={styles.primaryBtn}
