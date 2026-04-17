@@ -423,3 +423,64 @@ No formal PR template or `CONTRIBUTING.md` is currently configured in this repos
 - Run `pytest tests/ -v` in `backend/` to verify backend tests pass.
 - Write a clear PR description explaining what changed and why.
 - Request review from a maintainer before merging to `main`.
+
+## Corrections and Errata
+
+The "Adding New Features" section above contains two stale references that were written before the current architecture was in place. Do not follow those instructions as written — use the correct locations below.
+
+### Stale reference: `frontend/src/hooks/useApi.ts` (line 190)
+
+This file does not exist. All frontend API calls live in `frontend/src/services/api.ts` as named exports. See the "Adding a New API Endpoint (Updated)" section above for the correct pattern.
+
+### Stale reference: `frontend/src/components/index.ts` (line 195)
+
+This barrel file does not exist. The `frontend/src/components/` directory contains only a small set of shared layout and error-boundary components (`FeatureErrorBoundary.tsx`, `NavBar.tsx`, `WorkingLayout.tsx`) and has no index barrel. New feature components should be placed in a feature subdirectory under `frontend/src/features/`, not in `frontend/src/components/`. There is no barrel file to export from — import components directly by path.
+
+## Direct-Edit Architecture
+
+The direct-edit feature (`frontend/src/features/direct-edit/`) is the primary CV editing surface. Users type inline on a web rendering of the CV that visually mirrors the final PDF output, replacing the old split-screen form builder.
+
+### Entry Point
+
+`DirectEditPage` (`frontend/src/features/direct-edit/DirectEditPage.tsx`) is mounted at the `/build/form` route in `App.tsx`. It bootstraps `CVFormData` from context (or loads the most recent saved version if the user navigates directly to the URL), then assembles the template renderer and auto-save hook.
+
+### Key Hooks (co-located in `frontend/src/features/direct-edit/hooks/`)
+
+| Hook | File | Purpose |
+|------|------|---------|
+| `useDirectEditor` | `hooks/useDirectEditor.ts` | Bridges `EditableField` callbacks to `CVFormData` via `useCVContext`. Exposes `updateField`, `addBullet`, `removeBullet`, `addEntry`, `removeEntry`, `toggleSection`, `hiddenSections`, `reorderSections`, `reorderEntries`. |
+| `useAutoSave` | `hooks/useAutoSave.ts` | Debounced auto-save (2.5 s inactivity) with `SaveStatus` type (`idle \| saving \| saved \| error`). Skips saves when `formData` is unchanged since last save. |
+| `usePageBreak` | `hooks/usePageBreak.ts` | Measures the CV container height to compute where the A4 page break falls and returns the Y offset for `PageBreakIndicator`. |
+| `useSectionDrag` | `hooks/useSectionDrag.ts` | Drag-and-drop reordering of top-level CV sections via HTML drag events. |
+| `useEntryDrag` | `hooks/useEntryDrag.ts` | Drag-and-drop reordering of entries within a section (e.g., work experience entries). |
+| `useScrollSync` | `hooks/useScrollSync.ts` | Keeps any scroll position in sync when the editor layout changes. |
+
+### Core Component: `EditableField`
+
+`EditableField` (`components/EditableField.tsx`) is the fundamental building block. It wraps a single `CVFormData` field in a `contentEditable` element using the "uncontrolled while focused, controlled while blurred" pattern:
+
+- **While focused:** React does not touch the DOM; the browser owns the element.
+- **On blur:** reads `textContent` (or `innerHTML` when `rich=true`) and fires `onFieldChange(path, value)` only if the value changed.
+- **Paste handling:** uses `contentEditable="plaintext-only"` by default to strip rich-text on paste; the `rich` prop enables HTML-aware paste that normalises formatting to plain text.
+
+The `fieldPath` prop is a dot-bracket string (e.g., `workExperience[0].bullets[2].text`) resolved via `setAtPath` / `getAtPath` from `frontend/src/utils/formDataPatch.ts`.
+
+### Template Renderer: `MedLengthTemplate`
+
+`MedLengthTemplate` (`components/MedLengthTemplate.tsx`) renders the entire CV document as HTML, placing an `EditableField` for every text field and an `EditableBulletList` for every bullet array. CSS in `MedLengthTemplate.module.css` targets ~95% visual fidelity with the `med-length-proff-cv` LaTeX template. Section order follows `formData.sectionOrder`.
+
+Each section is wrapped in `SectionWrapper` (hover-reveal add button, visibility toggle, drag grip) and each entry in `EntryWrapper` (hover-reveal delete button with optional confirm dialog, drag grip).
+
+Section-specific sub-components live in `components/sections/`: `WorkSection`, `EducationSection`, `SkillsSection`, `ProjectsSection`, `AwardsSection`, `AdditionalSection`.
+
+### `EditorActionsContext` Integration
+
+`DirectEditPage` registers its toolbar actions (Download PDF, Tune for Job, save status, loading flags) into `EditorActionsContext` via `useSetEditorActions()` on mount, and clears them on unmount. `NavBar` reads these via `useEditorActions()` to render the download button and save indicator only while the editor route is active.
+
+### Adding a New Editable Section Type
+
+1. Create a section component in `frontend/src/features/direct-edit/components/sections/` (e.g., `PublicationsSection.tsx`) using `EditableField` and `EditableBulletList` for all editable fields.
+2. Register the section key in `components/sections/sectionTypes.ts`.
+3. Add a `case` for the new key in `MedLengthTemplate.tsx`'s section renderer.
+4. Add a corresponding empty-entry factory function in `frontend/src/utils/entryFactories.ts` and handle the new key in `useDirectEditor`'s `addEntry` / `removeEntry` callbacks.
+5. Extend the `CVFormData` type in `frontend/src/types/index.ts` if the section introduces new data fields (avoid this where possible — `additionalSections` handles generic section types without a schema change).

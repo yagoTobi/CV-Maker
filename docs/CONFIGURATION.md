@@ -236,6 +236,6 @@ Several application-level settings are defined as constants in the source code a
 | `MAX_FILE_SIZE` | 10 MB (10,485,760 bytes) | `backend/routes/cv_import.py:14` | Maximum upload size for CV import |
 | `ALLOWED_EXTENSIONS` | `.pdf`, `.docx`, `.json` | `backend/routes/cv_import.py:15` | Accepted file types for CV import |
 | Axios timeout | 30,000 ms (30 seconds) | `frontend/src/services/api.ts:9` | Default HTTP request timeout |
-| LaTeX compilation timeout | 90 seconds | `backend/services/latex_compiler.py:114` | Maximum time for a single LaTeX compilation pass |
+| LaTeX compilation timeout | 90 seconds | `backend/services/latex_compiler.py:113` | Maximum time for a single LaTeX compilation pass |
 | LLM cache maxsize | 256 entries | `backend/services/llm_cache.py:6` | Maximum cached AI responses |
 | LLM cache TTL | 3,600 seconds (1 hour) | `backend/services/llm_cache.py:6` | Time before cached AI responses expire |

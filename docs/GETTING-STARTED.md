@@ -132,7 +132,7 @@ Vite starts a dev server with hot module replacement.
    curl http://localhost:8000/api/templates
    ```
 
-   This should return JSON listing three templates: `med-length-proff-cv`, `deedy-resume`, and `mcdowell-cv-master`.
+   This should return JSON listing three templates: `med-length-proff-cv`, `deedy-resume`, and `mcdowell-cv`.
 
 ## Docker Alternative
 

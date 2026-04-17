@@ -1,741 +1,280 @@
+<!-- generated-by: gsd-doc-writer -->
 # Architecture
 
 ## System Overview
 
-CV Maker follows a client-server architecture with a React frontend and FastAPI backend.
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              Frontend (React)                                │
-│                                                                              │
-│  ┌────────────────┐  ┌──────────────────┐  ┌──────────────┐                 │
-│  │  Landing /     │  │  Form Builder    │  │   Editor     │                 │
-│  │  Dashboard     │  │  (Build/Import)  │  │  (Tune/Edit) │                 │
-│  └────────────────┘  └──────────────────┘  └──────────────┘                 │
-│                                                                              │
-│  Screens: landing → build-choice → template-select → form-builder → editor  │
-│           landing → build-choice → import-upload → template-select → form   │
-│           landing → dashboard → "Tune for a Job" → editor (tune mode)       │
-│           landing → dashboard → "Apply to Job" → apply (3-step flow)        │
-│           landing → dashboard → click version → editor                      │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                     │
-                                     ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              Backend (FastAPI)                               │
-│                                                                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
-│  │ Compile API  │  │ Generate LaTeX│  │   Chat API   │  │  Version API │    │
-│  │ /compile     │  │ /generate-   │  │  /chat       │  │ /cv-versions │    │
-│  │              │  │  latex       │  │  /match-     │  │              │    │
-│  └──────────────┘  └──────────────┘  │  analysis    │  └──────────────┘    │
-│         │                │           └──────────────┘         │            │
-│  ┌──────────────┐        │                   ▼                 ▼            │
-│  │  Import API  │        ▼            ┌──────────────┐  ┌──────────────┐    │
-│  │  /cv-import  │  ┌──────────────┐  │ AWS Bedrock  │  │  JSON Files  │    │
-│  └──────────────┘  │Jinja2 Engine │  │  (Claude)    │  │ user_data/   │    │
-│  ┌──────────────┐  │(.tex.j2      │  │              │  │ versions/    │    │
-│  │  Tailor API  │  │  templates)  │  └──────────────┘  └──────────────┘    │
-│  │  /tailor     │  └──────────────┘                                        │
-│  └──────────────┘                                                           │
-│         │          ┌──────────────┐                                         │
-│         ▼          │LaTeX Compiler│                                         │
-│  Field-level AI    │(pdflatex/    │                                         │
-│  suggestions       │ xelatex)     │                                         │
-│                    └──────────────┘                                         │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+CV-Maker is a web application where users edit their CV directly on a rendered, print-accurate web page and download a LaTeX-compiled PDF. The system is split into a React 19 frontend (Vite) and a Python FastAPI backend. The frontend renders the CV using web components styled to match the corresponding LaTeX template at ~95% visual fidelity; users type inline using `contentEditable` fields mapped directly to a `CVFormData` data structure. The backend generates LaTeX from that structure, compiles it to PDF, and provides AI-powered features (import, tailor, match analysis) via AWS Bedrock. There is no split-screen or form-builder flow: the CV document itself is the editor.
 
 ---
 
-## Screen Flow
+## Route Structure
+
+Routes are defined in `frontend/src/App.tsx`. All working pages (non-landing) are nested inside `WorkingLayout`, which renders the persistent `NavBar` and scopes `EditorActionsContext` to those pages.
 
 ```
-React Router v6 Routes (8 routes):
-/                → LandingScreen
-/build/start     → BuildChoiceScreen
-/build           → TemplateSelector
-/build/form      → CVFormBuilder
-/import          → CVImportUpload
-/apply           → ApplyToJobScreen
-/dashboard       → Dashboard
-/editor          → EditorScreen
-
-landing (/)
-  ├── "Build my CV"    → /build/start → "Start from scratch" → /build → /build/form → /editor
-  │                                   → "Import existing CV" → /import → /build → /build/form (with ImportBanner)
-  ├── "Tune for a role" → /dashboard (if saved CVs exist) or /build/start (if no CVs)
-  └── "My Saved CVs"    → /dashboard  [shown only when savedVersions.length > 0]
-
-dashboard (/dashboard) — hierarchical view
-  ├── Base CVs (expandable groups)
-  │   ├── "Tune for a Job" button → /editor (mode:'tune', base CV loaded)
-  │   ├── "Apply to Job" button → /apply (3-step flow from base CV)
-  │   └── Job applications (nested under base)
-  ├── Ungrouped versions → orphaned CVs without parent
-  ├── click any version → /editor (version loaded)
-  ├── [Move...] action → re-parent job application to different base CV
-  ├── Download PDF button → compile on-demand from any version
-  └── back → /
-
-editor (/editor) — two modes
-  ├── Build mode: "Your CV Editor" header, general editing
-  ├── Tune mode: "Tune your CV" header, job input + AI suggestions
-  │   ├── Left panel: collapsible JobInput → MatchSummaryBar → TailorPanel (suggestion cards)
-  │   └── Right panel: PDF preview (auto-compiles on entry)
-  ├── VersionSwitcher (header) → save / switch / dashboard
-  └── Save modal → "Base CV" or "Job Application" + parent picker + job details
-
-apply (/apply) — 3-step progressive flow
-  ├── Step 1: Job Details (company, role, job description)
-  ├── Step 2: Match Analysis (score + gaps + suggestions) — reuses POST /chat/match-analysis
-  ├── Step 3: Review Changes (field-level AI suggestions with checkboxes)
-  └── "Open in Tune Screen" button → /editor (mode:'tune', job context pre-filled)
-
-build/form (/build/form) — CVFormBuilder
-  ├── Right panel: PDF preview
-  ├── Mode passed via location.state.mode: 'build' | 'tune'
-  ├── ImportBanner (when coming from import path) — source badge, confidence indicator, warnings, dismissible
-  ├── Field-level confidence badges — amber border + badge on low/medium confidence fields
-  ├── "Advanced Editor" button in preview header → /editor (escape hatch for power users)
-  └── VoiceWidget (overlay pill in sidebar) → voice interview session
+/                → LandingScreen          (template selection + build/tune entry)
+/build           → TemplateSelector       (pick a CV template)
+/build/form      → DirectEditPage         (inline CV editor — primary editing surface)
+/apply           → redirect to /build/form with state { tune: true }
+/dashboard       → Dashboard              (hierarchical version list, download, delete)
+*                → NotFound               (404 catch-all)
 ```
+
+`/apply` is a redirect to `/build/form` — the tune-for-job flow runs inside the editor page.
 
 ---
 
-## Frontend Architecture
-
-### Project Structure (Feature-Based)
+## Component Diagram
 
 ```
-frontend/src/
-├── features/
-│   ├── landing/              Landing screen
-│   │   ├── LandingScreen.tsx
-│   │   ├── LandingScreen.module.css
-│   │   └── index.ts
-│   ├── build-choice/         Build entry choice ("Start from scratch" | "Import existing CV")
-│   │   ├── BuildChoiceScreen.tsx
-│   │   ├── BuildChoiceScreen.module.css
-│   │   └── index.ts
-│   ├── template-selection/   Template picker (Build path)
-│   │   ├── TemplateSelector.tsx
-│   │   ├── TemplateSelector.css
-│   │   └── index.ts
-│   ├── form-builder/         Structured form builder
-│   │   ├── CVFormBuilder.tsx
-│   │   ├── CVFormBuilder.module.css
-│   │   ├── ImportBanner.tsx
-│   │   ├── ImportBanner.module.css
-│   │   └── index.ts
-│   ├── cv-import/            CV import upload
-│   │   ├── CVImportUpload.tsx
-│   │   ├── CVImportUpload.module.css
-│   │   └── index.ts
-│   ├── apply-to-job/         3-step job application flow
-│   │   ├── ApplyToJobScreen.tsx
-│   │   ├── ApplyToJobScreen.module.css
-│   │   └── index.ts
-│   ├── voice-widget/         Voice interview overlay
-│   │   ├── VoiceWidget.tsx
-│   │   ├── VoiceWidget.module.css
-│   │   └── index.ts
-│   ├── editor/               Editor + tune screen components
-│   │   ├── EditorScreen.tsx
-│   │   ├── EditorScreen.module.css
-│   │   ├── TailorPanel.tsx       AI suggestion cards (accept/skip/undo)
-│   │   ├── TailorPanel.module.css
-│   │   ├── MatchSummaryBar.tsx   Score bar with progress + expandable details
-│   │   ├── MatchSummaryBar.module.css
-│   │   ├── MatchAnalysis.tsx     Gap/suggestion tag lists
-│   │   ├── MatchAnalysis.module.css
-│   │   ├── JobInput.tsx          Company/role/description input
-│   │   ├── JobInput.module.css
-│   │   ├── PdfPreview.tsx
-│   │   ├── PdfPreview.module.css
-│   │   ├── ChatPanel.tsx
-│   │   ├── ChatPanel.module.css
-│   │   ├── LatexEditor.tsx
-│   │   ├── LatexEditor.module.css
-│   │   └── index.ts
-│   ├── dashboard/            Saved versions management
-│   │   ├── Dashboard.tsx
-│   │   ├── Dashboard.module.css
-│   │   ├── VersionSwitcher.tsx
-│   │   ├── VersionSwitcher.module.css
-│   │   └── index.ts
-│   └── shared/               Reusable cross-feature components
-│       ├── ErrorBoundary.tsx
-│       ├── useFileUpload.ts
-│       └── index.ts
-├── components/
-│   └── FeatureErrorBoundary.tsx   Per-feature error boundary with retry
-├── contexts/                 React Context providers
-│   └── AppContext.tsx        Global shared state (replaces App.tsx god component)
-├── hooks/                    Custom React hooks
-├── services/                 API client
-├── styles/                   Design tokens (variables.css)
-├── types/                    TypeScript type definitions
-├── App.tsx                   React Router route definitions (~25 lines)
-└── main.tsx                  React entry point
+Browser
+  └─ main.tsx (StrictMode + BrowserRouter + ErrorBoundary)
+       └─ App.tsx (AppProvider + Routes)
+            ├─ LandingScreen
+            └─ WorkingLayout (NavBar + EditorActionsProvider + Outlet)
+                 ├─ TemplateSelector
+                 ├─ DirectEditPage  ──────────────────────────────┐
+                 │    ├─ MedLengthTemplate                        │
+                 │    │    ├─ EditableField (one per text field)   │
+                 │    │    ├─ EditableBulletList                   │
+                 │    │    ├─ SectionWrapper                       │
+                 │    │    └─ EntryWrapper                         │
+                 │    └─ [PageBreakIndicator, SaveIndicator]       │
+                 │                                                 │
+                 │    hooks: useDirectEditor, useAutoSave,         │
+                 │           usePageBreak, useSectionDrag,         │
+                 │           useEntryDrag, useScrollSync           │
+                 │                                                 │
+                 └─ Dashboard (version list + download)            │
+                                                                   │
+ApplyToJobScreen (at /apply, redirects to /build/form) ───────────┘
+     ├─ MedLengthTemplate (readOnly preview)
+     ├─ ChangePanel (AI tailor suggestions)
+     └─ hooks: useTailor, useScrollSync
 ```
-
-**Organization Rationale:**
-- Feature-based folders group related components, styles, and barrel exports
-- Each feature folder has an `index.ts` for clean imports (e.g., `import { Dashboard } from './features/dashboard'`)
-- `shared/` contains components used across multiple features
-- `hooks/`, `services/`, `types/`, and `styles/` remain top-level (cross-cutting concerns)
-
-### Components
-
-| Component | Feature | Purpose |
-|-----------|---------|---------|
-| `App.tsx` | - | React Router v6 route definitions only (~25 lines) |
-| `AppContext.tsx` | contexts | Global shared state provider (replaces App.tsx god component) |
-| `LandingScreen.tsx` | landing | Intent-based entry screen (Build / Tune / Import / My CVs) |
-| `BuildChoiceScreen.tsx` | build-choice | Build entry choice ("Start from scratch" \| "Import existing CV") |
-| `TemplateSelector.tsx` | template-selection | Template selection (Build path + Import path) |
-| `CVFormBuilder.tsx` | form-builder | Structured form with 7 sections + PDF preview + DnD reordering + inline import indicators |
-| `ImportBanner.tsx` | form-builder | Dismissible import summary banner (source, confidence, warnings) shown at top of form builder when coming from import |
-| `VoiceWidget.tsx` | voice-widget | Voice interview overlay with animated orb, transcript feed, mic controls |
-| `CVImportUpload.tsx` | cv-import | Drag-and-drop file upload (PDF, DOCX, JSON) with progress indicator + direct navigation to template selector on success |
-| `ApplyToJobScreen.tsx` | apply-to-job | 3-step job application flow: Job Details → Match Analysis → Review Changes |
-| `Dashboard.tsx` | dashboard | Hierarchical CV management — base CVs with nested job applications, move/re-parent, tune/apply actions |
-| `VersionSwitcher.tsx` | dashboard | In-editor save / switch between saved versions, save modal with base CV picker |
-| `EditorScreen.tsx` | editor | CV editor + tune screen — left panel (job input, match bar, tailor cards) + right panel (PDF preview) |
-| `TailorPanel.tsx` | editor | AI suggestion cards with accept/skip/undo, inline diff, inline edit, Accept All |
-| `MatchSummaryBar.tsx` | editor | Compact match score bar with progress indicator, expandable gap/suggestion details |
-| `MatchAnalysis.tsx` | editor | Gap tags + suggestion list (rendered inside MatchSummaryBar details) |
-| `JobInput.tsx` | editor | Company, role, job description input with Analyze button |
-| `PdfPreview.tsx` | editor | PDF rendering via `<iframe>` with base64 source |
-| `ChatPanel.tsx` | editor | AI conversation + inline edit suggestions with undo |
-| `LatexEditor.tsx` | editor | CodeMirror-based LaTeX editor component |
-| `FeatureErrorBoundary.tsx` | components | Per-feature error boundary with retry button |
-| `ErrorBoundary.tsx` | shared | Global graceful error handling |
-
-### Custom Hooks
-
-| Hook | Owns |
-|------|------|
-| `useFormBuilder` | All CVFormData state, section/entry CRUD, reorder helpers, isDirty tracking, export/import |
-| `useTemplates` | Selected template, content fetch, `setTemplateId` (set without fetch) |
-| `useCompiler` | Compile request, PDF state, markChanged |
-| `useChat` | AI messages, analyzeJob, matchAnalysis, applyEdit, undo |
-| `useTailor` | Tailor suggestions, applied/skipped/pending state, accept/skip/undo, Accept All, inline edit, estimated score |
-| `useImport` | CV import file upload (PDF/DOCX/JSON), AI extraction via Bedrock, progress tracking, confidence scoring, validation warnings, import state reset |
-| `useVoiceInterview` | Voice interview WebSocket connection, transcript collection, mic controls, session management |
-
-### State Management (AppContext.tsx)
-
-AppContext replaced the old App.tsx god component pattern. All shared state and handlers are now centralized in `contexts/AppContext.tsx`.
-
-| State | Type | Purpose |
-|-------|------|---------|
-| `selectedTemplateForBuild` | `string \| null` | Template chosen in Build/Import path |
-| `activeVersion` | `CVVersion \| null` | Currently loaded saved version |
-| `savedVersions` | `CVVersionMeta[]` | Metadata for version switcher and dashboard |
-| `formData` | `CVFormData \| null` | Form data from Build/Import path (passed to form-builder and editor) |
-| `isSavingVersion` | `boolean` | Loading state for save |
-
-Navigation handled by React Router v6 with browser history (back/forward support).
-
----
-
-## Backend Architecture
-
-### API Routes
-
-| Route | Method | Purpose |
-|-------|--------|---------|
-| `/api/compile` | POST | Compile LaTeX to PDF (engine selected per templateId) |
-| `/api/generate-latex` | POST | Generate LaTeX from `CVFormData` via Jinja2 |
-| `/api/chat` | POST | Stream AI responses (SSE) |
-| `/api/chat/analyze` | POST | AI CV analysis |
-| `/api/chat/match-analysis` | POST | CV-job match score + gaps + suggestions |
-| `/api/tailor/suggest-changes` | POST | AI field-level tailoring suggestions (returns `TailorChange[]`) |
-| `/api/templates` | GET | List available templates |
-| `/api/templates/{id}/preview` | GET | Template preview image |
-| `/api/templates/{id}/content` | GET | Raw LaTeX template content |
-| `/api/templates/{id}/files/{filename}` | GET | Template support files (cls, fonts) |
-| `/api/user-data` | GET/POST/DELETE | User profile CRUD |
-| `/api/user-data/experience` | POST | Add experience entry to profile |
-| `/api/cv-versions` | GET/POST | List / create saved CV versions |
-| `/api/cv-versions/{id}` | GET/PATCH/DELETE | Load / update / delete a saved version |
-| `/api/cv-import` | POST | Upload PDF/DOCX/JSON for AI extraction |
-| `/api/ws/voice-interview` | WebSocket | Pipecat WebSocket pipeline (Nova Sonic S2S) |
-| `/api/voice/extract-cv` | POST | Extract CV data from voice session transcript |
-| `/api/voice/profile` | GET/POST | Get/save returning user's voice profile |
-| `/api/health` | GET | Health check |
-
-### Storage Layer
-
-All user data persistence (CV versions, profiles, voice profiles) is abstracted behind a `StorageBackend` Protocol, enabling multiple storage implementations without changing business logic.
-
-**Architecture:**
-
-```
-Routes (cv_versions, user_data, voice_interview)
-    ↓
-get_storage() dependency (storage_factory.py)
-    ↓
-StorageBackend Protocol (11 async methods)
-    ↓
-┌─────────────────┬──────────────────┐
-│  FileStorage    │  DynamoStorage   │
-│  (JSON files)   │  (single table)  │
-└─────────────────┴──────────────────┘
-```
-
-**StorageBackend Protocol** (`services/storage.py`):
-- 11-method async interface for all user data operations
-- Python Protocol (structural typing, no base class)
-- Methods: `list_versions`, `get_version`, `create_version`, `update_version`, `delete_version`, `update_children_of_deleted_parent`, `get_profile`, `save_profile`, `delete_profile`, `get_voice_profile`, `save_voice_profile`
-
-**FileStorage** (`services/file_storage.py`):
-- Wraps existing JSON file I/O — zero behavior change from previous implementation
-- `user_id="local"` maps to flat `user_data/` directory for backward compatibility
-- Other user IDs get namespaced subdirectories: `user_data/{user_id}/`
-- Versions: `user_data/{user_id}/versions/{uuid}.json`
-- Profile: `user_data/{user_id}/profile.json`
-- Voice profile: `user_data/{user_id}/voice_profile.json`
-
-**DynamoStorage** (`services/dynamo_storage.py`):
-- Single-table design with composite keys: `PK=USER#{user_id}`, `SK=VERSION#{version_id} | PROFILE | VOICE_PROFILE`
-- PAY_PER_REQUEST billing mode (no provisioned throughput)
-- No GSIs needed (all queries by user_id)
-- Table name from `DYNAMODB_TABLE_NAME` env var (default: `cv-maker`)
-- Endpoint URL configurable via `DYNAMODB_ENDPOINT_URL` (for DynamoDB Local)
-
-**Storage Factory** (`services/storage_factory.py`):
-- `get_storage()` FastAPI dependency reads `STORAGE_BACKEND` env var (`file` | `dynamodb`)
-- Singleton instance via `@lru_cache`
-- Defaults to FileStorage for local development
-
-**User ID Dependency** (`backend/dependencies.py`):
-- `get_current_user()` reads `X-User-Id` header
-- Defaults to `"local"` for single-user local tool
-- Required for all routes that access user data
-- CORS allows `X-User-Id` header
-
-**Key Design Decisions:**
-- Storage abstraction uses Protocol (no runtime base class overhead)
-- `user_id="local"` preserves backward compatibility with existing file structure
-- DynamoDB single-table design keeps queries simple (no cross-table joins)
-- WebSocket handler uses storage singleton directly (FastAPI `Depends` doesn't work in WS handlers)
-
-### Services & Routes
-
-| File | Purpose |
-|------|---------|
-| `routes/compile.py` | LaTeX → PDF compilation (pdflatex / xelatex) |
-| `routes/generate_latex.py` | CVFormData → LaTeX via Jinja2, `latex_escape` filter (all special chars), `latex_url_escape` filter (URLs: `%` and `#` only), `_build_personal_items` |
-| `routes/cv_versions.py` | Version CRUD + all shared Pydantic models (PersonalInfo, WorkEntry, CVFormData, …); uses StorageBackend |
-| `routes/cv_import.py` | CV import upload endpoint (PDF/DOCX/JSON) |
-| `routes/voice_interview.py` | Voice interview WebSocket endpoint + transcript extraction + profile management; uses StorageBackend |
-| `routes/chat.py` | AI chat streaming + match analysis |
-| `routes/tailor.py` | `POST /tailor/suggest-changes` — AI field-level suggestions |
-| `routes/templates.py` | Template listing and file serving |
-| `routes/user_data.py` | User profile CRUD; uses StorageBackend |
-| `services/storage.py` | StorageBackend Protocol (11-method async interface) |
-| `services/file_storage.py` | FileStorage implementation (JSON files) |
-| `services/dynamo_storage.py` | DynamoStorage implementation (DynamoDB single-table) |
-| `services/storage_factory.py` | `get_storage()` dependency, reads `STORAGE_BACKEND` env var |
-| `services/bedrock.py` | AWS Bedrock client wrapper |
-| `services/cv_extractor.py` | AI-powered CV extraction via Bedrock (PDF multimodal, DOCX text, JSON direct) |
-| `services/json_utils.py` | JSON parsing utilities (used by chat, tailor, voice routes) |
-| `services/latex_compiler.py` | pdflatex / xelatex subprocess wrapper |
-| `dependencies.py` | `get_current_user()` dependency, reads `X-User-Id` header |
-| `prompts/cv_agent.py` | AI prompt templates (CV_AGENT_SYSTEM_PROMPT, MATCH_ANALYSIS_PROMPT, TAILOR_SUGGEST_PROMPT) |
-| `prompts/voice_interview.py` | Voice interview system prompt and extraction prompt |
-
-### Voice Interview Architecture
-
-The voice interview feature provides an alternative to manual form filling through natural conversation.
-
-**Pipeline (Pipecat + Amazon Nova Sonic):**
-
-```
-User audio → WebSocket transport → user_aggregator
-                                  ↓
-                           Nova Sonic LLM (S2S)
-                                  ↓
-           TranscriptCollector ← assistant audio → transport output
-                                  ↓
-                           assistant_aggregator
-```
-
-**Key Components:**
-- **WebSocket transport**: `FastAPIWebsocketTransport` with `ProtobufFrameSerializer` for binary audio frames
-- **Nova Sonic**: Amazon's speech-to-speech LLM service (16kHz input, 24kHz output sample rates)
-- **TranscriptCollector**: Custom frame processor that collects `TranscriptionFrame` objects to build session transcript
-- **Session storage**: In-memory dict `{session_id: [utterances]}` — cleared on restart (needs TTL cleanup for production)
-- **Extraction endpoint**: `POST /api/voice/extract-cv` takes full transcript and uses Bedrock to extract structured `CVFormData`
-- **Voice profile**: Returning user detection stores name/email in `user_data/voice_profile.json` for personalized greeting
-
-**Dependencies:**
-- Optional: `pip install 'pipecat-ai[aws]'` — app starts without it (feature disabled)
-- Alpha quality: no error recovery, no session persistence, no rate limiting
-
-### LaTeX Templates
-
-Templates live in `backend/latex_templates/` and use Jinja2 with custom delimiters
-(`(( ))` for variables, `(% %)` for blocks) to avoid clashing with LaTeX `{}` syntax.
-
-| Template file | Engine | Class | Notes |
-|--------------|--------|-------|-------|
-| `med-length-proff-cv.tex.j2` | pdflatex | `resume` (`rSection` / `rSubsection`) | Supports dynamic `section_order` |
-| `mcdowell-cv.tex.j2` | xelatex | `mcdowellcv` (`cvsection` / `cvsubsection`) | Supports dynamic `section_order` |
-| `deedy-resume.tex.j2` | xelatex | `deedy-resume` (two-column) | Fixed layout, does NOT use `section_order` |
-
-All templates receive the following context variables from `generate_latex.py`:
-
-| Variable | Source |
-|----------|--------|
-| `personal` | `form_data.personalInfo` (Pydantic model) |
-| `personal_items` | Pre-built ordered list from `_build_personal_items()`, respects `personalOrder` |
-| `work` | `form_data.workExperience` |
-| `education` | `form_data.education` |
-| `skills` | `form_data.skills` |
-| `projects` | `form_data.projects` |
-| `awards` | `form_data.awards` |
-| `additional_sections` | `form_data.additionalSections` |
-| `section_order` | `form_data.sectionOrder` (default: work, education, skills, projects, awards) |
-
-**Jinja2 Filters:**
-- `latex_escape` — Escapes all LaTeX special characters: `& % $ # _ { } ~ ^ \`
-- `latex_url_escape` — Escapes only `%` and `#` (for use in `\href{}` URLs; other chars like `&` and `_` are valid in URLs)
-
----
-
-## Data Models
-
-### `CVFormData` (canonical form — `types/index.ts` + `cv_versions.py`)
-
-```typescript
-PersonalInfo {
-  fullName, email, phone, location
-  links: Array<{ label: string; url: string }>  // label auto-derived from URL
-  summary?: string                               // intro paragraph
-  personalOrder?: string[]                       // header line field order
-}
-
-WorkEntry      { company, title, startDate, endDate, location, bullets[] }
-EducationEntry { school, degree, startDate, endDate, location, gpa?, details[] }
-SkillCategory  { category, skills[] }
-Project        { name, year, description, technologies?, bullets?: string[] }
-Award          { year, title, description? }
-AdditionalEntry { title, subtitle?, startDate?, endDate?, location?, description?, bullets: string[] }
-AdditionalSection { title, entries: AdditionalEntry[] }
-
-CVFormData {
-  templateId: string
-  sectionOrder?: string[]    // section display order
-  personalInfo: PersonalInfo
-  workExperience: WorkEntry[]
-  education: EducationEntry[]
-  skills: SkillCategory[]
-  projects?: Project[]
-  awards?: Award[]
-  additionalSections?: AdditionalSection[]
-}
-```
-
-### `CVVersion` (storage — `user_data/versions/{uuid}.json`)
-
-```typescript
-CVVersion {
-  id, name, templateId, texContent
-  formData?: CVFormData   // populated on Build path; null on Tune path
-  jobDescription?, companyName?, matchScore?
-  role?: string           // job role/title (e.g., "Senior Product Designer")
-  parentVersionId?: string | null  // ID of base CV this application derives from
-  createdAt: string       // ISO-8601
-}
-CVVersionMeta = Omit<CVVersion, 'texContent' | 'formData'>
-```
-
-**Version Types:**
-- **Base CV**: `parentVersionId = null`, no job details — template to tailor for jobs (e.g., "Creative CV", "Consulting CV")
-- **Job Application**: `parentVersionId = <base-cv-id>`, has job details — tailored version for specific role/company
 
 ---
 
 ## Data Flow
 
-### Build Path (form → PDF)
+### Editing flow (primary path)
+
+1. User selects a template at `/build` → `selectedTemplateForBuild` is written to `CVContext`.
+2. `DirectEditPage` mounts at `/build/form`. If `formData` is null (direct URL navigation or page refresh) it bootstraps by loading the most recent saved version via `api.getVersion`, or falls back to an empty `CVFormData` with placeholder values.
+3. Every text field in `MedLengthTemplate` is an `EditableField`. The component uses the "uncontrolled while focused, controlled while blurred" pattern: the browser owns the DOM while the element is focused; on blur, `onFieldChange(path, value)` fires and `useDirectEditor.updateField` writes the change into `CVFormData` via `setAtPath` (dot-bracket path notation, e.g., `workExperience[0].bullets[2]`).
+4. `useAutoSave` watches `formData` for changes. After 2.5 seconds of inactivity it calls `api.saveVersion` and reports `idle | saving | saved | error` status. `SaveIndicator` in the `NavBar` renders this status.
+5. User clicks "Download PDF" in the `NavBar`. `DirectEditPage` calls `api.generateLatex(formData)` → `api.compileLatex(texContent, templateId)` → triggers a browser download of the base64-encoded PDF.
+
+### Tune-for-job flow
+
+1. User clicks "Tune for Job" in the `NavBar` (only visible on `/build/form`). `DirectEditPage` navigates to `/apply` with `state.baseVersionId`.
+2. `/apply` redirects to `/build/form` with `state.tune: true`.
+3. `ApplyToJobScreen` mounts. Steps 1–2 collect job details and run match analysis (`api.matchAnalysis`). Step 3 renders a read-only `MedLengthTemplate` preview alongside a `ChangePanel` with AI-generated tailor suggestions (`api.tailorSuggestChanges`).
+4. `useTailor` manages accepting/skipping/undoing individual `TailorChange` objects. Each accepted change calls `setAtPath` on a local copy of `formData` and re-generates LaTeX.
+5. On save, a child `CVVersion` is created with `parentVersionId` pointing to the base version.
+
+### Backend request flow
 
 ```
-User fills form → CVFormBuilder
-  → POST /api/generate-latex → Jinja2 renders .tex.j2 → LaTeX string
-  → POST /api/compile         → pdflatex/xelatex      → PDF base64
-  → inline preview in CVFormBuilder
-  → "Open in Editor" → editor screen (auto-compile, PDF tab shown)
+Frontend api.ts (axios/fetch)
+    → FastAPI /api/* router
+         → Route handler (Pydantic validation)
+              → Service layer
+                   ├─ BedrockClient  → AWS Bedrock (Claude)
+                   ├─ LaTeXCompiler  → pdflatex / xelatex subprocess
+                   ├─ StorageBackend → FileStorage (local JSON files)
+                   │                    or DynamoStorage (DynamoDB)
+                   └─ CVExtractor    → PDF/DOCX/JSON import
 ```
-
-### Tune Path (editor tune mode)
-
-```
-Dashboard → "Tune for a Job" → /editor (mode:'tune', base CV loaded, auto-compiles PDF)
-User fills in company, role, job description → clicks "Analyze Position"
-  → POST /api/chat/match-analysis → match score + gaps + suggestions (MatchSummaryBar)
-  → POST /api/tailor/suggest-changes (background) → field-level change cards (TailorPanel)
-User reviews cards: Accept / Skip / Edit each suggestion
-  → Accept: formData updated → LaTeX regenerated → PDF recompiled → preview updates
-  → Skip: card collapses, move to next
-  → Undo: reverts accepted/skipped change
-```
-
-### Apply to Job Path (3-step wizard)
-
-```
-Dashboard → "Apply to Job" → /apply (base CV loaded)
-  Step 1: Enter company, role, job description
-  Step 2: POST /api/chat/match-analysis → score + gaps (can "Open in Tune Screen" → /editor)
-  Step 3: POST /api/tailor/suggest-changes → field-level suggestions with checkboxes
-  → Apply selected → save as job application version → /dashboard
-```
-
-### Version Save / Load (Job-Centric Model)
-
-```
-Save: POST /api/cv-versions → { name, templateId, texContent, formData?, parentVersionId?, role?, companyName?, jobDescription?, … }
-      → user_data/versions/{uuid}.json
-      → Auto-names if company/role provided: "{company} {role}" or "Application {date}"
-List: GET  /api/cv-versions → sorted newest-first, grouped by parentVersionId
-      → Base CVs (parentVersionId = null) with nested job applications
-Load: GET  /api/cv-versions/{id} → full version → populate editor / form
-      → If job application, pre-fill job panel with company/role/description
-Move: PATCH /api/cv-versions/{id} → { parentVersionId } → re-parent job application
-```
-
----
-
-## File Structure
-
-### Frontend (`/frontend/src`)
-
-```
-src/
-├── features/
-│   ├── landing/                # LandingScreen.tsx, .module.css, index.ts
-│   ├── build-choice/           # BuildChoiceScreen.tsx, .module.css, index.ts
-│   ├── template-selection/     # TemplateSelector.tsx, .css, index.ts
-│   ├── form-builder/           # CVFormBuilder.tsx, ImportBanner.tsx, .module.css, index.ts
-│   ├── cv-import/              # CVImportUpload.tsx, .module.css, index.ts
-│   ├── apply-to-job/           # ApplyToJobScreen.tsx, .module.css, index.ts
-│   ├── voice-widget/           # VoiceWidget.tsx, .module.css, index.ts
-│   ├── editor/                 # EditorScreen, TailorPanel, MatchSummaryBar, MatchAnalysis, JobInput, PdfPreview, ChatPanel, LatexEditor
-│   ├── dashboard/              # Dashboard.tsx, VersionSwitcher.tsx, .module.css, index.ts
-│   └── shared/                 # ErrorBoundary.tsx, index.ts
-├── contexts/
-│   └── AppContext.tsx          # Global shared state provider
-├── hooks/
-│   ├── useFormBuilder.ts       # CVFormData state + CRUD
-│   ├── useTemplates.ts         # Template selection + content
-│   ├── useCompiler.ts          # LaTeX compilation
-│   ├── useChat.ts              # AI chat + match analysis
-│   ├── useTailor.ts            # AI tailoring suggestions + accept/skip/undo
-│   ├── useImport.ts            # CV import file upload + extraction
-│   └── useVoiceInterview.ts    # Voice interview WebSocket + transcript
-├── services/
-│   └── api.ts                  # All API calls (16 endpoints)
-├── styles/
-│   └── variables.css           # CSS design tokens
-├── types/
-│   └── index.ts                # All TypeScript types
-├── App.tsx                     # React Router route definitions (~25 lines)
-├── App.module.css
-└── main.tsx
-```
-
-### Backend (`/backend`)
-
-```
-backend/
-├── routes/
-│   ├── compile.py              # POST /compile
-│   ├── generate_latex.py       # POST /generate-latex
-│   ├── cv_versions.py          # CRUD /cv-versions + shared Pydantic models
-│   ├── cv_import.py            # POST /cv-import (upload + extraction)
-│   ├── voice_interview.py      # WS /ws/voice-interview, POST /voice/extract-cv, GET/POST /voice/profile
-│   ├── chat.py                 # POST /chat, /chat/analyze, /chat/match-analysis
-│   ├── tailor.py               # POST /tailor/suggest-changes
-│   ├── templates.py            # GET /templates, /{id}/preview, /{id}/content, /{id}/files/{filename}
-│   └── user_data.py            # GET/POST/DELETE /user-data, POST /user-data/experience
-├── latex_templates/
-│   ├── med-length-proff-cv.tex.j2
-│   ├── mcdowell-cv.tex.j2
-│   └── deedy-resume.tex.j2
-├── services/
-│   ├── storage.py              # StorageBackend Protocol (11-method interface)
-│   ├── file_storage.py         # FileStorage implementation (JSON files)
-│   ├── dynamo_storage.py       # DynamoStorage implementation (DynamoDB)
-│   ├── storage_factory.py      # get_storage() dependency
-│   ├── bedrock.py              # AWS Bedrock client wrapper
-│   ├── cv_extractor.py         # AI extraction (PDF/DOCX/JSON)
-│   ├── json_utils.py           # JSON parsing utilities
-│   └── latex_compiler.py       # pdflatex / xelatex subprocess
-├── prompts/
-│   ├── cv_agent.py
-│   └── voice_interview.py      # Voice interview system prompt + extraction prompt
-├── config/
-│   └── templates.py            # TemplateConfig entries (3 templates)
-├── scripts/
-│   ├── create_table.py         # DynamoDB table creation script
-│   └── migrate_to_dynamodb.py  # Migration script (FileStorage → DynamoDB)
-├── tests/
-│   ├── __init__.py
-│   ├── test_template_rendering.py    # Jinja2 rendering tests (21 tests, fast)
-│   └── test_template_compilation.py  # pdflatex/xelatex compilation tests (18 tests, ~28s)
-├── user_data/
-│   ├── profile.json            # User profile (local user)
-│   ├── voice_profile.json      # Voice interview returning user data (local user)
-│   └── versions/               # Saved CV versions ({uuid}.json) (local user)
-├── dependencies.py             # get_current_user() dependency
-├── pytest.ini                  # pytest config (slow marker)
-└── main.py                     # FastAPI app + router registration
-```
-
----
-
-## Design System
-
-CV Maker uses a Zed-inspired light theme — soft, professional, minimal.
-
-### Color Tokens (`variables.css`)
-
-| Variable | Value | Usage |
-|----------|-------|-------|
-| `--bg-primary` | `#F8FAFC` | App background |
-| `--bg-secondary` | `#FFFFFF` | Cards, panels |
-| `--bg-tertiary` | `#F1F5F9` | Section backgrounds, chips |
-| `--bg-hover` | `#E2E8F0` | Hover state backgrounds |
-| `--accent` | `#3B82F6` | Primary actions, focus rings, active nav |
-| `--accent-hover` | `#2563EB` | Hover on accent elements |
-| `--accent-light` | `#DBEAFE` | Accent background tints |
-| `--text-primary` | `#1E293B` | Main text |
-| `--text-secondary` | `#64748B` | Labels, secondary |
-| `--text-muted` | `#94A3B8` | Placeholders, hints |
-| `--border-color` | `#E2E8F0` | Default borders |
-| `--border-strong` | `#CBD5E1` | Hover / emphasis borders |
-| `--warning` | `#F59E0B` | Dirty-state indicator on Regenerate button |
-| `--error` | `#EF4444` | Error text and borders |
-| `--error-light` | `#FEF2F2` | Error background tints |
-
-### Typography
-
-- **Primary**: IBM Plex Sans (400, 500, 600)
-- **Monospace**: IBM Plex Mono (LaTeX editor, error output)
-
-### Key Patterns
-
-- **CSS Modules** for all new components — scoped class names, no global leakage
-- **Design tokens** (`var(--xxx)`) everywhere — never hardcoded hex in component CSS
-- **Cards**: `bg-secondary`, 1px `border-color` border, `--radius` (8px), `--shadow-sm`
-- **Inputs**: `bg-secondary`, blue focus ring via `border-color: var(--accent)`
-- **Labels**: 0.75rem, 600 weight, uppercase, `0.04em` letter-spacing
-
----
-
-## Security Considerations
-
-- CORS restricted to `localhost` origins; exact methods (`GET POST PUT DELETE`) specified; `X-User-Id` header allowed
-- LaTeX input sanitised before compilation: `\write18`, `\openin`, `\catcode` and shell-escape patterns blocked
-- AWS credentials via environment / IAM (never in source)
-- No authentication — relies on `X-User-Id` header (trusted client); multi-user production requires auth + signed user ID
-- User data isolation: all storage operations scoped by `user_id`
-- DynamoDB access via IAM roles (no hardcoded credentials)
-- Local development defaults to `user_id="local"` for backward compatibility
-
----
-
-## Testing
-
-The backend includes comprehensive test coverage for LaTeX template rendering and compilation.
-
-### Test Suites
-
-| Test File | Purpose | Count | Speed |
-|-----------|---------|-------|-------|
-| `test_template_rendering.py` | Jinja2 rendering tests (no TeX required) | 21 tests | Fast (~2s) |
-| `test_template_compilation.py` | Full pdflatex/xelatex compilation | 18 tests | Slow (~28s) |
-
-### Test Coverage
-
-**Rendering Tests** (`test_template_rendering.py`):
-- All 3 templates (med-length-proff-cv, deedy-resume, mcdowell-cv)
-- Minimal data (name + 1 work entry)
-- Maximal data (all sections filled)
-- Special LaTeX character escaping (`& % $ # _ { } ~ ^ \`)
-- Empty optional sections (no projects/awards/summary)
-- Work entries with empty bullet arrays
-- CV with only name (no contact info)
-- Section ordering (`sectionOrder` field respected)
-- Direct filter testing (`latex_escape`, `latex_url_escape`)
-
-**Compilation Tests** (`test_template_compilation.py`):
-- Minimal, maximal, special chars, and empty sections for all 3 templates
-- Unicode characters (accented names, international symbols)
-- PDF size validation (10KB–500KB range)
-- Marked `@pytest.mark.slow` (2–5 seconds per test)
-- Auto-skip if pdflatex/xelatex not installed
-
-### Running Tests
-
-```bash
-cd backend
-
-# Run all tests
-python3 -m pytest tests/ -v
-
-# Run only fast tests (skip compilation)
-pytest -m "not slow"
-
-# Run specific test file
-pytest tests/test_template_rendering.py -v
-
-# Run with coverage
-pytest --cov=routes --cov=services tests/
-```
-
-### Configuration
-
-`pytest.ini` defines the `slow` marker for compilation tests. Use `-m "not slow"` to skip slow tests during development.
 
 ---
 
 ## Key Abstractions
 
-The most significant interfaces, patterns, and design abstractions used across the system, with their file locations and roles.
-
-### Data Model Interfaces
-
 | Abstraction | Location | Description |
-|-------------|----------|-------------|
-| `CVFormData` | `frontend/src/types/index.ts`, `backend/routes/cv_versions.py` | Canonical CV content structure shared between frontend and backend. Contains all section data (personal info, work, education, skills, projects, awards, additional sections) plus template and ordering metadata. |
-| `CVVersion` | `frontend/src/types/index.ts`, `backend/routes/cv_versions.py` | A saved snapshot of a CV including LaTeX source, form data, and optional job context. Supports hierarchical parent-child relationships for base CVs and job applications. |
-| `CVVersionMeta` | `frontend/src/types/index.ts` | Lightweight version metadata (`Omit<CVVersion, 'texContent' | 'formData'>`) used in lists and dashboards to avoid loading full version content. |
-| `TailorChange` | `frontend/src/types/index.ts` | A single AI-suggested field-level change with a `fieldPath` (dot-bracket path like `workExperience[0].bullets[2]`), rationale, and one or more `TailorAlternative` values. |
-| `MatchAnalysis` | `frontend/src/types/index.ts` | Structured result of CV-to-job comparison: numeric score, gap list, and improvement suggestions. |
+|---|---|---|
+| `CVFormData` | `frontend/src/types/index.ts:126` | Canonical data model for all CV content. Single source of truth between web editor and LaTeX generation. |
+| `CVVersion` | `frontend/src/types/index.ts:160` | Saved snapshot: id, name, templateId, texContent, formData, job metadata, parentVersionId. |
+| `EditableField` | `frontend/src/features/direct-edit/components/EditableField.tsx` | Core `contentEditable` component. One instance per CVFormData text field. Uncontrolled while focused, controlled on blur. |
+| `MedLengthTemplate` | `frontend/src/features/direct-edit/components/MedLengthTemplate.tsx` | Web rendering of the `med-length-proff-cv` LaTeX template. Accepts the full `CVFormData` + callback props from `useDirectEditor`. |
+| `useDirectEditor` | `frontend/src/features/direct-edit/hooks/useDirectEditor.ts` | Bridges `EditableField` callbacks to `CVFormData` mutations. Exposes `updateField`, `addBullet`, `removeBullet`, `addEntry`, `removeEntry`, `reorderSections`, `reorderEntries`, `toggleSection`, `removeSection`. |
+| `useAutoSave` | `frontend/src/features/direct-edit/hooks/useAutoSave.ts` | Debounced (2.5 s) save hook. Tracks `idle | saving | saved | error` status. Skips saves when `formData` is unchanged or uses a sentinel `templateId`. |
+| `usePageBreak` | `frontend/src/features/direct-edit/hooks/usePageBreak.ts` | `ResizeObserver`-based detector for CV content exceeding one US Letter page. Returns pixel Y offset of page 2 start (or null). |
+| `useSectionDrag` / `useEntryDrag` | `frontend/src/features/direct-edit/hooks/` | HTML Drag-and-Drop hooks for reordering sections and entries. Use dynamic `draggable` toggling on `mousedown` to remain compatible with `contentEditable`. Ghost image suppressed via a 1x1 canvas. |
+| `useScrollSync` | `frontend/src/features/direct-edit/hooks/useScrollSync.ts` | `IntersectionObserver`-based scroll sync from CV sections to `ChangePanel` cards (one-way; anti-jitter flag prevents feedback loops). |
+| `StorageBackend` | `backend/services/storage.py` | Python Protocol (Strategy) for persistence. `FileStorage` writes `user_data/versions/*.json`; `DynamoStorage` uses DynamoDB single-table design (`PK=USER#{id}`, `SK=VERSION#{id}`). Selected by `STORAGE_BACKEND` env var via `storage_factory.py`. |
+| `BedrockClient` | `backend/services/bedrock.py` | Singleton AWS Bedrock client. Model selection per task: `MODEL_HAIKU` for extraction (speed), `MODEL_SONNET` for match analysis and chat (quality), `MODEL_TAILOR` (defaults to Haiku, overridable via `TAILOR_MODEL_ID` env var). |
+| `TEMPLATES` registry | `backend/config/templates.py` | Dict of `TemplateConfig` dataclasses mapping template IDs to folder paths, LaTeX engine (`pdflatex` vs `xelatex`), and extra files. Three templates: `med-length-proff-cv`, `deedy-resume`, `mcdowell-cv`. |
+| `setAtPath` / `getAtPath` | `frontend/src/utils/formDataPatch.ts` | Dot-bracket path utilities for reading and writing nested `CVFormData` fields (e.g., `workExperience[0].bullets[2]`). ID-aware: updates `BulletItem.text` without generating a new ID. |
 
-### Backend Patterns
+---
 
-| Abstraction | Location | Pattern | Description |
-|-------------|----------|---------|-------------|
-| `StorageBackend` | `backend/services/storage.py` | Strategy (Protocol) | 11-method async interface for all user data persistence. Two implementations: `FileStorage` (JSON files) and `DynamoStorage` (DynamoDB single-table). Resolved at startup by `storage_factory.py` based on `STORAGE_BACKEND` env var. |
-| `BedrockClient` | `backend/services/bedrock.py` | Singleton | Unified AWS Bedrock access with per-task model selection. Module-level `bedrock_client` instance. Supports streaming and non-streaming chat, plus document-based chat for PDF import. Uses `MODEL_HAIKU` for fast extraction tasks and `MODEL_SONNET` for quality analysis/rewriting. |
-| `TemplateConfig` | `backend/config/templates.py` | Registry | Dataclass holding template metadata (id, name, folder, engine, files). The `TEMPLATES` dict maps template IDs to their configs, serving as the single source of truth for template resolution. |
-| `llm_cache` | `backend/services/llm_cache.py` | Cache (TTL) | In-memory TTL cache (1-hour, 256 entries max) for LLM responses. Cache keys are SHA-256 hashes of concatenated inputs. Used by match-analysis and tailor endpoints to avoid redundant AI calls. |
-| `get_current_user()` | `backend/dependencies.py` | FastAPI Dependency | Extracts user identity from `X-User-Id` header, defaulting to `"local"` for single-user mode. All storage-accessing routes depend on this for user scoping. |
-| `get_storage()` | `backend/services/storage_factory.py` | FastAPI Dependency + Singleton | Returns the singleton `StorageBackend` instance, created once via `@lru_cache` and reused across all requests. |
+## Context Architecture
 
-### Frontend Patterns
+Four React contexts are composed in `AppProvider` (`frontend/src/contexts/AppContext.tsx`):
 
-| Abstraction | Location | Pattern | Description |
-|-------------|----------|---------|-------------|
-| Domain Contexts | `frontend/src/contexts/JobContext.tsx`, `CVContext.tsx`, `ToolsContext.tsx` | Context + Provider | State split into three domain contexts (job input, CV/version state, shared tools) composed via `AppProvider`. A backwards-compatible `useAppContext()` shim merges all three into a single flat object. |
-| `useFormBuilder` | `frontend/src/hooks/useFormBuilder.ts` | Custom Hook | The largest hook (~700 lines), encapsulating all `CVFormData` state management: section/entry CRUD, array reordering, dirty tracking, and import/export. Returns a memoized object with `useCallback`-wrapped updaters. |
-| `api` object | `frontend/src/services/api.ts` | Facade | Single API client object exposing all backend calls. Methods catch errors internally and return typed failure values (null, empty arrays, error objects) rather than throwing. SSE streaming handled via native `fetch` with `processSSEStream` helper. |
-| `formDataPatch` utilities | `frontend/src/utils/formDataPatch.ts` | Path Resolution | Functions (`parsePath`, `setAtPath`, `getAtPath`, `applyTailorChanges`) that resolve dot-bracket field paths (e.g., `workExperience[0].bullets[2]`) to navigate and mutate the `CVFormData` tree. Used by the tailor and apply-to-job features to apply AI-suggested changes. |
-| Entry factories | `frontend/src/utils/entryFactories.ts` | Factory | Functions like `emptyWorkEntry()`, `emptyPersonalInfo()`, `emptyProject()` that create default-valued instances of each CV section entry type. Used by `useFormBuilder` when adding new entries. |
-| `FeatureErrorBoundary` | `frontend/src/components/FeatureErrorBoundary.tsx` | Error Boundary | React class component wrapping per-route components. Catches render errors and displays retry/home UI, preventing a single feature crash from taking down the entire application. |
+```
+AppProvider
+  └─ JobProvider        (companyName, roleName, jobDescription)
+       └─ CVProvider    (userProfile, formData, activeVersion, savedVersions,
+       │                 isSavingVersion, selectedTemplateForBuild)
+            └─ ToolsProvider  (templates, compiler, chat, cvImport,
+                               handleVersionLoad, handleSaveVersion, handleSwitchVersion)
+```
+
+`EditorActionsProvider` is scoped to `WorkingLayout` (not `AppProvider`) so it only exists when a working page is mounted:
+
+```
+WorkingLayout
+  └─ EditorActionsProvider  (actions: { onDownload, onTuneForJob, saveStatus, isDownloading, isTuning })
+       └─ NavBar  (reads actions via useEditorActions())
+       └─ Outlet
+            └─ DirectEditPage  (writes actions via useSetEditorActions())
+```
+
+`AppContext.tsx` also exports `useAppContext()`, a backwards-compatible shim that merges `JobContext`, `CVContext`, and `ToolsContext` into one flat object. New code should use the domain-specific hooks directly: `useJobContext()`, `useCVContext()`, `useToolsContext()`.
+
+---
+
+## Direct-Edit Feature Directory
+
+```
+frontend/src/features/direct-edit/
+  DirectEditPage.tsx          Top-level editor page; bootstraps formData, owns download + save lifecycle
+  hooks/
+    useDirectEditor.ts        CVFormData mutation surface for all EditableField callbacks
+    useAutoSave.ts            Debounced save with status tracking
+    usePageBreak.ts           Page overflow detection via ResizeObserver
+    useSectionDrag.ts         Section-level HTML drag-and-drop reordering
+    useEntryDrag.ts           Entry-level HTML drag-and-drop reordering
+    useScrollSync.ts          IntersectionObserver-based CV-to-ChangePanel scroll sync
+  components/
+    MedLengthTemplate.tsx     Web CV renderer (med-length-proff-cv visual fidelity)
+    EditableField.tsx         contentEditable text field mapped to a CVFormData path
+    EditableBulletList.tsx    List of EditableFields for bullet arrays
+    SectionWrapper.tsx        Hover-reveal section controls (add, toggle, drag grip)
+    EntryWrapper.tsx          Hover-reveal entry controls (delete + confirm)
+    DropLine.tsx              Visual drop target indicator during drag
+    FloatingFormatToolbar.tsx Selection-triggered formatting toolbar (bold, italic, link)
+    ChangePanel.tsx           AI tailor suggestion panel (also used in ApplyToJobScreen)
+    ChangeCard.tsx            Single tailor suggestion card with accept/skip/undo/alternatives
+    PageBreakIndicator.tsx    Visual dashed line at page 2 boundary
+    SaveIndicator.tsx         Save status badge (idle/saving/saved/error)
+    ImportToast.tsx           Post-import confirmation toast
+    GripIcon.tsx              SVG grip handle icon for drag interactions
+    ConfirmDialog.tsx         Confirmation modal for destructive actions
+    sections/
+      WorkSection.tsx         Work experience section
+      EducationSection.tsx    Education section
+      SkillsSection.tsx       Skills section
+      ProjectsSection.tsx     Projects section
+      AwardsSection.tsx       Awards section
+      AdditionalSection.tsx   Generic additional sections
+      EntryDragContainer.tsx  Drag wrapper for entry-level reordering
+      DropZoneTail.tsx        Drop zone at the end of an entry list
+      DateRange.tsx           Shared date range renderer
+      sectionTypes.ts         Shared section key constants and label map
+```
+
+---
+
+## Directory Structure
+
+```
+CV-Maker/
+  frontend/                   React + TypeScript + Vite
+    src/
+      App.tsx                 Route definitions only
+      main.tsx                App entry point (StrictMode + BrowserRouter + ErrorBoundary)
+      contexts/               React context providers (Job, CV, Tools, EditorActions, AppContext shim)
+      features/               Feature-scoped components
+        direct-edit/          Inline CV editor (primary feature)
+        apply-to-job/         3-step tune-for-job flow (job details -> match analysis -> review)
+        dashboard/            Saved version list, download, delete, rename
+        landing/              Home screen with build/tune entry panels
+        template-selection/   Template picker
+        voice-widget/         Voice interview widget
+        shared/               Global ErrorBoundary
+      hooks/                  Shared hooks: useTemplates, useCompiler, useChat, useImport, useTailor
+      components/             Shared components: NavBar, WorkingLayout, FeatureErrorBoundary
+      services/api.ts         Axios-based HTTP client; single point of contact to backend
+      types/index.ts          All TypeScript interfaces and types
+      utils/                  Pure utilities: formDataPatch, cvFilename, entryFactories, idHelpers, etc.
+      styles/variables.css    Global CSS custom properties (colors, spacing, shadows, fonts)
+  backend/                    Python + FastAPI
+    main.py                   App factory, CORS, security headers, router registration
+    routes/                   9 route modules (compile, chat, cv_versions, generate_latex,
+                              cv_import, tailor, templates, user_data, voice_interview)
+    services/                 Business logic (bedrock, latex_compiler, cv_extractor,
+                              storage, file_storage, dynamo_storage, storage_factory,
+                              json_utils, llm_cache)
+    config/templates.py       Template registry (TEMPLATES dict)
+    prompts/                  System prompts for all AI features
+    latex_templates/          Jinja2 .tex.j2 templates with custom delimiters (( )) / (% %)
+    dependencies.py           get_current_user (X-User-Id header, defaults to "local")
+  cv-templates/               Original LaTeX template source directories
+    med-length-proff-cv/
+    deedy-resume/
+    mcdowell-cv-master/
+```
+
+---
+
+## Backend Layers
+
+| Layer | Location | Responsibility |
+|---|---|---|
+| HTTP routes | `backend/routes/` | Request validation (Pydantic), response formatting, thin delegation to services |
+| Services | `backend/services/` | Business logic, external integrations, data persistence |
+| Storage | `backend/services/storage.py` (Protocol) | Persistence abstraction — FileStorage or DynamoStorage |
+| AI client | `backend/services/bedrock.py` | Singleton Bedrock client, streaming + non-streaming, model-per-task selection |
+| LaTeX pipeline | `backend/routes/generate_latex.py` + `backend/services/latex_compiler.py` | Form data -> Jinja2 -> .tex -> pdflatex/xelatex subprocess -> PDF |
+| Template registry | `backend/config/templates.py` | Maps template IDs to folder paths, engine, and extra files |
+| Prompts | `backend/prompts/` | System prompts for chat, match analysis, tailor, and voice interview |
+
+---
+
+## API Endpoint Map
+
+| Method | Path | Route File | Purpose |
+|---|---|---|---|
+| GET | `/api/health` | `backend/main.py` | Health check |
+| POST | `/api/compile` | `backend/routes/compile.py:27` | Compile LaTeX to PDF (base64) |
+| POST | `/api/compile/pdf` | `backend/routes/compile.py:50` | Compile LaTeX, return raw PDF |
+| GET | `/api/templates` | `backend/routes/templates.py:31` | List available templates |
+| GET | `/api/templates/{id}/preview` | `backend/routes/templates.py:47` | Template preview image |
+| GET | `/api/templates/{id}/content` | `backend/routes/templates.py:63` | Template LaTeX source |
+| GET | `/api/templates/{id}/files/{name}` | `backend/routes/templates.py:90` | Template support files |
+| POST | `/api/generate-latex` | `backend/routes/generate_latex.py:122` | Form data -> LaTeX source |
+| POST | `/api/chat` | `backend/routes/chat.py:57` | AI chat (streaming SSE) |
+| POST | `/api/chat/analyze` | `backend/routes/chat.py:93` | AI job analysis (streaming) |
+| POST | `/api/chat/match-analysis` | `backend/routes/chat.py:131` | Structured match analysis |
+| POST | `/api/tailor/suggest-changes` | `backend/routes/tailor.py:84` | AI tailor suggestions |
+| POST | `/api/cv-import` | `backend/routes/cv_import.py:40` | Import CV from PDF/DOCX/JSON |
+| GET | `/api/cv-versions` | `backend/routes/cv_versions.py:177` | List versions (hierarchical) |
+| POST | `/api/cv-versions` | `backend/routes/cv_versions.py:228` | Create version |
+| GET | `/api/cv-versions/{id}` | `backend/routes/cv_versions.py:276` | Get full version |
+| DELETE | `/api/cv-versions/{id}` | `backend/routes/cv_versions.py:290` | Delete version |
+| PATCH | `/api/cv-versions/{id}` | `backend/routes/cv_versions.py:311` | Update version (re-parent) |
+| GET | `/api/user-data` | `backend/routes/user_data.py:34` | Load user profile |
+| POST | `/api/user-data` | `backend/routes/user_data.py:48` | Save user profile |
+| POST | `/api/user-data/experience` | `backend/routes/user_data.py:63` | Add single experience |
+| DELETE | `/api/user-data` | `backend/routes/user_data.py:82` | Clear user data |
+| WS | `/api/ws/voice-interview` | `backend/routes/voice_interview.py:120` | Voice interview pipeline |
+| POST | `/api/voice/extract-cv` | `backend/routes/voice_interview.py:265` | Extract CV from transcript |
+| GET | `/api/voice/profile` | `backend/routes/voice_interview.py:336` | Get voice profile |
+| POST | `/api/voice/profile` | `backend/routes/voice_interview.py:345` | Save voice profile |
+
+---
+
+## Security and Cross-Cutting Concerns
+
+**Authentication:** `X-User-Id` header -> `get_current_user()` dependency (`backend/dependencies.py`). Defaults to `"local"` for single-user mode. A comment in the code marks the swap point for JWT/Cognito.
+
+**LaTeX sanitization:** `LaTeXCompiler._sanitize_content()` (`backend/services/latex_compiler.py:54`) strips dangerous commands (shell escape, file I/O, `\def`, `\let`, `\special`) before compilation. UUID validation on version IDs prevents path traversal.
+
+**Caching:** In-memory LLM response cache (`backend/services/llm_cache.py`) with 1-hour TTL, keyed by SHA-256 of concatenated inputs. Used by match analysis and tailor endpoints to avoid redundant Bedrock calls.
+
+**Security headers:** `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin` applied via middleware in `backend/main.py`.
+
+**Error handling:** API methods in `frontend/src/services/api.ts` catch all errors and return typed failure values (never throw). `FeatureErrorBoundary` wraps per-route components; a global `ErrorBoundary` wraps the entire app. Backend route handlers use try/except with `logger.exception()` and generic 500 responses to avoid leaking internals.
