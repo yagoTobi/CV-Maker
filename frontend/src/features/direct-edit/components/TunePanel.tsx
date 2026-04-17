@@ -6,8 +6,8 @@
  * Tier 2: Job Details (company, role, job description) + Analyze Match
  * Tier 3: Review Changes (ChangePanel + useTailor accept/reject) + Save Tailored CV
  *
- * Replaces the standalone ApplyToJobScreen 3-step flow with an inline panel
- * on the editor page. All tier bodies remain mounted (CSS expand/collapse)
+ * Inline panel on the editor page for job-targeted CV tuning.
+ * All tier bodies remain mounted (CSS expand/collapse)
  * to preserve form state across collapse/expand cycles (RESEARCH.md Pitfall 3).
  *
  * Covers: D-01 through D-07, D-11, D-12.
@@ -124,7 +124,7 @@ export function TunePanel({
     setSavingBase(false);
   }, [baseName, formData, setActiveVersion]);
 
-  // Handle Tier 2 analyze (port from ApplyToJobScreen.handleAnalyze)
+  // Handle Tier 2 analyze
   const handleAnalyze = useCallback(async () => {
     if (!jobDescription.trim()) return;
     setAnalyzing(true);
@@ -143,7 +143,7 @@ export function TunePanel({
     tailor.fetchSuggestions(formData, jobDescription, companyName, roleName);
   }, [formData, jobDescription, companyName, roleName, tailor]);
 
-  // Handle Tier 3 save (port from ApplyToJobScreen.handleSaveTailoredCV, per D-11)
+  // Handle Tier 3 save (per D-11)
   const handleSaveTailored = useCallback(async () => {
     const currentVersion = activeVersion;
     if (!currentVersion || !previewFormData) return;

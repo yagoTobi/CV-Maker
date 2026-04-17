@@ -5,7 +5,7 @@
  * states, and accept-all button. Pure renderer -- all state comes from props
  * (useTailor via parent).
  *
- * Reused in both DirectEditPage (Plan 03) and ApplyToJobScreen (Plan 04).
+ * Reused in DirectEditPage via TunePanel.
  *
  * Covers: D-01 (panel layout), D-02 (scroll sync via data-change-section).
  */
