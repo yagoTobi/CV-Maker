@@ -1,0 +1,86 @@
+/* CVSwitcherDropdown -- Absolute-positioned dropdown listing base CVs. */
+
+/* Main container -- absolute, anchored top-left of CVNameButton */
+.dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 100;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  min-width: 200px;
+  max-width: 280px;
+  animation: dropdownEnter 0.15s ease-out;
+}
+
+@keyframes dropdownEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* List -- reset, padded, max-height for scroll */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+/* Individual item button */
+.item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+  color: var(--text-primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 150ms ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item:hover {
+  background: var(--bg-tertiary);
+}
+
+/* Active item -- current CV being edited */
+.itemActive {
+  font-weight: 500;
+  border-left: 2px solid var(--accent);
+  padding-left: 10px;
+}
+
+/* Divider between list and "+ New CV" action */
+.divider {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 4px 0;
+}
+
+/* "+ New CV" action item */
+.newCvItem {
+  color: var(--text-secondary);
+}
+
+/* Empty state -- non-interactive placeholder */
+.emptyState {
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+  color: var(--text-muted);
+  cursor: default;
+}
