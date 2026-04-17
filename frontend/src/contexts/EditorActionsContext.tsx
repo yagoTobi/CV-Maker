@@ -16,6 +16,9 @@ interface EditorActions {
   saveStatus: SaveStatus;
   isDownloading: boolean;
   isTuning: boolean;
+  cvName: string;           // activeVersion?.name ?? 'Untitled CV' (set by DirectEditPage)
+  tuneCompanyName: string;  // TunePanel Tier 2 companyName (set by DirectEditPage)
+  tuneRole: string;         // TunePanel Tier 2 roleName (set by DirectEditPage)
 }
 
 interface EditorActionsContextValue {
