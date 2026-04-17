@@ -7,7 +7,7 @@
  * Ghost image suppressed via 1x1 transparent canvas (D-05).
  * All handlers call e.stopPropagation() to prevent bubbling.
  */
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useMemo } from 'react';
 
 export function useSectionDrag(onReorder: (from: number, to: number) => void) {
   const dragFromRef = useRef<number | null>(null);
@@ -88,7 +88,7 @@ export function useSectionDrag(onReorder: (from: number, to: number) => void) {
     cleanup();
   }, [onReorder, cleanup]);
 
-  return {
+  return useMemo(() => ({
     onGripMouseDown,
     onDragStart,
     onDragEnter,
@@ -98,5 +98,5 @@ export function useSectionDrag(onReorder: (from: number, to: number) => void) {
     dropIndex,
     isDragging,
     dragFromIndex,
-  };
+  }), [onGripMouseDown, onDragStart, onDragEnter, onDragOver, onDrop, onDragEnd, dropIndex, isDragging, dragFromIndex]);
 }

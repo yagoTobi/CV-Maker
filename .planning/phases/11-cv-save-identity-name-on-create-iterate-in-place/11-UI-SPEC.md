@@ -1,7 +1,7 @@
 ---
 phase: 11
 slug: cv-save-identity-name-on-create-iterate-in-place
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-04-17
@@ -44,9 +44,9 @@ Declared values — multiples of 4, aligned with existing project conventions:
 Exceptions:
 - NavBar left-group gap: 16px (existing, unchanged — `gap: 16px` in `.leftGroup`)
 - NavBar height: 48px (existing, unchanged)
-- CV name button padding: 4px 6px (tight fit inside 48px nav row)
-- Dropdown item padding: 8px 12px (compact list items)
-- Name prompt dialog: 20px 24px padding (slightly wider than ConfirmDialog at 10px 14px, to accommodate input field)
+- CV name button padding: 4px 8px (tight fit inside 48px nav row)
+- Dropdown item padding: 8px 8px (compact list items)
+- Name prompt dialog: 16px 24px padding (standard, to accommodate input field)
 
 ---
 
@@ -113,18 +113,18 @@ All new components. No shadcn blocks. No third-party registry.
 │  │  My CV                        │  │   ← text input, placeholder "My CV"
 │  └───────────────────────────────┘  │
 │                                     │
-│                [Skip]  [Save CV]    │   ← right-aligned buttons
+│          [Skip for now]  [Save CV]  │   ← right-aligned buttons
 └─────────────────────────────────────┘
 ```
 
-**Dimensions:** min-width 320px, max-width 420px. Padding 20px 24px. Border-radius `--radius-lg` (12px). Box-shadow `--shadow-lg`. Background `--bg-secondary`.
+**Dimensions:** min-width 320px, max-width 420px. Padding 16px 24px. Border-radius `--radius-lg` (12px). Box-shadow `--shadow-lg`. Background `--bg-secondary`.
 
-**Input field:** Full-width, font 14px, padding 8px 10px, border `1px solid --border-color`, border-radius `--radius-sm` (6px). On focus: border-color changes to `--accent`. Placeholder text: "My CV" (or imported filename if available — logic in hook, not visual spec). Value auto-selected on open so user can type immediately without clicking.
+**Input field:** Full-width, font 14px, padding 8px 8px, border `1px solid --border-color`, border-radius `--radius-sm` (6px). On focus: border-color changes to `--accent`. Placeholder text: "My CV" (or imported filename if available — logic in hook, not visual spec). Value auto-selected on open so user can type immediately without clicking.
 
 **Buttons:**
-- "Skip" — ghost style, 13px, `--text-secondary`, matches existing `.cancelBtn` pattern from ConfirmDialog
+- "Skip for now" — ghost style, 13px, `--text-secondary`, matches existing `.cancelBtn` pattern from ConfirmDialog
 - "Save CV" — accent style, 13px, `--bg-accent` (#3B82F6) white text, matches existing `.accentBtn` from NavBar
-- Button order: Skip left, Save CV right (right-to-left read order for affirmative action)
+- Button order: Skip for now left, Save CV right (right-to-left read order for affirmative action)
 
 **Enter key:** Submits the dialog (same as clicking "Save CV").
 **Escape key / clicking backdrop:** Dismisses without name — uses "Untitled CV" as fallback (D-04).
@@ -154,7 +154,7 @@ All new components. No shadcn blocks. No third-party registry.
 
 **CV name button style:**
 - Font: 14px, weight 500, color `--text-primary` at rest
-- Padding: 4px 6px
+- Padding: 4px 8px
 - Background: transparent at rest, `--bg-tertiary` on hover
 - Border: none (no border at rest); appears as plain text with subtle hover state
 - Border-radius: `--radius-sm` (6px)
@@ -193,10 +193,10 @@ All new components. No shadcn blocks. No third-party registry.
 ```
 
 **Item anatomy:**
-- Padding: 8px 12px
+- Padding: 8px 8px
 - Font: 13px, weight 400, `--text-primary`
 - Hover: background `--bg-tertiary`
-- Active (current CV being edited): weight 500, left border 2px solid `--accent`, padding-left 10px (2px border + 10px = 12px visual)
+- Active (current CV being edited): weight 500, left border 2px solid `--accent`, padding-left 12px (2px border + 12px = 14px visual indent, aligns with standard scale)
 - Transition: `background 150ms ease`
 - Only base CVs shown (parentVersionId is null) — D-06
 
@@ -237,7 +237,7 @@ All new components. No shadcn blocks. No third-party registry.
 
 **Separator "/":**
 - Font: 13px, weight 400, color `--accent` (subtle brand, Claude's call per CONTEXT.md)
-- Margin: 0 6px (6px either side of the slash)
+- Margin: 0 8px (8px either side of the slash)
 
 **Company/role segment:**
 - Font: 13px, weight 400, color `--text-secondary`
@@ -267,7 +267,7 @@ All new components. No shadcn blocks. No third-party registry.
 | First auto-save debounce fires, no activeVersion.id | Dialog opens, input auto-focused, text auto-selected |
 | User types name and presses Enter or clicks "Save CV" | Dialog closes, name used for version creation, save proceeds |
 | User clears input and presses Enter or clicks "Save CV" | Name defaults to "My CV", dialog closes, save proceeds |
-| User clicks "Skip" or Escape or backdrop | Dialog closes, name defaults to "Untitled CV", save proceeds |
+| User clicks "Skip for now" or Escape or backdrop | Dialog closes, name defaults to "Untitled CV", save proceeds |
 | Save completes | `activeVersion.id` is set; subsequent saves use PATCH (in-place update per D-02) |
 
 ### CV Switcher Dropdown — Interaction Flow
@@ -291,7 +291,7 @@ All new components. No shadcn blocks. No third-party registry.
 | Name prompt subtext | "You can always rename it later." |
 | Name prompt input placeholder | "My CV" |
 | Name prompt primary CTA | "Save CV" |
-| Name prompt dismiss action | "Skip" |
+| Name prompt dismiss action | "Skip for now" |
 | Name prompt fallback (skip/dismiss) | "Untitled CV" (used as the version name, not shown in UI) |
 | CV switcher empty state | "No other CVs" (13px, --text-muted, non-interactive) |
 | CV switcher new action | "+ New CV" |
@@ -301,7 +301,7 @@ All new components. No shadcn blocks. No third-party registry.
 | Save indicator — saved | "Saved" (unchanged from existing SaveIndicator) |
 | Save indicator — error | "Save failed" (unchanged from existing SaveIndicator) |
 
-No destructive actions in this phase. The name prompt "Skip" is non-destructive (falls back to "Untitled CV", does not cancel the save).
+No destructive actions in this phase. The name prompt "Skip for now" is non-destructive (falls back to "Untitled CV", does not cancel the save).
 
 ---
 
@@ -331,11 +331,11 @@ Animation keyframe: `dialogEnter` — identical to ConfirmDialog's `dialogEnter`
 |-------|---------|
 | `.dropdown` | Absolute positioned container, `--shadow-lg`, `--border-color`, `--radius` |
 | `.list` | `ul` reset, max-height 240px, overflow-y auto |
-| `.item` | 13px, padding 8px 12px, hover `--bg-tertiary` |
-| `.itemActive` | weight 500, left border 2px solid `--accent`, padding-left 10px |
+| `.item` | 13px, padding 8px 8px, hover `--bg-tertiary` |
+| `.itemActive` | weight 500, left border 2px solid `--accent`, padding-left 12px |
 | `.divider` | 1px `--border-color` horizontal rule, margin 4px 0 |
 | `.newCvItem` | Same as `.item`, color `--text-secondary` |
-| `.emptyState` | 13px, `--text-muted`, padding 8px 12px, non-interactive |
+| `.emptyState` | 13px, `--text-muted`, padding 8px 8px, non-interactive |
 
 Animation keyframe: `dropdownEnter` — `opacity 0→1, translateY -6px→0, 150ms ease-out`.
 
@@ -343,13 +343,13 @@ Animation keyframe: `dropdownEnter` — `opacity 0→1, translateY -6px→0, 150
 
 | Class | Purpose |
 |-------|---------|
-| `.cvNameBtn` | 14px weight 500, transparent bg, `--radius-sm`, 4px 6px padding, transition |
+| `.cvNameBtn` | 14px weight 500, transparent bg, `--radius-sm`, 4px 8px padding, transition |
 | `.cvNameBtnOpen` | Applied when dropdown is open: `--bg-hover`, `--accent` text |
 | `.cvNameChevron` | Inline span for ▾ character, `--text-muted`, 10px, 4px margin-left, transition transform |
 | `.cvNameChevronOpen` | `transform: rotate(180deg)` |
 | `.breadcrumb` | Flex row, align-items center, gap 0 (separator has its own margin) |
 | `.breadcrumbBase` | 14px weight 500, `--text-primary`, max-width 160px, overflow ellipsis |
-| `.breadcrumbSep` | 13px, `--accent`, margin 0 6px |
+| `.breadcrumbSep` | 13px, `--accent`, margin 0 8px |
 | `.breadcrumbSub` | 13px weight 400, `--text-secondary`, max-width 160px, overflow ellipsis |
 
 ---

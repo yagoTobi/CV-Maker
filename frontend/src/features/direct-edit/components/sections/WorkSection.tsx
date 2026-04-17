@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { EditableField } from '../EditableField';
 import { EditableBulletList } from '../EditableBulletList';
 import { SectionWrapper } from '../SectionWrapper';
@@ -14,10 +14,13 @@ import styles from '../MedLengthTemplate.module.css';
 
 interface WorkSectionProps extends SharedSectionProps {
   entries: WorkEntry[];
+  /** User-overridden section heading; falls back to 'Experience'. */
+  labelOverride?: string;
 }
 
-export function WorkSection({
+export const WorkSection = memo(function WorkSection({
   entries,
+  labelOverride,
   readOnly,
   onFieldChange,
   onBulletAdd,
@@ -32,6 +35,8 @@ export function WorkSection({
   sectionDrag,
   sectionIndex,
 }: WorkSectionProps) {
+  const displayLabel = labelOverride ?? 'Experience';
+
   const renderEntries = (entryDrag?: ReturnType<typeof useEntryDrag>) => (
     <>
       {entries.map((job, i) => (
@@ -118,15 +123,26 @@ export function WorkSection({
       sectionIndex={sectionIndex}
       dragHandlers={sectionDrag}
       isDragSource={sectionDrag.dragFromIndex === sectionIndex}
-      title="Experience"
+      title={displayLabel}
       isHidden={hiddenSections.has('work')}
       isEmpty={entries.length === 0}
       onToggleVisibility={() => onToggleSection('work')}
       onAddEntry={() => onAddEntry('work')}
       addLabel="+ Add work entry"
-      headerClassName={styles.sectionHeader}
       readOnly={readOnly}
       onRemoveSection={readOnly ? undefined : () => onRemoveSection?.('work')}
+      renderHeader={readOnly ? undefined : () => (
+        <EditableField
+          value={displayLabel}
+          fieldPath="sectionLabels.work"
+          onFieldChange={onFieldChange}
+          placeholder="Experience"
+          tag="div"
+          className={styles.sectionHeader}
+          onInput={onInput}
+          readOnly={readOnly}
+        />
+      )}
     >
       {readOnly ? (
         renderEntries()
@@ -137,4 +153,4 @@ export function WorkSection({
       )}
     </SectionWrapper>
   );
-}
+});

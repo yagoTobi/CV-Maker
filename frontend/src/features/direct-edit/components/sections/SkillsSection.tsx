@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, memo } from 'react';
 import { EditableField } from '../EditableField';
 import { SectionWrapper } from '../SectionWrapper';
 import { EntryWrapper } from '../EntryWrapper';
@@ -13,6 +13,8 @@ import styles from '../MedLengthTemplate.module.css';
 
 interface SkillsSectionProps extends SharedSectionProps {
   categories: SkillCategory[];
+  /** User-overridden section heading; falls back to 'Skills'. */
+  labelOverride?: string;
 }
 
 function SkillCategoryRow({
@@ -63,8 +65,9 @@ function SkillCategoryRow({
   );
 }
 
-export function SkillsSection({
+export const SkillsSection = memo(function SkillsSection({
   categories,
+  labelOverride,
   readOnly,
   onFieldChange,
   onAddEntry,
@@ -77,6 +80,8 @@ export function SkillsSection({
   sectionDrag,
   sectionIndex,
 }: SkillsSectionProps) {
+  const displayLabel = labelOverride ?? 'Skills';
+
   const handleSkillsTextChange = useCallback(
     (skillIndex: number, currentSkills: SkillItem[], _path: string, value: string) => {
       const newTexts = value.split(',').map(s => s.trim()).filter(Boolean);
@@ -140,15 +145,26 @@ export function SkillsSection({
       sectionIndex={sectionIndex}
       dragHandlers={sectionDrag}
       isDragSource={sectionDrag.dragFromIndex === sectionIndex}
-      title="Skills"
+      title={displayLabel}
       isHidden={hiddenSections.has('skills')}
       isEmpty={categories.length === 0}
       onToggleVisibility={() => onToggleSection('skills')}
       onAddEntry={() => onAddEntry('skills')}
       addLabel="+ Add skill category"
-      headerClassName={styles.sectionHeader}
       readOnly={readOnly}
       onRemoveSection={readOnly ? undefined : () => onRemoveSection?.('skills')}
+      renderHeader={readOnly ? undefined : () => (
+        <EditableField
+          value={displayLabel}
+          fieldPath="sectionLabels.skills"
+          onFieldChange={onFieldChange}
+          placeholder="Skills"
+          tag="div"
+          className={styles.sectionHeader}
+          onInput={onInput}
+          readOnly={readOnly}
+        />
+      )}
     >
       <div className={styles.skillsGrid}>
         {readOnly ? (
@@ -161,4 +177,4 @@ export function SkillsSection({
       </div>
     </SectionWrapper>
   );
-}
+});

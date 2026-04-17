@@ -206,3 +206,13 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 10 to break down)
+
+### Phase 11: CV Save Identity — Name on first create, iterate in-place
+
+**Goal:** Establish a named CV identity at the moment of creation (import or scratch) and make auto-save update that same version in-place, so the Dashboard never accumulates silent duplicates from editing activity
+**Requirements**: TBD
+**Depends on:** Phase 8
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 11 to break down)

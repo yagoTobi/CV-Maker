@@ -23,7 +23,15 @@
   padding-right: 416px; /* 400px panel + 16px breathing room */
 }
 
+/* Suppress the padding transition when crossing the breakpoint (zoom).
+ * Without this, padding-right -> padding-bottom fires as an animated
+ * transition and causes a visible layout shift.
+ */
 @media (max-width: 1199px) {
+  .contentArea {
+    transition: none;
+  }
+
   .contentAreaWithPanel {
     padding-right: 0;
     padding-bottom: calc(50vh + 16px); /* bottom sheet + breathing room */

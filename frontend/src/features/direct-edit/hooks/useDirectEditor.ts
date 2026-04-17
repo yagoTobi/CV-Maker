@@ -13,11 +13,15 @@
  *
  * Covers: EDIT-05 (edits update CVFormData in real-time).
  * Extended: CONT-01..04 (addEntry, removeEntry, toggleSection).
+ *
+ * Performance: all mutations use structural sharing (spread/filter/map on the
+ * changed path only) so unchanged section array references stay stable.
+ * React.memo on section components can then bail out when their data didn't change.
  */
 import { useCallback, useState } from 'react';
 import { useCVContext } from '../../../contexts/CVContext';
 import { generateId } from '../../../utils/idHelpers';
-import { setAtPath, getAtPath } from '../../../utils/formDataPatch';
+import { setAtPathImmutable, getAtPath } from '../../../utils/formDataPatch';
 import {
   emptyWorkEntry,
   emptyEducationEntry,
@@ -44,9 +48,7 @@ export function useDirectEditor() {
     (path: string, value: string | SkillItem[]) => {
       setFormData((prev: CVFormData | null) => {
         if (!prev) return prev;
-        const next = structuredClone(prev);
-        setAtPath(next as Record<string, unknown>, path, value);
-        return next;
+        return setAtPathImmutable(prev as Record<string, unknown>, path, value) as CVFormData;
       });
     },
     [setFormData]
@@ -57,14 +59,11 @@ export function useDirectEditor() {
       const newId = generateId();
       setFormData((prev: CVFormData | null) => {
         if (!prev) return prev;
-        const next = structuredClone(prev);
-        const arr = getAtPath(
-          next as Record<string, unknown>,
-          basePath
-        ) as BulletItem[] | undefined;
+        const arr = getAtPath(prev as Record<string, unknown>, basePath) as BulletItem[] | undefined;
         if (!Array.isArray(arr)) return prev;
-        arr.splice(afterIndex + 1, 0, { id: newId, text: '' });
-        return next;
+        const newArr = [...arr];
+        newArr.splice(afterIndex + 1, 0, { id: newId, text: '' });
+        return setAtPathImmutable(prev as Record<string, unknown>, basePath, newArr) as CVFormData;
       });
       return newId;
     },
@@ -73,70 +72,61 @@ export function useDirectEditor() {
 
   const removeBullet = useCallback(
     (basePath: string, index: number) => {
-      // Read current formData to check array length before calling setFormData
-      if (!formData) return;
-      const arr = getAtPath(
-        formData as Record<string, unknown>,
-        basePath
-      ) as BulletItem[] | undefined;
-      if (!Array.isArray(arr) || arr.length <= 1) return;
-
       setFormData((prev: CVFormData | null) => {
         if (!prev) return prev;
-        const next = structuredClone(prev);
-        const bullets = getAtPath(
-          next as Record<string, unknown>,
-          basePath
-        ) as BulletItem[] | undefined;
-        if (!Array.isArray(bullets) || bullets.length <= 1) return prev;
-        bullets.splice(index, 1);
-        return next;
+        const arr = getAtPath(prev as Record<string, unknown>, basePath) as BulletItem[] | undefined;
+        if (!Array.isArray(arr) || arr.length <= 1) return prev;
+        return setAtPathImmutable(
+          prev as Record<string, unknown>,
+          basePath,
+          arr.filter((_, i) => i !== index)
+        ) as CVFormData;
       });
     },
-    [formData, setFormData]
+    [setFormData]
   );
 
   const addEntry = useCallback(
     (sectionKey: string) => {
       setFormData((prev: CVFormData | null) => {
         if (!prev) return prev;
-        const next = structuredClone(prev);
         switch (sectionKey) {
           case 'work':
-            next.workExperience = [...next.workExperience, emptyWorkEntry()];
-            break;
+            return { ...prev, workExperience: [...prev.workExperience, emptyWorkEntry()] };
           case 'education':
-            next.education = [...next.education, emptyEducationEntry()];
-            break;
+            return { ...prev, education: [...prev.education, emptyEducationEntry()] };
           case 'skills':
-            next.skills = [...next.skills, emptySkillCategory()];
-            break;
+            return { ...prev, skills: [...prev.skills, emptySkillCategory()] };
           case 'projects':
-            next.projects = [...(next.projects || []), emptyProject()];
-            break;
+            return { ...prev, projects: [...(prev.projects || []), emptyProject()] };
           case 'awards':
-            next.awards = [...(next.awards || []), emptyAward()];
-            break;
-          default:
+            return { ...prev, awards: [...(prev.awards || []), emptyAward()] };
+          default: {
             if (sectionKey === 'additional-new') {
-              const sections = next.additionalSections || [];
+              const sections = prev.additionalSections || [];
               const newSection = emptyAdditionalSection(sections.length);
               const newSectionId = `additional-${sections.length}`;
-              next.additionalSections = [...sections, newSection];
-              next.sectionOrder = [...(next.sectionOrder || []), newSectionId];
-            } else if (sectionKey.startsWith('additional-')) {
+              return {
+                ...prev,
+                additionalSections: [...sections, newSection],
+                sectionOrder: [...(prev.sectionOrder || []), newSectionId],
+              };
+            }
+            if (sectionKey.startsWith('additional-')) {
               const idx = parseInt(sectionKey.split('-')[1], 10);
-              const sections = next.additionalSections || [];
+              const sections = prev.additionalSections || [];
               if (idx < sections.length) {
-                sections[idx] = {
+                const updatedSections = [...sections];
+                updatedSections[idx] = {
                   ...sections[idx],
                   entries: [...sections[idx].entries, emptyAdditionalEntry()],
                 };
-                next.additionalSections = sections;
+                return { ...prev, additionalSections: updatedSections };
               }
             }
+            return prev;
+          }
         }
-        return next;
       });
     },
     [setFormData]
@@ -146,37 +136,33 @@ export function useDirectEditor() {
     (sectionKey: string, index: number) => {
       setFormData((prev: CVFormData | null) => {
         if (!prev) return prev;
-        const next = structuredClone(prev);
         switch (sectionKey) {
           case 'work':
-            next.workExperience = next.workExperience.filter((_, i) => i !== index);
-            break;
+            return { ...prev, workExperience: prev.workExperience.filter((_, i) => i !== index) };
           case 'education':
-            next.education = next.education.filter((_, i) => i !== index);
-            break;
+            return { ...prev, education: prev.education.filter((_, i) => i !== index) };
           case 'skills':
-            next.skills = next.skills.filter((_, i) => i !== index);
-            break;
+            return { ...prev, skills: prev.skills.filter((_, i) => i !== index) };
           case 'projects':
-            next.projects = (next.projects || []).filter((_, i) => i !== index);
-            break;
+            return { ...prev, projects: (prev.projects || []).filter((_, i) => i !== index) };
           case 'awards':
-            next.awards = (next.awards || []).filter((_, i) => i !== index);
-            break;
-          default:
+            return { ...prev, awards: (prev.awards || []).filter((_, i) => i !== index) };
+          default: {
             if (sectionKey.startsWith('additional-')) {
               const sIdx = parseInt(sectionKey.split('-')[1], 10);
-              const sections = next.additionalSections || [];
+              const sections = prev.additionalSections || [];
               if (sIdx < sections.length) {
-                sections[sIdx] = {
+                const updatedSections = [...sections];
+                updatedSections[sIdx] = {
                   ...sections[sIdx],
                   entries: sections[sIdx].entries.filter((_, i) => i !== index),
                 };
-                next.additionalSections = sections;
+                return { ...prev, additionalSections: updatedSections };
               }
             }
+            return prev;
+          }
         }
-        return next;
       });
     },
     [setFormData]
@@ -197,37 +183,33 @@ export function useDirectEditor() {
     (sectionKey: string, from: number, to: number) => {
       setFormData((prev: CVFormData | null) => {
         if (!prev) return prev;
-        const next = structuredClone(prev);
         switch (sectionKey) {
           case 'work':
-            next.workExperience = reorder(next.workExperience, from, to);
-            break;
+            return { ...prev, workExperience: reorder(prev.workExperience, from, to) };
           case 'education':
-            next.education = reorder(next.education, from, to);
-            break;
+            return { ...prev, education: reorder(prev.education, from, to) };
           case 'skills':
-            next.skills = reorder(next.skills, from, to);
-            break;
+            return { ...prev, skills: reorder(prev.skills, from, to) };
           case 'projects':
-            next.projects = reorder(next.projects || [], from, to);
-            break;
+            return { ...prev, projects: reorder(prev.projects || [], from, to) };
           case 'awards':
-            next.awards = reorder(next.awards || [], from, to);
-            break;
-          default:
+            return { ...prev, awards: reorder(prev.awards || [], from, to) };
+          default: {
             if (sectionKey.startsWith('additional-')) {
               const sIdx = parseInt(sectionKey.split('-')[1], 10);
-              const sections = next.additionalSections || [];
+              const sections = prev.additionalSections || [];
               if (sIdx < sections.length) {
-                sections[sIdx] = {
+                const updatedSections = [...sections];
+                updatedSections[sIdx] = {
                   ...sections[sIdx],
                   entries: reorder(sections[sIdx].entries, from, to),
                 };
-                next.additionalSections = sections;
+                return { ...prev, additionalSections: updatedSections };
               }
             }
+            return prev;
+          }
         }
-        return next;
       });
     },
     [setFormData]
@@ -252,27 +234,28 @@ export function useDirectEditor() {
     (sectionKey: string) => {
       setFormData((prev: CVFormData | null) => {
         if (!prev) return prev;
-        const next = structuredClone(prev);
-        const currentOrder = next.sectionOrder ?? ['work', 'education', 'skills', 'projects', 'awards'];
-        next.sectionOrder = currentOrder.filter(k => k !== sectionKey);
+        const currentOrder = prev.sectionOrder ?? ['work', 'education', 'skills', 'projects', 'awards'];
+        const newOrder = currentOrder.filter(k => k !== sectionKey);
+        const base = { ...prev, sectionOrder: newOrder };
         switch (sectionKey) {
-          case 'work': next.workExperience = []; break;
-          case 'education': next.education = []; break;
-          case 'skills': next.skills = []; break;
-          case 'projects': next.projects = []; break;
-          case 'awards': next.awards = []; break;
-          default:
+          case 'work':     return { ...base, workExperience: [] };
+          case 'education': return { ...base, education: [] };
+          case 'skills':   return { ...base, skills: [] };
+          case 'projects': return { ...base, projects: [] };
+          case 'awards':   return { ...base, awards: [] };
+          default: {
             if (sectionKey.startsWith('additional-')) {
               const idx = parseInt(sectionKey.split('-')[1], 10);
-              next.additionalSections = (next.additionalSections ?? []).filter((_, i) => i !== idx);
-              // Re-index remaining additional-N keys in sectionOrder
+              const filtered = (prev.additionalSections ?? []).filter((_, i) => i !== idx);
               let counter = 0;
-              next.sectionOrder = next.sectionOrder.map(k =>
+              const reindexed = newOrder.map(k =>
                 k.startsWith('additional-') ? `additional-${counter++}` : k
               );
+              return { ...base, sectionOrder: reindexed, additionalSections: filtered };
             }
+            return base;
+          }
         }
-        return next;
       });
     },
     [setFormData]

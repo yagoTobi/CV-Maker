@@ -42,7 +42,7 @@ export function emptyWorkEntry(): WorkEntry {
 }
 
 export function emptyEducationEntry(): EducationEntry {
-  return { id: generateId(), school: '', degree: '', startDate: '', endDate: '', location: '', gpa: '', details: [] };
+  return { id: generateId(), school: '', degree: '', startDate: '', endDate: '', location: '', gpa: '', details: [emptyBullet()] };
 }
 
 export function emptySkillCategory(): SkillCategory {

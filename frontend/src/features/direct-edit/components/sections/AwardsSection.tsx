@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { EditableField } from '../EditableField';
 import { SectionWrapper } from '../SectionWrapper';
 import { EntryWrapper } from '../EntryWrapper';
@@ -62,10 +62,13 @@ function AwardRow({
 
 interface AwardsSectionProps extends SharedSectionProps {
   entries: Award[];
+  /** User-overridden section heading; falls back to 'Awards'. */
+  labelOverride?: string;
 }
 
-export function AwardsSection({
+export const AwardsSection = memo(function AwardsSection({
   entries,
+  labelOverride,
   readOnly,
   onFieldChange,
   onAddEntry,
@@ -78,6 +81,8 @@ export function AwardsSection({
   sectionDrag,
   sectionIndex,
 }: AwardsSectionProps) {
+  const displayLabel = labelOverride ?? 'Awards';
+
   const renderEntries = (entryDrag?: ReturnType<typeof useEntryDrag>) => (
     <>
       {entries.map((award, i) => (
@@ -126,15 +131,26 @@ export function AwardsSection({
       sectionIndex={sectionIndex}
       dragHandlers={sectionDrag}
       isDragSource={sectionDrag.dragFromIndex === sectionIndex}
-      title="Awards"
+      title={displayLabel}
       isHidden={hiddenSections.has('awards')}
       isEmpty={entries.length === 0}
       onToggleVisibility={() => onToggleSection('awards')}
       onAddEntry={() => onAddEntry('awards')}
       addLabel="+ Add award"
-      headerClassName={styles.sectionHeader}
       readOnly={readOnly}
       onRemoveSection={readOnly ? undefined : () => onRemoveSection?.('awards')}
+      renderHeader={readOnly ? undefined : () => (
+        <EditableField
+          value={displayLabel}
+          fieldPath="sectionLabels.awards"
+          onFieldChange={onFieldChange}
+          placeholder="Awards"
+          tag="div"
+          className={styles.sectionHeader}
+          onInput={onInput}
+          readOnly={readOnly}
+        />
+      )}
     >
       <div className={styles.awardsGrid}>
         {readOnly ? (
@@ -147,4 +163,4 @@ export function AwardsSection({
       </div>
     </SectionWrapper>
   );
-}
+});

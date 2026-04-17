@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { EditableField } from '../EditableField';
 import { EditableBulletList } from '../EditableBulletList';
 import { SectionWrapper } from '../SectionWrapper';
@@ -13,10 +13,13 @@ import styles from '../MedLengthTemplate.module.css';
 
 interface ProjectsSectionProps extends SharedSectionProps {
   entries: Project[];
+  /** User-overridden section heading; falls back to 'Projects'. */
+  labelOverride?: string;
 }
 
-export function ProjectsSection({
+export const ProjectsSection = memo(function ProjectsSection({
   entries,
+  labelOverride,
   readOnly,
   onFieldChange,
   onBulletAdd,
@@ -31,6 +34,8 @@ export function ProjectsSection({
   sectionDrag,
   sectionIndex,
 }: ProjectsSectionProps) {
+  const displayLabel = labelOverride ?? 'Projects';
+
   const renderEntries = (entryDrag?: ReturnType<typeof useEntryDrag>) => (
     <>
       {entries.map((proj, i) => (
@@ -121,15 +126,26 @@ export function ProjectsSection({
       sectionIndex={sectionIndex}
       dragHandlers={sectionDrag}
       isDragSource={sectionDrag.dragFromIndex === sectionIndex}
-      title="Projects"
+      title={displayLabel}
       isHidden={hiddenSections.has('projects')}
       isEmpty={entries.length === 0}
       onToggleVisibility={() => onToggleSection('projects')}
       onAddEntry={() => onAddEntry('projects')}
       addLabel="+ Add project"
-      headerClassName={styles.sectionHeader}
       readOnly={readOnly}
       onRemoveSection={readOnly ? undefined : () => onRemoveSection?.('projects')}
+      renderHeader={readOnly ? undefined : () => (
+        <EditableField
+          value={displayLabel}
+          fieldPath="sectionLabels.projects"
+          onFieldChange={onFieldChange}
+          placeholder="Projects"
+          tag="div"
+          className={styles.sectionHeader}
+          onInput={onInput}
+          readOnly={readOnly}
+        />
+      )}
     >
       {readOnly ? (
         renderEntries()
@@ -140,4 +156,4 @@ export function ProjectsSection({
       )}
     </SectionWrapper>
   );
-}
+});

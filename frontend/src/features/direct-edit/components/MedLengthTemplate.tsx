@@ -8,8 +8,14 @@
  * Section order follows formData.sectionOrder (or DEFAULT_SECTION_ORDER fallback).
  * Each section is wrapped in SectionWrapper (hover-reveal add button + toggle + drag grip).
  * Each entry is wrapped in EntryWrapper (hover-reveal delete + optional confirm + drag grip).
+ *
+ * A "+ Add section" button is rendered below the section list (non-readOnly only) and
+ * calls onAddEntry('additional-new') to create a new custom section.
+ *
+ * Standard section headings (work/education/skills/projects/awards) are editable inline
+ * via sectionLabels in formData; changes persist through onFieldChange.
  */
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { EditableField } from './EditableField';
 import { DropLine } from './DropLine';
 import { FloatingFormatToolbar } from './FloatingFormatToolbar';
@@ -25,6 +31,15 @@ import styles from './MedLengthTemplate.module.css';
 
 const DEFAULT_SECTION_ORDER = ['work', 'education', 'skills', 'projects', 'awards'];
 const DEFAULT_PERSONAL_ORDER = ['phone', 'email', 'location', 'links'];
+
+/** Default display labels for built-in sections (match the LaTeX template). */
+export const DEFAULT_SECTION_LABELS: Record<string, string> = {
+  work: 'Experience',
+  education: 'Education',
+  skills: 'Skills',
+  projects: 'Projects',
+  awards: 'Awards',
+};
 
 export interface MedLengthTemplateProps {
   formData: CVFormData;
@@ -59,10 +74,11 @@ export function MedLengthTemplate({
 }: MedLengthTemplateProps) {
   const { personalInfo } = formData;
   const sectionOrder = formData.sectionOrder ?? DEFAULT_SECTION_ORDER;
+  const sectionLabels = formData.sectionLabels ?? {};
   const sectionDrag = useSectionDrag(onReorderSections);
   const personalOrder = personalInfo.personalOrder ?? DEFAULT_PERSONAL_ORDER;
 
-  const sharedProps = {
+  const sharedProps = useMemo(() => ({
     readOnly,
     onFieldChange,
     onBulletAdd,
@@ -75,9 +91,9 @@ export function MedLengthTemplate({
     onInput,
     onRemoveSection,
     sectionDrag,
-  };
+  }), [readOnly, onFieldChange, onBulletAdd, onBulletRemove, onAddEntry, onRemoveEntry, onToggleSection, hiddenSections, onReorderEntries, onInput, onRemoveSection, sectionDrag]);
 
-  const renderInfoBarItems = () => {
+  const infoBarItems = useMemo(() => {
     const items: React.ReactNode[] = [];
 
     personalOrder.forEach((field, fieldIdx) => {
@@ -147,16 +163,62 @@ export function MedLengthTemplate({
     });
 
     return items;
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [personalOrder, personalInfo.phone, personalInfo.email, personalInfo.location, personalInfo.links, onFieldChange, onInput, readOnly]);
 
   const renderSection = (sec: string, sectionIdx: number) => {
     const props = { ...sharedProps, sectionIndex: sectionIdx };
 
-    if (sec === 'work') return <WorkSection key="work" entries={formData.workExperience} {...props} />;
-    if (sec === 'education') return <EducationSection key="education" entries={formData.education} {...props} />;
-    if (sec === 'skills') return <SkillsSection key="skills" categories={formData.skills} {...props} />;
-    if (sec === 'projects') return <ProjectsSection key="projects" entries={formData.projects ?? []} {...props} />;
-    if (sec === 'awards') return <AwardsSection key="awards" entries={formData.awards ?? []} {...props} />;
+    if (sec === 'work') {
+      return (
+        <WorkSection
+          key="work"
+          entries={formData.workExperience}
+          labelOverride={sectionLabels['work']}
+          {...props}
+        />
+      );
+    }
+    if (sec === 'education') {
+      return (
+        <EducationSection
+          key="education"
+          entries={formData.education}
+          labelOverride={sectionLabels['education']}
+          {...props}
+        />
+      );
+    }
+    if (sec === 'skills') {
+      return (
+        <SkillsSection
+          key="skills"
+          categories={formData.skills}
+          labelOverride={sectionLabels['skills']}
+          {...props}
+        />
+      );
+    }
+    if (sec === 'projects') {
+      return (
+        <ProjectsSection
+          key="projects"
+          entries={formData.projects ?? []}
+          labelOverride={sectionLabels['projects']}
+          {...props}
+        />
+      );
+    }
+    if (sec === 'awards') {
+      return (
+        <AwardsSection
+          key="awards"
+          entries={formData.awards ?? []}
+          labelOverride={sectionLabels['awards']}
+          {...props}
+        />
+      );
+    }
 
     if (sec.startsWith('additional-')) {
       const idx = parseInt(sec.split('-')[1], 10);
@@ -183,6 +245,9 @@ export function MedLengthTemplate({
     e.preventDefault();
   }, []);
 
+  const { dropIndex, dragFromIndex } = sectionDrag;
+  const isDraggingDown = dragFromIndex !== null && dropIndex !== null && dragFromIndex < dropIndex;
+
   return (
     <div className={styles.template} onDragOver={readOnly ? undefined : handleContainerDragOver}>
       {!readOnly && <FloatingFormatToolbar />}
@@ -197,7 +262,7 @@ export function MedLengthTemplate({
         readOnly={readOnly}
       />
       <div className={styles.infoBar}>
-        {renderInfoBarItems()}
+        {infoBarItems}
       </div>
 
       {personalInfo.summary !== undefined && (
@@ -214,16 +279,29 @@ export function MedLengthTemplate({
         />
       )}
 
-      {sectionOrder.map((sec, sectionIdx) => (
-        <React.Fragment key={sec}>
-          {!readOnly && sectionDrag.dropIndex === sectionIdx && sectionDrag.dragFromIndex !== sectionIdx && (
-            <DropLine />
-          )}
-          {renderSection(sec, sectionIdx)}
-        </React.Fragment>
-      ))}
-      {!readOnly && sectionDrag.dropIndex === sectionOrder.length && (
+      {sectionOrder.map((sec, sectionIdx) => {
+        const isDropTarget = !readOnly && dropIndex === sectionIdx && dragFromIndex !== sectionIdx;
+        return (
+          <React.Fragment key={sec}>
+            {/* Show indicator above this section only when dragging upward to this position */}
+            {isDropTarget && !isDraggingDown && <DropLine />}
+            {renderSection(sec, sectionIdx)}
+            {/* Show indicator below this section when dragging downward to this position */}
+            {isDropTarget && isDraggingDown && <DropLine />}
+          </React.Fragment>
+        );
+      })}
+      {!readOnly && dropIndex === sectionOrder.length && (
         <DropLine />
+      )}
+      {!readOnly && (
+        <button
+          className={styles.addSectionButton}
+          onClick={() => onAddEntry('additional-new')}
+          type="button"
+        >
+          + Add section
+        </button>
       )}
     </div>
   );

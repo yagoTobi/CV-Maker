@@ -181,3 +181,29 @@
 .additionalSimple {
   margin-bottom: 0.5em; /* \vspace{0.5em} */
 }
+
+/* --- Add section button (below all sections, non-readOnly only) --- */
+
+.addSectionButton {
+  display: block;
+  margin-top: 12pt;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: "EB Garamond Variable", "EB Garamond", Georgia, serif;
+  font-size: 10pt;
+  padding: 4px 8px;
+}
+
+.template:hover .addSectionButton {
+  opacity: 1;
+}
+
+.addSectionButton:hover {
+  color: var(--accent);
+  background: var(--bg-hover);
+  border-radius: 4px;
+}

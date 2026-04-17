@@ -138,6 +138,15 @@ _jinja_env.filters["html_latex"] = html_latex
 
 _DEFAULT_PERSONAL_ORDER = ["phone", "email", "location", "links"]
 
+# Default display labels for built-in sections — match the LaTeX template defaults.
+_DEFAULT_SECTION_LABELS = {
+    "work": "Experience",
+    "education": "Education",
+    "skills": "Skills",
+    "projects": "Projects",
+    "awards": "Awards",
+}
+
 
 def _build_personal_items(personal, order: list) -> list:
     """Build an ordered list of personal header items for template rendering.
@@ -227,7 +236,12 @@ async def generate_latex(form_data: CVFormData):
         raise HTTPException(status_code=500, detail="An internal error occurred")
 
     flat = _flatten_for_template(form_data)
+
     personal_order = form_data.personalInfo.personalOrder or _DEFAULT_PERSONAL_ORDER
+
+    # Merge user overrides on top of defaults so omitted keys still have a value
+    section_labels = {**_DEFAULT_SECTION_LABELS, **(form_data.sectionLabels or {})}
+
     context = {
         "personal": form_data.personalInfo,
         "personal_items": _build_personal_items(form_data.personalInfo, personal_order),
@@ -238,6 +252,7 @@ async def generate_latex(form_data: CVFormData):
         "awards": flat.get("awards", []),
         "additional_sections": flat.get("additionalSections", []),
         "section_order": form_data.sectionOrder or ["work", "education", "skills", "projects", "awards"],
+        "section_labels": section_labels,
     }
 
     try:

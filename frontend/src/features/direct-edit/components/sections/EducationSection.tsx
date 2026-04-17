@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { EditableField } from '../EditableField';
 import { EditableBulletList } from '../EditableBulletList';
 import { SectionWrapper } from '../SectionWrapper';
@@ -14,10 +14,13 @@ import styles from '../MedLengthTemplate.module.css';
 
 interface EducationSectionProps extends SharedSectionProps {
   entries: EducationEntry[];
+  /** User-overridden section heading; falls back to 'Education'. */
+  labelOverride?: string;
 }
 
-export function EducationSection({
+export const EducationSection = memo(function EducationSection({
   entries,
+  labelOverride,
   readOnly,
   onFieldChange,
   onBulletAdd,
@@ -32,6 +35,8 @@ export function EducationSection({
   sectionDrag,
   sectionIndex,
 }: EducationSectionProps) {
+  const displayLabel = labelOverride ?? 'Education';
+
   const renderEntries = (entryDrag?: ReturnType<typeof useEntryDrag>) => (
     <>
       {entries.map((edu, i) => {
@@ -199,15 +204,26 @@ export function EducationSection({
       sectionIndex={sectionIndex}
       dragHandlers={sectionDrag}
       isDragSource={sectionDrag.dragFromIndex === sectionIndex}
-      title="Education"
+      title={displayLabel}
       isHidden={hiddenSections.has('education')}
       isEmpty={entries.length === 0}
       onToggleVisibility={() => onToggleSection('education')}
       onAddEntry={() => onAddEntry('education')}
       addLabel="+ Add education"
-      headerClassName={styles.sectionHeader}
       readOnly={readOnly}
       onRemoveSection={readOnly ? undefined : () => onRemoveSection?.('education')}
+      renderHeader={readOnly ? undefined : () => (
+        <EditableField
+          value={displayLabel}
+          fieldPath="sectionLabels.education"
+          onFieldChange={onFieldChange}
+          placeholder="Education"
+          tag="div"
+          className={styles.sectionHeader}
+          onInput={onInput}
+          readOnly={readOnly}
+        />
+      )}
     >
       {readOnly ? (
         renderEntries()
@@ -218,4 +234,4 @@ export function EducationSection({
       )}
     </SectionWrapper>
   );
-}
+});

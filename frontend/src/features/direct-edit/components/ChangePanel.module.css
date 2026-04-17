@@ -206,7 +206,14 @@
   color: var(--text-muted);
 }
 
-/* Responsive: bottom sheet below 1200px */
+/* Responsive: bottom sheet below 1200px.
+ *
+ * transition: none on .panel suppresses the layout-shift animation that fires
+ * when the browser crosses the breakpoint (e.g. during zoom). Without it,
+ * `transition: transform` sees translateX(0) -> translateY(0) as a change and
+ * animates the panel sliding from right to bottom. The open/close slide
+ * animation is re-enabled explicitly on .panel.closed within the same block.
+ */
 @media (max-width: 1199px) {
   .panel {
     position: fixed;
@@ -219,7 +226,7 @@
     border-left: none;
     border-top: 1px solid var(--border-color);
     transform: translateY(0);
-    transition: transform 200ms ease-out;
+    transition: none;
   }
 
   .panel.closed {

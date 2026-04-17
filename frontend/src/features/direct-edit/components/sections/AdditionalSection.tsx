@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { EditableField } from '../EditableField';
 import { EditableBulletList } from '../EditableBulletList';
 import { SectionWrapper } from '../SectionWrapper';
@@ -17,7 +17,7 @@ interface AdditionalSectionProps extends SharedSectionProps {
   additionalIdx: number;
 }
 
-export function AdditionalSection({
+export const AdditionalSection = memo(function AdditionalSection({
   asec,
   additionalIdx,
   readOnly,
@@ -246,4 +246,4 @@ export function AdditionalSection({
       )}
     </SectionWrapper>
   );
-}
+});

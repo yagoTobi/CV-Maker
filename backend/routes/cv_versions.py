@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, field_validator
-from typing import List, Optional
+from typing import Dict, List, Optional
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -141,6 +141,7 @@ class AdditionalSection(BaseModel):
 class CVFormData(BaseModel):
     templateId: str
     sectionOrder: Optional[List[str]] = None  # e.g. ['work', 'education', 'skills', 'projects', 'awards']
+    sectionLabels: Optional[Dict[str, str]] = None  # e.g. {'work': 'Erfahrung', 'education': 'Bildung'}
     personalInfo: PersonalInfo = PersonalInfo()
     workExperience: List[WorkEntry] = []
     education: List[EducationEntry] = []

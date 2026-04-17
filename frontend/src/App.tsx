@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Routes, Route, Link, Navigate } from 'react-router-dom';
+import { Routes, Route, Link } from 'react-router-dom';
 import { AppProvider } from './contexts/AppContext';
 import { FeatureErrorBoundary } from './components/FeatureErrorBoundary';
 
@@ -29,7 +29,6 @@ function App() {
             <Route path="/dashboard" element={<FeatureErrorBoundary><Dashboard /></FeatureErrorBoundary>} />
             <Route path="/build" element={<FeatureErrorBoundary><TemplateSelector /></FeatureErrorBoundary>} />
             <Route path="/build/form" element={<FeatureErrorBoundary><DirectEditPage /></FeatureErrorBoundary>} />
-            <Route path="/apply" element={<Navigate to="/build/form" state={{ tune: true }} replace />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

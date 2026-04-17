@@ -127,6 +127,12 @@ export interface CVFormData {
   templateId: string;
   /** Ordered list of section ids: 'work' | 'education' | 'skills' | 'projects' | 'awards' | 'additional-{index}' */
   sectionOrder?: string[];
+  /**
+   * User-overridden display labels for built-in sections.
+   * Keys: 'work' | 'education' | 'skills' | 'projects' | 'awards'.
+   * Omitting a key falls back to the template default (e.g. 'Experience').
+   */
+  sectionLabels?: Record<string, string>;
   personalInfo: PersonalInfo;
   workExperience: WorkEntry[];
   education: EducationEntry[];

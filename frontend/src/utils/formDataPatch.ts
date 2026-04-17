@@ -20,6 +20,72 @@ function _isStructuredArray(arr: unknown[]): boolean {
   return typeof first === 'object' && first !== null && 'text' in first && 'id' in first;
 }
 
+/**
+ * Immutable structural-sharing version of setAtPath.
+ * Only copies nodes along the changed path; unchanged branches keep their references.
+ * This is critical for React.memo on section components: editing workExperience[0]
+ * must NOT produce new array references for education, skills, etc.
+ */
+export function setAtPathImmutable(
+  obj: Record<string, unknown>,
+  path: string,
+  value: unknown
+): Record<string, unknown> {
+  const segs = parsePath(path);
+
+  function rebuild(cur: unknown, depth: number): unknown {
+    const seg = segs[depth];
+    const isLast = depth === segs.length - 1;
+
+    if (isLast) {
+      if (Array.isArray(cur)) {
+        const existing = (cur as unknown[])[seg as number];
+        const newArr = [...(cur as unknown[])];
+        if (
+          existing &&
+          typeof existing === 'object' &&
+          'text' in (existing as object) &&
+          'id' in (existing as object) &&
+          typeof value === 'string'
+        ) {
+          newArr[seg as number] = { ...(existing as object), text: value };
+        } else if (
+          typeof seg === 'number' &&
+          typeof value === 'string' &&
+          _isStructuredArray(cur as unknown[])
+        ) {
+          newArr[seg as number] = { id: generateId(), text: value };
+        } else {
+          newArr[seg as number] = value;
+        }
+        return newArr;
+      }
+      const existing = (cur as Record<string, unknown>)[seg as string];
+      if (
+        existing &&
+        typeof existing === 'object' &&
+        'text' in (existing as object) &&
+        'id' in (existing as object) &&
+        typeof value === 'string'
+      ) {
+        return { ...(cur as object), [seg as string]: { ...(existing as object), text: value } };
+      }
+      return { ...(cur as object), [seg as string]: value };
+    }
+
+    if (Array.isArray(cur)) {
+      const idx = seg as number;
+      const newArr = [...(cur as unknown[])];
+      newArr[idx] = rebuild(newArr[idx], depth + 1);
+      return newArr;
+    }
+    const o = cur as Record<string, unknown>;
+    return { ...o, [seg as string]: rebuild(o[seg as string], depth + 1) };
+  }
+
+  return rebuild(obj, 0) as Record<string, unknown>;
+}
+
 export function setAtPath(obj: Record<string, unknown>, path: string, value: unknown): void {
   const segs = parsePath(path);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
