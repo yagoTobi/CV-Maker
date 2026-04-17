@@ -53,18 +53,6 @@ export const EditableField = forwardRef<HTMLElement, EditableFieldProps>(
     // Expose the DOM element to parent via forwardRef
     useImperativeHandle(forwardedRef, () => ref.current!, []);
 
-    // readOnly mode: render as plain (non-editable) element with same styling
-    if (readOnly) {
-      const readOnlyClassName = className
-        ? `${styles.editableField} ${className}`
-        : styles.editableField;
-
-      if (rich) {
-        return <Tag ref={ref} className={readOnlyClassName} data-field-path={fieldPath} dangerouslySetInnerHTML={{ __html: value }} />;
-      }
-      return <Tag ref={ref} className={readOnlyClassName} data-field-path={fieldPath}>{value}</Tag>;
-    }
-
     // Sync value prop to DOM ONLY when not focused (D-04, EDIT-06)
     // Rich mode syncs innerHTML; plain mode syncs textContent.
     useEffect(() => {
@@ -154,6 +142,13 @@ export const EditableField = forwardRef<HTMLElement, EditableFieldProps>(
     const combinedClassName = className
       ? `${styles.editableField} ${className}`
       : styles.editableField;
+
+    if (readOnly) {
+      if (rich) {
+        return <Tag ref={ref} className={combinedClassName} data-field-path={fieldPath} dangerouslySetInnerHTML={{ __html: value }} />;
+      }
+      return <Tag ref={ref} className={combinedClassName} data-field-path={fieldPath}>{value}</Tag>;
+    }
 
     // Build props object conditionally to avoid setting data-placeholder when undefined
     const elementProps: Record<string, unknown> = {

@@ -90,7 +90,6 @@ export function SectionWrapper({
 }: SectionWrapperProps) {
   const [isConfirming, setIsConfirming] = useState(false);
 
-  // readOnly mode: render section with header and content only, no interactive controls
   if (readOnly) {
     return (
       <div
