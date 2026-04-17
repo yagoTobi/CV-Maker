@@ -210,9 +210,13 @@ Plans:
 ### Phase 11: CV Save Identity — Name on first create, iterate in-place
 
 **Goal:** Establish a named CV identity at the moment of creation (import or scratch) and make auto-save update that same version in-place, so the Dashboard never accumulates silent duplicates from editing activity
-**Requirements**: TBD
+**Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09
 **Depends on:** Phase 8
-**Plans:** 0 plans
+**Plans:** 5 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 11 to break down)
+- [ ] 11-01-PLAN.md -- Backend PATCH extension + api.updateVersionFull (cv_versions.py + api.ts)
+- [ ] 11-02-PLAN.md -- NamePromptDialog + CVSwitcherDropdown new components
+- [ ] 11-03-PLAN.md -- useAutoSave POST/PATCH branching + test extension
+- [ ] 11-04-PLAN.md -- EditorActionsContext extension + TunePanel onTuneDetailsChange prop
+- [ ] 11-05-PLAN.md -- DirectEditPage wiring + NavBar CVNameButton + breadcrumb + logo-only
