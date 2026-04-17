@@ -28,10 +28,12 @@ void _typeCheck;
 vi.mock('../services/api', () => ({
   api: {
     saveVersion: vi.fn(),
+    updateVersionFull: vi.fn(),
   },
 }));
 
 const mockSaveVersion = vi.mocked(api.saveVersion);
+const mockUpdateVersionFull = vi.mocked(api.updateVersionFull);
 
 function makeFormData(overrides: Partial<CVFormData> = {}): CVFormData {
   return {
@@ -64,6 +66,7 @@ describe('useAutoSave', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     mockSaveVersion.mockReset();
+    mockUpdateVersionFull.mockReset();
   });
 
   afterEach(() => {
@@ -316,5 +319,25 @@ describe('useAutoSave', () => {
         name: 'Untitled CV',
       })
     );
+  });
+
+  // RED: new behavior — PATCH path when versionId is non-null
+  it('uses PATCH (updateVersionFull) when versionId is non-null', async () => {
+    const formData = makeFormData();
+    mockUpdateVersionFull.mockResolvedValue(true);
+
+    const { result } = renderHook(
+      ({ fd, vid }) => useAutoSave(fd, vid),
+      { initialProps: { fd: formData, vid: 'existing-id' } }
+    );
+
+    await act(async () => { vi.advanceTimersByTime(2500); });
+
+    expect(result.current).toBe('saved');
+    expect(mockUpdateVersionFull).toHaveBeenCalledWith(
+      'existing-id',
+      expect.objectContaining({ formData, texContent: '' })
+    );
+    expect(mockSaveVersion).not.toHaveBeenCalled();
   });
 });
