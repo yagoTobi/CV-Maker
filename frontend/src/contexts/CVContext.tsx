@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { api } from '../services/api';
 import type { UserProfile, CVFormData, CVVersion, CVVersionMeta } from '../types';
@@ -16,6 +16,8 @@ interface CVContextValue {
   setIsSavingVersion: (saving: boolean) => void;
   selectedTemplateForBuild: string | null;
   setSelectedTemplateForBuild: (templateId: string | null) => void;
+  /** Atomically clear formData, activeVersion, and selectedTemplateForBuild for a fresh build. */
+  resetForNewBuild: () => void;
 }
 
 const CVContext = createContext<CVContextValue | null>(null);
@@ -57,6 +59,12 @@ export function CVProvider({ children }: { children: ReactNode }) {
     return () => { mounted = false; };
   }, []);
 
+  const resetForNewBuild = useCallback(() => {
+    setFormData(null);
+    setActiveVersion(null);
+    setSelectedTemplateForBuild(null);
+  }, []);
+
   const value = useMemo(() => ({
     userProfile,
     setUserProfile,
@@ -70,6 +78,7 @@ export function CVProvider({ children }: { children: ReactNode }) {
     setIsSavingVersion,
     selectedTemplateForBuild,
     setSelectedTemplateForBuild,
+    resetForNewBuild,
   }), [
     userProfile,
     activeVersion,
@@ -77,6 +86,7 @@ export function CVProvider({ children }: { children: ReactNode }) {
     savedVersions,
     isSavingVersion,
     selectedTemplateForBuild,
+    resetForNewBuild,
   ]);
 
   return <CVContext.Provider value={value}>{children}</CVContext.Provider>;

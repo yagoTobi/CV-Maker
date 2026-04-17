@@ -140,6 +140,8 @@ Recent decisions affecting current work:
 
 - Phase 7 added: Navigation flow consolidation — collapse BuildChoiceScreen into Landing, reframe Dashboard as management-only screen
 - Phase 8 added: Streamlined Tune Flow: Save-as-Base Prompt, Inline Tune Panel, Base CV Dashboard
+- Phase 9 added: Implement CV-to-job match scoring pipeline redesign — CVFormData input, two-pass hybrid pipeline, Groq fast inference, dimensional scoring
+- Phase 10 added: CV import speed overhaul — reduce import time from 60+ seconds to under 15 seconds via Haiku/Groq model swap, streaming progress, parallel extraction, and content caching
 
 ### Pending Todos
 

@@ -8,7 +8,7 @@ import styles from './LandingScreen.module.css';
 
 export default function LandingScreen() {
   const navigate = useNavigate();
-  const { savedVersions, setFormData, cvImport, handleVersionLoad, setSelectedTemplateForBuild } = useAppContext();
+  const { savedVersions, resetForNewBuild, cvImport, handleVersionLoad, setSelectedTemplateForBuild } = useAppContext();
   const [expandedPanel, setExpandedPanel] = useState<'build' | 'tune' | null>(null);
   const switchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -32,9 +32,9 @@ export default function LandingScreen() {
       switchTimeoutRef.current = setTimeout(() => setExpandedPanel('build'), 250);
       return;
     }
-    setFormData(null);
+    resetForNewBuild();
     setExpandedPanel('build');
-  }, [expandedPanel, setFormData, cvImport.isImporting]);
+  }, [expandedPanel, resetForNewBuild, cvImport.isImporting]);
 
   const handleTuneClick = useCallback(async () => {
     if (switchTimeoutRef.current) clearTimeout(switchTimeoutRef.current);
@@ -63,10 +63,10 @@ export default function LandingScreen() {
   const handleBuildFromTune = useCallback(() => {
     setExpandedPanel(null);
     switchTimeoutRef.current = setTimeout(() => {
-      setFormData(null);
+      resetForNewBuild();
       setExpandedPanel('build');
     }, 250);
-  }, [setFormData]);
+  }, [resetForNewBuild]);
 
   const handleMyCV = () => {
     navigate('/dashboard');

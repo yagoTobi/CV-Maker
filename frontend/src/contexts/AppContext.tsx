@@ -35,6 +35,9 @@ interface AppContextValue {
   selectedTemplateForBuild: string | null;
   setSelectedTemplateForBuild: (templateId: string | null) => void;
 
+  // State reset
+  resetForNewBuild: () => void;
+
   // Hooks
   templates: ReturnType<typeof useTemplates>;
   cvImport: ReturnType<typeof useImport>;

@@ -6,7 +6,7 @@ import styles from './BuildExpansionPanel.module.css';
 
 export function BuildExpansionPanel() {
   const navigate = useNavigate();
-  const { setFormData, setSelectedTemplateForBuild, cvImport } = useAppContext();
+  const { setFormData, resetForNewBuild, cvImport } = useAppContext();
 
   // Clear stale import state on every mount/expand
   useEffect(() => {
@@ -31,8 +31,7 @@ export function BuildExpansionPanel() {
   }, [cvImport.importResult, navigate, setFormData, cvImport]);
 
   const handleStartFromScratch = () => {
-    setFormData(null);
-    setSelectedTemplateForBuild(null);
+    resetForNewBuild();
     navigate('/build');
   };
 

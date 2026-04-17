@@ -186,3 +186,23 @@ Plans:
 - [x] 08-02-PLAN.md -- Navigation rewiring: /apply redirect, LandingScreen, TuneExpansionPanel, Dashboard scoped view
 - [x] 08-03-PLAN.md -- TunePanel component (3 tiers) + DirectEditPage integration + visual checkpoint
 - [x] 08-04-PLAN.md -- Dead code removal: delete ApplyToJobScreen
+
+### Phase 9: Implement CV-to-job match scoring pipeline redesign — CVFormData input, two-pass hybrid pipeline, Groq fast inference, dimensional scoring
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 8
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 9 to break down)
+
+### Phase 10: CV import speed overhaul — reduce import time from 60+ seconds to under 15 seconds via Haiku/Groq model swap, streaming progress, parallel extraction, and content caching
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 9
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 10 to break down)
