@@ -16,7 +16,18 @@
 
 .contentArea {
   display: flex;
-  /* CV takes full width; ChangePanel slot added alongside in future plan */
+  transition: padding-right 200ms ease-out;
+}
+
+.contentAreaWithPanel {
+  padding-right: 416px; /* 400px panel + 16px breathing room */
+}
+
+@media (max-width: 1199px) {
+  .contentAreaWithPanel {
+    padding-right: 0;
+    padding-bottom: calc(50vh + 16px); /* bottom sheet + breathing room */
+  }
 }
 
 .cvContainer {

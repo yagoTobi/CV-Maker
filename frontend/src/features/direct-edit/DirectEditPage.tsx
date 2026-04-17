@@ -15,18 +15,20 @@
  */
 import '@fontsource-variable/eb-garamond';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useDirectEditor } from './hooks/useDirectEditor';
 import { useAutoSave } from './hooks/useAutoSave';
 import { usePageBreak } from './hooks/usePageBreak';
 import { MedLengthTemplate } from './components/MedLengthTemplate';
 import { useSetEditorActions } from '../../contexts/EditorActionsContext';
 import { PageBreakIndicator } from './components/PageBreakIndicator';
+import { TunePanel } from './components/TunePanel';
 import { useCVContext } from '../../contexts/CVContext';
 import { api } from '../../services/api';
 import { generateId } from '../../utils/idHelpers';
 import { generateCVFilename } from '../../utils/cvFilename';
-import type { CVFormData } from '../../types';
+import { noop, EMPTY_SET } from '../../utils/cvDisplayUtils';
+import type { CVFormData, SkillItem } from '../../types';
 import styles from './DirectEditPage.module.css';
 
 const DEFAULT_TEMPLATE = 'med-length-proff-cv';
@@ -54,8 +56,12 @@ export default function DirectEditPage() {
   const saveStatus = useAutoSave(formData, activeVersion?.id ?? null);
   const [isBootstrapping, setIsBootstrapping] = useState(!formData);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [tunePanelOpen, setTunePanelOpen] = useState(false);
+  const [previewFormData, setPreviewFormData] = useState<CVFormData | null>(null);
+  const [isTier3Active, setIsTier3Active] = useState(false);
   const setEditorActions = useSetEditorActions();
   const navigate = useNavigate();
+  const location = useLocation();
   const cvContainerRef = useRef<HTMLDivElement>(null);
   const pageBreakY = usePageBreak(cvContainerRef);
 
@@ -111,6 +117,16 @@ export default function DirectEditPage() {
     return () => { cancelled = true; };
   }, [formData, savedVersions, setFormData, selectedTemplateForBuild]);
 
+  // Open tune panel from navigation state (e.g., from TuneExpansionPanel or Dashboard)
+  useEffect(() => {
+    const locationState = location.state as { tune?: boolean } | null;
+    if (locationState?.tune) {
+      setTunePanelOpen(true);
+      // Clear the state so refreshing doesn't re-open
+      window.history.replaceState({}, '');
+    }
+  }, [location.state]);
+
   const handleInput = useCallback(() => {
     // No-op -- useAutoSave watches formData changes directly.
   }, []);
@@ -156,8 +172,8 @@ export default function DirectEditPage() {
   }, [formData]);
 
   const handleTuneForJob = useCallback(() => {
-    navigate('/apply', { state: { baseVersionId: activeVersion?.id } });
-  }, [navigate, activeVersion?.id]);
+    setTunePanelOpen(true);
+  }, []);
 
   // Lift editor actions into NavBar via EditorActionsContext
   useEffect(() => {
@@ -166,9 +182,24 @@ export default function DirectEditPage() {
       onTuneForJob: handleTuneForJob,
       saveStatus,
       isDownloading,
+      isTuning: tunePanelOpen,
     });
     return () => setEditorActions(null);
-  }, [setEditorActions, handleDownload, handleTuneForJob, saveStatus, isDownloading]);
+  }, [setEditorActions, handleDownload, handleTuneForJob, saveStatus, isDownloading, tunePanelOpen]);
+
+  // Callback handlers for TunePanel communication
+  const handlePreviewUpdate = useCallback((fd: CVFormData | null) => {
+    setPreviewFormData(fd);
+  }, []);
+
+  const handleTier3Active = useCallback((active: boolean) => {
+    setIsTier3Active(active);
+  }, []);
+
+  // Compute display values for MedLengthTemplate
+  const displayFormData = isTier3Active && previewFormData ? previewFormData : formData;
+  const isReadOnly = isTier3Active;
+  const noopFieldChange = noop as (path: string, value: string | SkillItem[]) => void;
 
   if (isBootstrapping || !formData) {
     return <div className={styles.loading}>Loading...</div>;
@@ -176,25 +207,35 @@ export default function DirectEditPage() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.contentArea}>
+      <div className={`${styles.contentArea}${tunePanelOpen ? ` ${styles.contentAreaWithPanel}` : ''}`}>
         <div ref={cvContainerRef} className={styles.cvContainer}>
           <MedLengthTemplate
-            formData={formData}
-            onFieldChange={updateField}
-            onBulletAdd={addBullet}
-            onBulletRemove={removeBullet}
-            onAddEntry={addEntry}
-            onRemoveEntry={removeEntry}
-            onToggleSection={toggleSection}
-            hiddenSections={hiddenSections}
-            onReorderSections={reorderSections}
-            onReorderEntries={reorderEntries}
-            onInput={handleInput}
-            onRemoveSection={removeSection}
+            formData={displayFormData}
+            readOnly={isReadOnly}
+            onFieldChange={isReadOnly ? noopFieldChange : updateField}
+            onBulletAdd={isReadOnly ? noop as (basePath: string, afterIndex: number) => void : addBullet}
+            onBulletRemove={isReadOnly ? noop as (basePath: string, index: number) => void : removeBullet}
+            onAddEntry={isReadOnly ? noop as (sectionKey: string) => void : addEntry}
+            onRemoveEntry={isReadOnly ? noop as (sectionKey: string, index: number) => void : removeEntry}
+            onToggleSection={isReadOnly ? noop as (sectionKey: string) => void : toggleSection}
+            hiddenSections={isReadOnly ? EMPTY_SET : hiddenSections}
+            onReorderSections={isReadOnly ? noop as (from: number, to: number) => void : reorderSections}
+            onReorderEntries={isReadOnly ? noop as (sectionKey: string, from: number, to: number) => void : reorderEntries}
+            onInput={isReadOnly ? undefined : handleInput}
+            onRemoveSection={isReadOnly ? undefined : removeSection}
           />
-          {pageBreakY !== null && <PageBreakIndicator offsetY={pageBreakY} />}
+          {pageBreakY !== null && !isReadOnly && <PageBreakIndicator offsetY={pageBreakY} />}
         </div>
       </div>
+      <TunePanel
+        isOpen={tunePanelOpen}
+        onClose={() => setTunePanelOpen(false)}
+        formData={formData}
+        activeVersion={activeVersion}
+        onPreviewUpdate={handlePreviewUpdate}
+        onTier3Active={handleTier3Active}
+        cvContainerRef={cvContainerRef}
+      />
     </div>
   );
 }
