@@ -30,6 +30,7 @@ interface TunePanelProps {
   onPreviewUpdate: (fd: CVFormData | null) => void;
   onTier3Active: (active: boolean) => void;
   cvContainerRef: React.RefObject<HTMLDivElement | null>;
+  onTuneDetailsChange?: (companyName: string, roleName: string) => void;
 }
 
 export function TunePanel({
@@ -40,6 +41,7 @@ export function TunePanel({
   onPreviewUpdate,
   onTier3Active,
   cvContainerRef,
+  onTuneDetailsChange,
 }: TunePanelProps) {
   const navigate = useNavigate();
   const { setActiveVersion } = useCVContext();
@@ -90,6 +92,11 @@ export function TunePanel({
       onPreviewUpdate(null);
     }
   }, [activeTier, previewFormData, onPreviewUpdate, onTier3Active]);
+
+  // Surface Tier 2 companyName/roleName to parent for NavBar breadcrumb
+  useEffect(() => {
+    onTuneDetailsChange?.(companyName, roleName);
+  }, [companyName, roleName, onTuneDetailsChange]);
 
   // Escape key closes the panel
   useEffect(() => {
