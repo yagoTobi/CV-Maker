@@ -28,7 +28,8 @@ import { api } from '../../services/api';
 import { generateId } from '../../utils/idHelpers';
 import { generateCVFilename } from '../../utils/cvFilename';
 import { noop, EMPTY_SET } from '../../utils/cvDisplayUtils';
-import type { CVFormData, SkillItem } from '../../types';
+import type { CVFormData, SkillItem, CVVersion, CVVersionMeta } from '../../types';
+import { NamePromptDialog } from './components/NamePromptDialog';
 import styles from './DirectEditPage.module.css';
 
 const DEFAULT_TEMPLATE = 'med-length-proff-cv';
@@ -51,9 +52,54 @@ function createEmptyFormData(): CVFormData {
 }
 
 export default function DirectEditPage() {
-  const { activeVersion, setFormData, savedVersions, selectedTemplateForBuild } = useCVContext();
+  const { activeVersion, setFormData, savedVersions, selectedTemplateForBuild,
+          setActiveVersion, setSavedVersions } = useCVContext();
   const { formData, updateField, addBullet, removeBullet, addEntry, removeEntry, toggleSection, hiddenSections, reorderSections, reorderEntries, removeSection } = useDirectEditor();
-  const saveStatus = useAutoSave(formData, activeVersion?.id ?? null);
+  const [isNamePromptOpen, setIsNamePromptOpen] = useState(false);
+  const [tuneCompanyName, setTuneCompanyName] = useState('');
+  const [tuneRole, setTuneRole] = useState('');
+  const namePromiseRef = useRef<((name: string) => void) | null>(null);
+
+  const onNeedName = useCallback((): Promise<string> => {
+    return new Promise((resolve) => {
+      namePromiseRef.current = resolve;
+      setIsNamePromptOpen(true);
+    });
+  }, []);
+
+  const handleNameSubmit = useCallback((name: string) => {
+    setIsNamePromptOpen(false);
+    namePromiseRef.current?.(name || 'My CV');
+    namePromiseRef.current = null;
+  }, []);
+
+  const handleNameDismiss = useCallback(() => {
+    setIsNamePromptOpen(false);
+    namePromiseRef.current?.('Untitled CV');
+    namePromiseRef.current = null;
+  }, []);
+
+  const handleFirstSave = useCallback((version: CVVersion) => {
+    setActiveVersion(version);
+    const meta: CVVersionMeta = {
+      id: version.id,
+      name: version.name,
+      templateId: version.templateId,
+      jobDescription: version.jobDescription,
+      companyName: version.companyName,
+      role: version.role,
+      matchScore: version.matchScore,
+      baselineMatchScore: version.baselineMatchScore,
+      parentVersionId: version.parentVersionId,
+      createdAt: version.createdAt,
+    };
+    setSavedVersions([meta, ...savedVersions]);
+  }, [setActiveVersion, setSavedVersions, savedVersions]);
+
+  const saveStatus = useAutoSave(formData, activeVersion?.id ?? null, {
+    onNeedName,
+    onFirstSave: handleFirstSave,
+  });
   const [isBootstrapping, setIsBootstrapping] = useState(!formData);
   const [isDownloading, setIsDownloading] = useState(false);
   const [tunePanelOpen, setTunePanelOpen] = useState(false);
@@ -183,9 +229,13 @@ export default function DirectEditPage() {
       saveStatus,
       isDownloading,
       isTuning: tunePanelOpen,
+      cvName: activeVersion?.name ?? 'Untitled CV',
+      tuneCompanyName,
+      tuneRole,
     });
     return () => setEditorActions(null);
-  }, [setEditorActions, handleDownload, handleTuneForJob, saveStatus, isDownloading, tunePanelOpen]);
+  }, [setEditorActions, handleDownload, handleTuneForJob, saveStatus, isDownloading,
+      tunePanelOpen, activeVersion, tuneCompanyName, tuneRole]);
 
   // Callback handlers for TunePanel communication
   const handlePreviewUpdate = useCallback((fd: CVFormData | null) => {
@@ -235,7 +285,18 @@ export default function DirectEditPage() {
         onPreviewUpdate={handlePreviewUpdate}
         onTier3Active={handleTier3Active}
         cvContainerRef={cvContainerRef}
+        onTuneDetailsChange={(company, role) => {
+          setTuneCompanyName(company);
+          setTuneRole(role);
+        }}
       />
+      {isNamePromptOpen && (
+        <NamePromptDialog
+          isOpen={isNamePromptOpen}
+          onSubmit={handleNameSubmit}
+          onDismiss={handleNameDismiss}
+        />
+      )}
     </div>
   );
 }
