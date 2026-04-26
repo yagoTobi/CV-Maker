@@ -220,3 +220,23 @@ Plans:
 - [ ] 11-03-PLAN.md -- useAutoSave POST/PATCH branching + test extension
 - [ ] 11-04-PLAN.md -- EditorActionsContext extension + TunePanel onTuneDetailsChange prop
 - [ ] 11-05-PLAN.md -- DirectEditPage wiring + NavBar CVNameButton + breadcrumb + logo-only
+
+### Phase 12: Refine tuning UX — fix match score, redesign change cards, simplify flow
+
+**Goal:** Fix the broken match score display, redesign change cards from word-level diffs to clean Before/After blocks, and simplify the post-save flow with user choice instead of auto-navigation
+**Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12, D-13
+**Depends on:** Phase 11
+**Plans:** 3 plans
+**UI hint**: yes
+
+**Success Criteria** (what must be TRUE):
+  1. Match score displays the actual baseline value from match analysis (not 0%)
+  2. Score circle shows percentage with "%" suffix
+  3. Change cards use clean Before/After tinted blocks instead of word-level diff highlights
+  4. After saving tailored CV, user chooses between "View in Dashboard" and "Keep Editing"
+  5. When all changes are reviewed, a summary banner appears above the save button
+
+Plans:
+- [ ] 12-01-PLAN.md -- Fix match score bug: expose setBaselineScore from useTailor, add "%" suffix to score circle
+- [ ] 12-02-PLAN.md -- Redesign change cards: Before/After tinted blocks, new layout order, no word-level diffs
+- [ ] 12-03-PLAN.md -- Flow simplification: post-save prompt, all-reviewed banner, prominent save button + visual checkpoint
