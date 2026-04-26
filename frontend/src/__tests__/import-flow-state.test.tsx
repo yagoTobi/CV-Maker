@@ -268,13 +268,16 @@ describe('Navigation Flow State Management', () => {
       });
     });
 
-    it('NavBar does not show + New CV on non-editor pages (D-13)', async () => {
+    it('NavBar shows logo only (no My CVs, no + New CV) on non-editor pages (D-08, D-13)', async () => {
       renderApp('/dashboard');
 
       await waitFor(() => {
-        expect(screen.getByText('My CVs')).toBeInTheDocument();
+        expect(screen.getByText('CV Maker')).toBeInTheDocument();
       });
 
+      // D-08: My CVs link removed from NavBar on non-editor pages
+      expect(screen.queryByText('My CVs')).not.toBeInTheDocument();
+      // D-13: + New CV only appears inside CVSwitcherDropdown (editor pages), not globally
       expect(screen.queryByText('+ New CV')).not.toBeInTheDocument();
     });
   });
