@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: context exhaustion at 93% (2026-04-17)
-last_updated: "2026-04-17T00:37:25.089Z"
+stopped_at: Completed 11-05 auto tasks (checkpoint pending human verification)
+last_updated: "2026-04-26T09:59:15.785Z"
 last_activity: 2026-04-17
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 29
-  completed_plans: 29
+  total_phases: 11
+  completed_phases: 9
+  total_plans: 34
+  completed_plans: 34
   percent: 100
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** The CV itself is the editor. Users type directly on what they'll download -- no form fields, no split screen.
-**Current focus:** Phase 08 — streamlined-tune-flow-save-as-base-prompt-inline-tune-panel-
+**Current focus:** Phase 11 — CV Save Identity: name on first create, iterate in-place
 
 ## Current Position
 
-Phase: 08
-Plan: Not started
-Status: Ready to execute
+Phase: 11
+Plan: Wave 1 executing (11-01, 11-02)
+Status: Executing
 Last activity: 2026-04-17
 
 Progress: [███████░░░] 67%
@@ -78,6 +78,7 @@ Progress: [███████░░░] 67%
 | Phase 06-route-integration P02 | 2min | 2 tasks | 3 files |
 | Phase 06-route-integration P03 | 2min | 2 tasks | 32 files |
 | Phase 08 P04 | 80s | 1 tasks | 5 files |
+| Phase 11 P05 | 4min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -135,6 +136,8 @@ Recent decisions affecting current work:
 - [Phase 06-route-integration]: SUPPORTED_TEMPLATES as client-side Set for template enablement gating (not security boundary)
 - [Phase 06-route-integration]: handleApplyToJob simplified to navigate-only -- ApplyToJobScreen fetches its own version data
 - [Phase 06-route-integration]: No surviving production imports of deleted modules -- safe full deletion confirmed by dead code audit
+- setSavedVersions full-array pattern in handleFirstSave — CVContext interface uses (versions: CVVersionMeta[]) not functional updater, so reads savedVersions from closure
+- NavBar D-08: My CVs link removed entirely; non-editor pages show logo only; import-flow-state D-13 test updated to match
 
 ### Roadmap Evolution
 
@@ -165,6 +168,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-17T00:35:51.937Z
-Stopped at: context exhaustion at 93% (2026-04-17)
+Last session: 2026-04-26T09:59:15.776Z
+Stopped at: Completed 11-05 auto tasks (checkpoint pending human verification)
 Resume file: None
