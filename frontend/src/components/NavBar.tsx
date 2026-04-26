@@ -8,15 +8,18 @@
  * Editor detection: pathname === '/build/form' AND editorActions is non-null.
  * Per D-08, D-09, D-10, D-12, D-16, D-17 from UI-SPEC.
  */
+import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEditorActions } from '../contexts/EditorActionsContext';
 import { SaveIndicator } from '../features/direct-edit/components/SaveIndicator';
+import { CVSwitcherDropdown } from '../features/direct-edit/components/CVSwitcherDropdown';
 import styles from './NavBar.module.css';
 
 export function NavBar() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const editorActions = useEditorActions();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const isEditorPage = pathname === '/build/form' && editorActions !== null;
   const isTuning = editorActions?.isTuning ?? false;
@@ -31,14 +34,48 @@ export function NavBar() {
         >
           CV Maker
         </button>
-        <button
-          className={`${styles.navLink}${pathname === '/dashboard' ? ` ${styles.navLinkActive}` : ''}`}
-          onClick={() => navigate('/dashboard')}
-          type="button"
-          aria-current={pathname === '/dashboard' ? 'page' : undefined}
-        >
-          My CVs
-        </button>
+        {isEditorPage && !isTuning && (
+          <div style={{ position: 'relative' }}>
+            <button
+              className={`${styles.cvNameBtn}${isDropdownOpen ? ` ${styles.cvNameBtnOpen}` : ''}`}
+              onClick={() => setIsDropdownOpen(prev => !prev)}
+              type="button"
+              aria-haspopup="listbox"
+              aria-expanded={isDropdownOpen}
+              title={editorActions?.cvName ?? 'Untitled CV'}
+            >
+              <span className={styles.cvNameText}>
+                {editorActions?.cvName ?? 'Untitled CV'}
+              </span>
+              <span
+                className={`${styles.cvNameChevron}${isDropdownOpen ? ` ${styles.cvNameChevronOpen}` : ''}`}
+                aria-hidden="true"
+              >
+                ▾
+              </span>
+            </button>
+            <CVSwitcherDropdown
+              isOpen={isDropdownOpen}
+              onClose={() => setIsDropdownOpen(false)}
+            />
+          </div>
+        )}
+        {isEditorPage && isTuning && (
+          <div className={styles.breadcrumb}>
+            <span className={styles.breadcrumbBase}>
+              {editorActions?.cvName ?? 'Untitled CV'}
+            </span>
+            {(editorActions?.tuneCompanyName || editorActions?.tuneRole) && (
+              <>
+                <span className={styles.breadcrumbSep}>/</span>
+                <span className={styles.breadcrumbSub}>
+                  {editorActions?.tuneCompanyName || editorActions?.tuneRole}
+                </span>
+              </>
+            )}
+          </div>
+        )}
+        {/* Non-editor pages: logo only (no My CVs link) — per D-08 */}
       </div>
 
       <div className={styles.rightGroup}>

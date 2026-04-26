@@ -152,3 +152,78 @@
     transform: rotate(360deg);
   }
 }
+
+/* CV Name Button (editor pages, not tuning) */
+.cvNameBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.cvNameBtn:hover,
+.cvNameBtnOpen {
+  background: var(--bg-hover);
+  color: var(--accent);
+}
+
+.cvNameText {
+  max-width: 180px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  display: inline-block;
+}
+
+.cvNameChevron {
+  font-size: 10px;
+  color: var(--text-muted);
+  transition: transform 150ms ease;
+  flex-shrink: 0;
+}
+
+.cvNameChevronOpen {
+  transform: rotate(180deg);
+}
+
+/* Breadcrumb (editor pages, tuning active) */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+}
+
+.breadcrumbBase {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  max-width: 160px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.breadcrumbSep {
+  font-size: 13px;
+  color: var(--accent);
+  margin: 0 8px;
+  flex-shrink: 0;
+}
+
+.breadcrumbSub {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  max-width: 160px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
