@@ -44,13 +44,17 @@ export function LinkHeaderItem({
     onInput?.();
   }, [linkIdx, onFieldChange, onInput]);
 
-  // Backspace on empty label removes the link
+  // Backspace on empty label removes the link.
+  // Read live DOM content instead of stale label prop (EditableField commits on blur, not on input).
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if ((e.key === 'Backspace' || e.key === 'Delete') && label === '') {
-      e.preventDefault();
-      onRemoveLink(linkIdx);
+    if (e.key === 'Backspace' || e.key === 'Delete') {
+      const liveText = (e.currentTarget as HTMLElement).textContent ?? '';
+      if (liveText === '') {
+        e.preventDefault();
+        onRemoveLink(linkIdx);
+      }
     }
-  }, [label, linkIdx, onRemoveLink]);
+  }, [linkIdx, onRemoveLink]);
 
   const placeholder = inferUrlPlaceholder(label);
   // Show link color only when URL is set (matches LaTeX darkblue behavior)

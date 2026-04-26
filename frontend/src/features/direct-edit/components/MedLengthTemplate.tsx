@@ -58,7 +58,7 @@ export interface MedLengthTemplateProps {
   onReorderEntries: (sectionKey: string, from: number, to: number) => void;
   onInput?: () => void;
   onRemoveSection?: (sectionKey: string) => void;
-  onAddLink?: (label?: string, url?: string) => void;
+  onAddLink?: (label?: string, url?: string, side?: 'left' | 'right') => void;
   onRemoveLink?: (idx: number) => void;
 }
 
@@ -101,8 +101,8 @@ export function MedLengthTemplate({
     sectionDrag,
   }), [readOnly, onFieldChange, onBulletAdd, onBulletRemove, onAddEntry, onRemoveEntry, onToggleSection, hiddenSections, onReorderEntries, onInput, onRemoveSection, sectionDrag]);
 
-  const handleAddLinkSelect = useCallback((preset: LinkPreset) => {
-    onAddLink?.(preset.label, preset.url);
+  const handleAddLinkSelect = useCallback((preset: LinkPreset, side: 'left' | 'right') => {
+    onAddLink?.(preset.label, preset.url, side);
     setDropdownSide(null);
   }, [onAddLink]);
 
@@ -118,7 +118,7 @@ export function MedLengthTemplate({
       </button>
       {dropdownSide === side && (
         <AddLinkDropdown
-          onSelect={handleAddLinkSelect}
+          onSelect={(preset) => handleAddLinkSelect(preset, side)}
           onClose={() => setDropdownSide(null)}
         />
       )}
@@ -126,10 +126,40 @@ export function MedLengthTemplate({
   ) : null;
 
   const infoBarItems = useMemo(() => {
-    const items: React.ReactNode[] = [];
+    const leftLinks = personalInfo.links.filter(l => l.side === 'left');
+    const rightLinks = personalInfo.links.filter(l => l.side !== 'left');
 
-    // Track which fields actually produced visible items so we only add separators between them
+    const renderLinkGroup = (links: typeof personalInfo.links) => {
+      const group: React.ReactNode[] = [];
+      links.forEach((link, i) => {
+        const linkIdx = personalInfo.links.indexOf(link);
+        if (i > 0) {
+          group.push(
+            <span key={`link-sep-${link.id}`} className={styles.infoSeparator}>|</span>
+          );
+        }
+        group.push(
+          <LinkHeaderItem
+            key={`link-${link.id}`}
+            linkId={link.id}
+            label={link.label}
+            url={link.url}
+            linkIdx={linkIdx}
+            onFieldChange={onFieldChange}
+            onRemoveLink={onRemoveLink ?? (() => {})}
+            className={styles.linkText}
+            onInput={onInput}
+            readOnly={readOnly}
+          />
+        );
+      });
+      return group;
+    };
+
+    // Build groups: left-links, then personalOrder fields (excluding 'links'), then right-links
     const fieldItems: React.ReactNode[][] = [];
+
+    if (leftLinks.length > 0) fieldItems.push(renderLinkGroup(leftLinks));
 
     personalOrder.forEach((field) => {
       const group: React.ReactNode[] = [];
@@ -172,33 +202,16 @@ export function MedLengthTemplate({
           />
         );
       } else if (field === 'links') {
-        personalInfo.links.forEach((link, linkIdx) => {
-          if (linkIdx > 0) {
-            group.push(
-              <span key={`link-sep-${linkIdx}`} className={styles.infoSeparator}>|</span>
-            );
-          }
-          group.push(
-            <LinkHeaderItem
-              key={`link-${link.id}`}
-              linkId={link.id}
-              label={link.label}
-              url={link.url}
-              linkIdx={linkIdx}
-              onFieldChange={onFieldChange}
-              onRemoveLink={onRemoveLink ?? (() => {})}
-              className={styles.linkText}
-              onInput={onInput}
-              readOnly={readOnly}
-            />
-          );
-        });
+        // Handled separately via leftLinks/rightLinks — skip
+        return;
       }
-      // Only include groups that have content (skip empty links array)
       if (group.length > 0) fieldItems.push(group);
     });
 
+    if (rightLinks.length > 0) fieldItems.push(renderLinkGroup(rightLinks));
+
     // Interleave separators only between non-empty groups
+    const items: React.ReactNode[] = [];
     fieldItems.forEach((group, groupIdx) => {
       items.push(...group);
       if (groupIdx < fieldItems.length - 1) {

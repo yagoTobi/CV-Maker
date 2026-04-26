@@ -139,6 +139,13 @@ export const EditableField = forwardRef<HTMLElement, EditableFieldProps>(
       isComposing.current = false;
     }, []);
 
+    const handleClick = useCallback((e: React.MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'A' || target.closest('a')) {
+        e.preventDefault();
+      }
+    }, []);
+
     const combinedClassName = className
       ? `${styles.editableField} ${className}`
       : styles.editableField;
@@ -165,6 +172,7 @@ export const EditableField = forwardRef<HTMLElement, EditableFieldProps>(
       onCompositionStart: handleCompositionStart,
       onCompositionEnd: handleCompositionEnd,
       onPaste: rich ? handlePaste : undefined,
+      onClick: rich ? handleClick : undefined,
     };
 
     if (placeholder !== undefined) {

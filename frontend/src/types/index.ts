@@ -57,7 +57,7 @@ export interface PersonalInfo {
   email: string;
   phone: string;
   location: string;
-  links: Array<{ id: string; label: string; url: string }>;
+  links: Array<{ id: string; label: string; url: string; side?: 'left' | 'right' }>;
   summary?: string;
   /** Ordered list of header fields: 'phone' | 'email' | 'location' | 'links' */
   personalOrder?: string[];

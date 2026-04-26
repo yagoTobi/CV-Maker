@@ -261,15 +261,14 @@ export function useDirectEditor() {
     [setFormData]
   );
 
-  const addLink = useCallback((label = '', url = '') => {
+  const addLink = useCallback((label = '', url = '', side: 'left' | 'right' = 'right') => {
     setFormData((prev: CVFormData | null) => {
       if (!prev) return prev;
+      const newLink = { id: generateId(), label, url, side };
+      const links = [...prev.personalInfo.links, newLink];
       return {
         ...prev,
-        personalInfo: {
-          ...prev.personalInfo,
-          links: [...prev.personalInfo.links, { id: generateId(), label, url }],
-        },
+        personalInfo: { ...prev.personalInfo, links },
       };
     });
   }, [setFormData]);

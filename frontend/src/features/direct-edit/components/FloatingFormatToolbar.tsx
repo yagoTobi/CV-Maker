@@ -3,62 +3,100 @@
  * Appears above text selection when inside a [data-rich] contentEditable element.
  * Provides Bold, Italic, and Link buttons via document.execCommand.
  *
- * Keyboard shortcuts (Cmd/Ctrl+B, Cmd/Ctrl+I, Cmd/Ctrl+K) are handled here so they
- * work regardless of which [data-rich] element is focused.
+ * Three modes:
+ * - format:      B | I | 🔗  (text selected)
+ * - link-create: [URL input] [submit]  (creating new link from selection)
+ * - link-edit:   [URL input] [submit] [unlink]  (cursor inside existing link)
+ *
+ * Keyboard shortcuts (Cmd/Ctrl+B, Cmd/Ctrl+I, Cmd/Ctrl+K) work in any [data-rich] field.
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import styles from './FloatingFormatToolbar.module.css';
+
+type Mode = 'format' | 'link-create' | 'link-edit';
 
 export function FloatingFormatToolbar() {
   const [visible, setVisible] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const [formats, setFormats] = useState({ bold: false, italic: false, linked: false });
-  const [showLink, setShowLink] = useState(false);
+  const [mode, setMode] = useState<Mode>('format');
   const [linkUrl, setLinkUrl] = useState('');
   const linkInputRef = useRef<HTMLInputElement>(null);
   const savedRangeRef = useRef<Range | null>(null);
+  const linkAnchorRef = useRef<HTMLAnchorElement | null>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  /** Ref mirror of showLink so event listeners always read the latest value */
-  const showLinkRef = useRef(false);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const modeRef = useRef<Mode>('format');
 
-  // Keep ref in sync with state
-  useEffect(() => {
-    showLinkRef.current = showLink;
-  }, [showLink]);
+  useEffect(() => { modeRef.current = mode; }, [mode]);
+
+  const dismiss = useCallback(() => {
+    setVisible(false);
+    setMode('format');
+    setLinkUrl('');
+    linkAnchorRef.current = null;
+  }, []);
+
+  const positionToolbar = useCallback((rect: DOMRect) => {
+    const TOOLBAR_W = 118;
+    let left = rect.left + rect.width / 2 - TOOLBAR_W / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - TOOLBAR_W - 8));
+    setPos({ top: rect.top - 44, left });
+  }, []);
 
   useEffect(() => {
     const onSelectionChange = () => {
       clearTimeout(hideTimerRef.current);
       const sel = window.getSelection();
-      if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
-        // Do not hide while the link input is open — the user clicked the link
-        // button which collapses the selection, but we must keep the toolbar visible.
-        if (!showLinkRef.current) {
-          hideTimerRef.current = setTimeout(() => { setVisible(false); setShowLink(false); }, 150);
+      if (!sel || sel.rangeCount === 0) {
+        if (modeRef.current === 'format') {
+          hideTimerRef.current = setTimeout(dismiss, 150);
         }
         return;
       }
+
       const range = sel.getRangeAt(0);
       const ancestor = range.commonAncestorContainer;
       const el = ancestor instanceof Element ? ancestor : ancestor.parentElement;
+
       if (!el?.closest('[data-rich]')) {
-        if (!showLinkRef.current) {
-          hideTimerRef.current = setTimeout(() => { setVisible(false); setShowLink(false); }, 150);
+        if (modeRef.current === 'format') {
+          hideTimerRef.current = setTimeout(dismiss, 150);
         }
         return;
       }
-      const rect = range.getBoundingClientRect();
-      if (rect.width === 0) return;
-      const TOOLBAR_W = 118;
-      let left = rect.left + rect.width / 2 - TOOLBAR_W / 2;
-      left = Math.max(8, Math.min(left, window.innerWidth - TOOLBAR_W - 8));
-      setPos({ top: rect.top - 44, left });
-      setFormats({
-        bold: document.queryCommandState('bold'),
-        italic: document.queryCommandState('italic'),
-        linked: !!el.closest('[data-rich] a'),
-      });
-      setVisible(true);
+
+      const anchorEl = el.closest('[data-rich] a') as HTMLAnchorElement | null;
+
+      if (sel.isCollapsed) {
+        if (anchorEl) {
+          const rect = anchorEl.getBoundingClientRect();
+          positionToolbar(rect);
+          linkAnchorRef.current = anchorEl;
+          savedRangeRef.current = range.cloneRange();
+          setLinkUrl(anchorEl.getAttribute('href') ?? '');
+          setMode('link-edit');
+          setVisible(true);
+          setTimeout(() => linkInputRef.current?.focus(), 0);
+        } else if (modeRef.current === 'format') {
+          hideTimerRef.current = setTimeout(dismiss, 150);
+        }
+        return;
+      }
+
+      // Non-collapsed selection: show format buttons
+      if (modeRef.current !== 'link-create') {
+        const rect = range.getBoundingClientRect();
+        if (rect.width === 0) return;
+        positionToolbar(rect);
+        setFormats({
+          bold: document.queryCommandState('bold'),
+          italic: document.queryCommandState('italic'),
+          linked: !!anchorEl,
+        });
+        setMode('format');
+        setVisible(true);
+      }
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
@@ -78,7 +116,7 @@ export function FloatingFormatToolbar() {
         const sel = window.getSelection();
         if (sel?.rangeCount) savedRangeRef.current = sel.getRangeAt(0).cloneRange();
         setVisible(true);
-        setShowLink(true);
+        setMode('link-create');
         setLinkUrl('');
         setTimeout(() => linkInputRef.current?.focus(), 0);
       }
@@ -91,7 +129,7 @@ export function FloatingFormatToolbar() {
       document.removeEventListener('keydown', onKeyDown);
       clearTimeout(hideTimerRef.current);
     };
-  }, []);
+  }, [dismiss, positionToolbar]);
 
   const handleBold = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -108,54 +146,69 @@ export function FloatingFormatToolbar() {
     if (formats.linked) { document.execCommand('unlink'); return; }
     const sel = window.getSelection();
     if (sel?.rangeCount) savedRangeRef.current = sel.getRangeAt(0).cloneRange();
-    setShowLink(true);
+    setMode('link-create');
     setLinkUrl('');
     setTimeout(() => linkInputRef.current?.focus(), 0);
   }, [formats.linked]);
 
+  const applyLink = useCallback((url: string) => {
+    let href = url.trim();
+    if (!href) return;
+    if (!/^https?:\/\/|^mailto:/.test(href)) href = `https://${href}`;
+
+    if (mode === 'link-edit' && linkAnchorRef.current) {
+      linkAnchorRef.current.href = href;
+    } else {
+      if (savedRangeRef.current) {
+        const sel = window.getSelection();
+        if (sel) { sel.removeAllRanges(); sel.addRange(savedRangeRef.current); }
+      }
+      document.execCommand('createLink', false, href);
+      document.querySelectorAll('[data-rich] a:not([data-editor-link])').forEach(a => {
+        a.setAttribute('data-editor-link', 'true');
+      });
+    }
+  }, [mode]);
+
   const handleLinkSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    if (!linkUrl.trim()) { setShowLink(false); return; }
-    if (savedRangeRef.current) {
-      const sel = window.getSelection();
-      if (sel) { sel.removeAllRanges(); sel.addRange(savedRangeRef.current); }
+    applyLink(linkUrl);
+    dismiss();
+  }, [linkUrl, applyLink, dismiss]);
+
+  const handleUnlink = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    if (linkAnchorRef.current) {
+      const anchor = linkAnchorRef.current;
+      const parent = anchor.parentNode;
+      if (parent) {
+        while (anchor.firstChild) parent.insertBefore(anchor.firstChild, anchor);
+        parent.removeChild(anchor);
+      }
     }
-    let url = linkUrl.trim();
-    if (!/^https?:\/\/|^mailto:/.test(url)) url = `https://${url}`;
-    document.execCommand('createLink', false, url);
-    // Disable navigation on editor links
-    document.querySelectorAll('[data-rich] a:not([data-editor-link])').forEach(a => {
-      a.setAttribute('data-editor-link', 'true');
-      (a as HTMLElement).style.pointerEvents = 'none';
-      (a as HTMLElement).style.cursor = 'text';
-    });
-    setShowLink(false);
-    setLinkUrl('');
-  }, [linkUrl]);
+    dismiss();
+  }, [dismiss]);
+
+  const handleLinkInputBlur = useCallback((e: React.FocusEvent) => {
+    // Don't dismiss if focus moved to another element within the toolbar
+    if (toolbarRef.current?.contains(e.relatedTarget as Node)) return;
+    setTimeout(() => {
+      if (!toolbarRef.current?.contains(document.activeElement)) {
+        dismiss();
+      }
+    }, 150);
+  }, [dismiss]);
 
   if (!visible) return null;
 
   return (
     <div
+      ref={toolbarRef}
       className={styles.toolbar}
       style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
-      onMouseDown={(e) => e.preventDefault()}
+      onMouseDown={(e) => { if ((e.target as HTMLElement).tagName !== 'INPUT') e.preventDefault(); }}
     >
-      {showLink ? (
-        <form onSubmit={handleLinkSubmit} className={styles.linkForm}>
-          <input
-            ref={linkInputRef}
-            className={styles.linkInput}
-            type="text"
-            placeholder="https://"
-            value={linkUrl}
-            onChange={e => setLinkUrl(e.target.value)}
-            onKeyDown={e => e.key === 'Escape' && setShowLink(false)}
-            autoComplete="off"
-          />
-          <button type="submit" className={styles.linkSubmitBtn}>&#8629;</button>
-        </form>
-      ) : (
+      {mode === 'format' ? (
         <>
           <button
             type="button"
@@ -186,6 +239,30 @@ export function FloatingFormatToolbar() {
             </svg>
           </button>
         </>
+      ) : (
+        <form onSubmit={handleLinkSubmit} className={styles.linkForm}>
+          <input
+            ref={linkInputRef}
+            className={styles.linkInput}
+            type="text"
+            placeholder="https://"
+            value={linkUrl}
+            onChange={e => setLinkUrl(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Escape') dismiss(); }}
+            onBlur={handleLinkInputBlur}
+            autoComplete="off"
+          />
+          <button type="submit" className={styles.linkSubmitBtn} title="Apply link">&#8629;</button>
+          {mode === 'link-edit' && (
+            <button type="button" className={styles.unlinkBtn} onMouseDown={handleUnlink} title="Remove link">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18.84 12.25l1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                <path d="M5.16 11.75l-1.72 1.71a5 5 0 0 0 7.07 7.07l1.72-1.71"/>
+                <line x1="2" y1="2" x2="22" y2="22"/>
+              </svg>
+            </button>
+          )}
+        </form>
       )}
     </div>
   );

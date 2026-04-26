@@ -95,3 +95,23 @@
 .linkSubmitBtn:hover {
   background: var(--accent-hover);
 }
+
+.unlinkBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color 0.1s ease, color 0.1s ease, border-color 0.1s ease;
+}
+
+.unlinkBtn:hover {
+  background: var(--error-light, #fef2f2);
+  color: var(--error, #ef4444);
+  border-color: var(--error, #ef4444);
+}
