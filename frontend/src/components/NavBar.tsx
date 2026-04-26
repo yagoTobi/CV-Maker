@@ -23,6 +23,7 @@ export function NavBar() {
 
   const isEditorPage = pathname === '/build/form' && editorActions !== null;
   const isTuning = editorActions?.isTuning ?? false;
+  const isTunedVersion = editorActions?.isTunedVersion ?? false;
 
   return (
     <nav className={styles.navBar} aria-label="Main navigation">
@@ -34,7 +35,7 @@ export function NavBar() {
         >
           CV Maker
         </button>
-        {isEditorPage && !isTuning && (
+        {isEditorPage && !isTuning && !isTunedVersion && (
           <div style={{ position: 'relative' }}>
             <button
               className={`${styles.cvNameBtn}${isDropdownOpen ? ` ${styles.cvNameBtnOpen}` : ''}`}
@@ -60,7 +61,7 @@ export function NavBar() {
             />
           </div>
         )}
-        {isEditorPage && isTuning && (
+        {isEditorPage && (isTuning || isTunedVersion) && (
           <div className={styles.breadcrumb}>
             <span className={styles.breadcrumbBase}>
               {editorActions?.cvName ?? 'Untitled CV'}
@@ -81,6 +82,16 @@ export function NavBar() {
       <div className={styles.rightGroup}>
         {isEditorPage ? (
           <>
+            <SaveIndicator status={editorActions.saveStatus} inline />
+            {!isTunedVersion && (
+              <button
+                className={`${styles.ghostBtn}${isTuning ? ` ${styles.ghostBtnActive}` : ''}`}
+                onClick={editorActions.onTuneForJob}
+                type="button"
+              >
+                Tune for Job
+              </button>
+            )}
             <button
               className={styles.accentBtn}
               onClick={editorActions.onDownload}
@@ -96,14 +107,6 @@ export function NavBar() {
                 'Download PDF'
               )}
             </button>
-            <button
-              className={`${styles.ghostBtn}${isTuning ? ` ${styles.ghostBtnActive}` : ''}`}
-              onClick={editorActions.onTuneForJob}
-              type="button"
-            >
-              Tune for Job
-            </button>
-            <SaveIndicator status={editorActions.saveStatus} inline />
           </>
         ) : null}
       </div>

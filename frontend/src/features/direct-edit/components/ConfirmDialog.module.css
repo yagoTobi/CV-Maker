@@ -13,7 +13,7 @@
   top: -4px;
   right: -24px;
   z-index: 10;
-  background: #fff;
+  background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-lg);
@@ -60,7 +60,8 @@
 }
 
 .deleteBtn:hover {
-  background: #dc2626;
+  background: var(--error-light);
+  color: var(--error);
 }
 
 .cancelBtn {

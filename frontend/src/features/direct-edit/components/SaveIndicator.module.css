@@ -16,6 +16,12 @@
   pointer-events: none;
   user-select: none;
   transition: opacity 0.3s ease;
+  min-width: 60px; /* prevents layout shift when text changes */
+}
+
+.idle {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .saving {
@@ -34,4 +40,7 @@
   position: static;
   z-index: auto;
   pointer-events: auto;
+  /* Fixed width prevents NavBar buttons from shifting when text changes */
+  min-width: 72px;
+  text-align: right;
 }

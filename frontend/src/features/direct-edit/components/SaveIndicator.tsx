@@ -13,18 +13,22 @@ interface SaveIndicatorProps {
 }
 
 export function SaveIndicator({ status, inline }: SaveIndicatorProps) {
-  if (status === 'idle') return null;
-
   const text = status === 'saving' ? 'Saving...'
              : status === 'saved'  ? 'Saved'
-             : 'Save failed';
+             : status === 'error'  ? 'Save failed'
+             : '';
 
   const className = status === 'saving' ? styles.saving
                   : status === 'saved'  ? styles.saved
-                  : styles.error;
+                  : status === 'error'  ? styles.error
+                  : styles.idle;
 
   return (
-    <div className={`${styles.indicator} ${className}${inline ? ` ${styles.inline}` : ''}`}>
+    <div
+      className={`${styles.indicator} ${className}${inline ? ` ${styles.inline}` : ''}`}
+      aria-live="polite"
+      aria-atomic="true"
+    >
       {text}
     </div>
   );

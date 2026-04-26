@@ -16,7 +16,8 @@ interface EditorActions {
   saveStatus: SaveStatus;
   isDownloading: boolean;
   isTuning: boolean;
-  cvName: string;           // activeVersion?.name ?? 'Untitled CV' (set by DirectEditPage)
+  isTunedVersion: boolean;  // true when activeVersion has a parentVersionId (job-specific CV)
+  cvName: string;           // parent name when tuned, else activeVersion.name (set by DirectEditPage)
   tuneCompanyName: string;  // TunePanel Tier 2 companyName (set by DirectEditPage)
   tuneRole: string;         // TunePanel Tier 2 roleName (set by DirectEditPage)
 }

@@ -261,6 +261,32 @@ export function useDirectEditor() {
     [setFormData]
   );
 
+  const addLink = useCallback((label = '', url = '') => {
+    setFormData((prev: CVFormData | null) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        personalInfo: {
+          ...prev.personalInfo,
+          links: [...prev.personalInfo.links, { id: generateId(), label, url }],
+        },
+      };
+    });
+  }, [setFormData]);
+
+  const removeLink = useCallback((linkIdx: number) => {
+    setFormData((prev: CVFormData | null) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        personalInfo: {
+          ...prev.personalInfo,
+          links: prev.personalInfo.links.filter((_, i) => i !== linkIdx),
+        },
+      };
+    });
+  }, [setFormData]);
+
   return {
     formData,
     updateField,
@@ -273,5 +299,7 @@ export function useDirectEditor() {
     toggleSection,
     hiddenSections,
     removeSection,
+    addLink,
+    removeLink,
   };
 }

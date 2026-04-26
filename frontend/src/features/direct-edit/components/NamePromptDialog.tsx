@@ -41,7 +41,7 @@ export function NamePromptDialog({ isOpen, defaultName, onSubmit, onDismiss }: N
       if (e.key === 'Escape') {
         onDismiss();
       } else if (e.key === 'Enter') {
-        onSubmit(value.trim() || 'My CV');
+        onSubmit(value.trim() || 'Untitled CV');
       }
     };
     document.addEventListener('keydown', handleKeyDown);
@@ -51,7 +51,7 @@ export function NamePromptDialog({ isOpen, defaultName, onSubmit, onDismiss }: N
   if (!isOpen) return null;
 
   const handleSave = () => {
-    onSubmit(value.trim() || 'My CV');
+    onSubmit(value.trim() || 'Untitled CV');
   };
 
   return (
@@ -64,7 +64,7 @@ export function NamePromptDialog({ isOpen, defaultName, onSubmit, onDismiss }: N
         aria-labelledby="namePromptHeading"
       >
         <p id="namePromptHeading" className={styles.heading}>Give this CV a name</p>
-        <p className={styles.subtext}>You can always rename it later.</p>
+        <p className={styles.subtext}>Name it by role to use as your base CV — e.g. "Software Engineer".</p>
         <div className={styles.inputRow}>
           <input
             ref={inputRef}
@@ -72,7 +72,7 @@ export function NamePromptDialog({ isOpen, defaultName, onSubmit, onDismiss }: N
             type="text"
             value={value}
             onChange={e => setValue(e.target.value)}
-            placeholder="My CV"
+            placeholder="e.g. Software Engineer"
             autoFocus
           />
         </div>

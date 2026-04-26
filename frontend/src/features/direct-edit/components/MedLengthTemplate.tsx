@@ -15,8 +15,11 @@
  * Standard section headings (work/education/skills/projects/awards) are editable inline
  * via sectionLabels in formData; changes persist through onFieldChange.
  */
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { EditableField } from './EditableField';
+import { LinkHeaderItem } from './LinkHeaderItem';
+import { AddLinkDropdown } from './AddLinkDropdown';
+import type { LinkPreset } from './AddLinkDropdown';
 import { DropLine } from './DropLine';
 import { FloatingFormatToolbar } from './FloatingFormatToolbar';
 import { useSectionDrag } from '../hooks/useSectionDrag';
@@ -55,6 +58,8 @@ export interface MedLengthTemplateProps {
   onReorderEntries: (sectionKey: string, from: number, to: number) => void;
   onInput?: () => void;
   onRemoveSection?: (sectionKey: string) => void;
+  onAddLink?: (label?: string, url?: string) => void;
+  onRemoveLink?: (idx: number) => void;
 }
 
 export function MedLengthTemplate({
@@ -71,7 +76,10 @@ export function MedLengthTemplate({
   onReorderEntries,
   onInput,
   onRemoveSection,
+  onAddLink,
+  onRemoveLink,
 }: MedLengthTemplateProps) {
+  const [dropdownSide, setDropdownSide] = useState<'left' | 'right' | null>(null);
   const { personalInfo } = formData;
   const sectionOrder = formData.sectionOrder ?? DEFAULT_SECTION_ORDER;
   const sectionLabels = formData.sectionLabels ?? {};
@@ -93,12 +101,40 @@ export function MedLengthTemplate({
     sectionDrag,
   }), [readOnly, onFieldChange, onBulletAdd, onBulletRemove, onAddEntry, onRemoveEntry, onToggleSection, hiddenSections, onReorderEntries, onInput, onRemoveSection, sectionDrag]);
 
+  const handleAddLinkSelect = useCallback((preset: LinkPreset) => {
+    onAddLink?.(preset.label, preset.url);
+    setDropdownSide(null);
+  }, [onAddLink]);
+
+  const addLinkBtn = (side: 'left' | 'right') => !readOnly && onAddLink ? (
+    <span key={`add-link-${side}`} style={{ position: 'relative', display: 'inline-flex', alignItems: 'baseline' }}>
+      <button
+        className={styles.addLinkBtn}
+        onClick={() => setDropdownSide(prev => prev === side ? null : side)}
+        type="button"
+        title="Add link"
+      >
+        +
+      </button>
+      {dropdownSide === side && (
+        <AddLinkDropdown
+          onSelect={handleAddLinkSelect}
+          onClose={() => setDropdownSide(null)}
+        />
+      )}
+    </span>
+  ) : null;
+
   const infoBarItems = useMemo(() => {
     const items: React.ReactNode[] = [];
 
-    personalOrder.forEach((field, fieldIdx) => {
+    // Track which fields actually produced visible items so we only add separators between them
+    const fieldItems: React.ReactNode[][] = [];
+
+    personalOrder.forEach((field) => {
+      const group: React.ReactNode[] = [];
       if (field === 'phone') {
-        items.push(
+        group.push(
           <EditableField
             key="phone"
             value={personalInfo.phone}
@@ -107,10 +143,11 @@ export function MedLengthTemplate({
             placeholder="+1 (555) 123-4567"
             onInput={onInput}
             readOnly={readOnly}
+            className={personalInfo.phone ? styles.linkText : undefined}
           />
         );
       } else if (field === 'email') {
-        items.push(
+        group.push(
           <EditableField
             key="email"
             value={personalInfo.email}
@@ -119,10 +156,11 @@ export function MedLengthTemplate({
             placeholder="email@example.com"
             onInput={onInput}
             readOnly={readOnly}
+            className={personalInfo.email ? styles.linkText : undefined}
           />
         );
       } else if (field === 'location') {
-        items.push(
+        group.push(
           <EditableField
             key="location"
             value={personalInfo.location}
@@ -136,17 +174,19 @@ export function MedLengthTemplate({
       } else if (field === 'links') {
         personalInfo.links.forEach((link, linkIdx) => {
           if (linkIdx > 0) {
-            items.push(
+            group.push(
               <span key={`link-sep-${linkIdx}`} className={styles.infoSeparator}>|</span>
             );
           }
-          items.push(
-            <EditableField
+          group.push(
+            <LinkHeaderItem
               key={`link-${link.id}`}
-              value={link.label}
-              fieldPath={`personalInfo.links[${linkIdx}].label`}
+              linkId={link.id}
+              label={link.label}
+              url={link.url}
+              linkIdx={linkIdx}
               onFieldChange={onFieldChange}
-              placeholder="Link"
+              onRemoveLink={onRemoveLink ?? (() => {})}
               className={styles.linkText}
               onInput={onInput}
               readOnly={readOnly}
@@ -154,17 +194,23 @@ export function MedLengthTemplate({
           );
         });
       }
+      // Only include groups that have content (skip empty links array)
+      if (group.length > 0) fieldItems.push(group);
+    });
 
-      if (fieldIdx < personalOrder.length - 1) {
+    // Interleave separators only between non-empty groups
+    fieldItems.forEach((group, groupIdx) => {
+      items.push(...group);
+      if (groupIdx < fieldItems.length - 1) {
         items.push(
-          <span key={`sep-${fieldIdx}`} className={styles.infoSeparator}>|</span>
+          <span key={`sep-${groupIdx}`} className={styles.infoSeparator}>|</span>
         );
       }
     });
 
     return items;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [personalOrder, personalInfo.phone, personalInfo.email, personalInfo.location, personalInfo.links, onFieldChange, onInput, readOnly]);
+  }, [personalOrder, personalInfo.phone, personalInfo.email, personalInfo.location, personalInfo.links, onFieldChange, onInput, readOnly, onRemoveLink]);
 
   const renderSection = (sec: string, sectionIdx: number) => {
     const props = { ...sharedProps, sectionIndex: sectionIdx };
@@ -262,7 +308,9 @@ export function MedLengthTemplate({
         readOnly={readOnly}
       />
       <div className={styles.infoBar}>
+        {addLinkBtn('left')}
         {infoBarItems}
+        {addLinkBtn('right')}
       </div>
 
       {personalInfo.summary !== undefined && (

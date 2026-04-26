@@ -54,10 +54,10 @@ function createEmptyFormData(): CVFormData {
 export default function DirectEditPage() {
   const { activeVersion, setFormData, savedVersions, selectedTemplateForBuild,
           setActiveVersion, setSavedVersions } = useCVContext();
-  const { formData, updateField, addBullet, removeBullet, addEntry, removeEntry, toggleSection, hiddenSections, reorderSections, reorderEntries, removeSection } = useDirectEditor();
+  const { formData, updateField, addBullet, removeBullet, addEntry, removeEntry, toggleSection, hiddenSections, reorderSections, reorderEntries, removeSection, addLink, removeLink } = useDirectEditor();
   const [isNamePromptOpen, setIsNamePromptOpen] = useState(false);
-  const [tuneCompanyName, setTuneCompanyName] = useState('');
-  const [tuneRole, setTuneRole] = useState('');
+  const [tuneCompanyName, setTuneCompanyName] = useState(activeVersion?.companyName ?? '');
+  const [tuneRole, setTuneRole] = useState(activeVersion?.role ?? '');
   const namePromiseRef = useRef<((name: string) => void) | null>(null);
 
   const onNeedName = useCallback((): Promise<string> => {
@@ -223,19 +223,24 @@ export default function DirectEditPage() {
 
   // Lift editor actions into NavBar via EditorActionsContext
   useEffect(() => {
+    const isTunedVersion = !!(activeVersion?.parentVersionId);
+    const parentName = isTunedVersion
+      ? (savedVersions.find(v => v.id === activeVersion?.parentVersionId)?.name ?? 'Untitled CV')
+      : (activeVersion?.name ?? 'Untitled CV');
     setEditorActions({
       onDownload: handleDownload,
       onTuneForJob: handleTuneForJob,
       saveStatus,
       isDownloading,
       isTuning: tunePanelOpen,
-      cvName: activeVersion?.name ?? 'Untitled CV',
-      tuneCompanyName,
-      tuneRole,
+      isTunedVersion,
+      cvName: parentName,
+      tuneCompanyName: isTunedVersion ? (tuneCompanyName || activeVersion?.companyName || '') : tuneCompanyName,
+      tuneRole: isTunedVersion ? (tuneRole || activeVersion?.role || '') : tuneRole,
     });
     return () => setEditorActions(null);
   }, [setEditorActions, handleDownload, handleTuneForJob, saveStatus, isDownloading,
-      tunePanelOpen, activeVersion, tuneCompanyName, tuneRole]);
+      tunePanelOpen, activeVersion, savedVersions, tuneCompanyName, tuneRole]);
 
   // Callback handlers for TunePanel communication
   const handlePreviewUpdate = useCallback((fd: CVFormData | null) => {
@@ -273,6 +278,8 @@ export default function DirectEditPage() {
             onReorderEntries={isReadOnly ? noop as (sectionKey: string, from: number, to: number) => void : reorderEntries}
             onInput={isReadOnly ? undefined : handleInput}
             onRemoveSection={isReadOnly ? undefined : removeSection}
+            onAddLink={isReadOnly ? undefined : addLink}
+            onRemoveLink={isReadOnly ? undefined : removeLink}
           />
           {pageBreakY !== null && !isReadOnly && <PageBreakIndicator offsetY={pageBreakY} />}
         </div>

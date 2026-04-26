@@ -1,0 +1,70 @@
+/* LinkHeaderItem -- editable link label + hover URL popover in CV header */
+
+.wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.urlTrigger {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  z-index: 100;
+}
+
+.wrapper:hover .urlTrigger,
+.wrapper:focus-within .urlTrigger {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.urlPopover {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  padding: 4px 6px;
+  white-space: nowrap;
+  font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+}
+
+.urlIcon {
+  font-size: 10px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* Blue text when URL is set — matches LaTeX darkblue */
+.hasUrl {
+  color: rgb(21, 88, 176);
+}
+
+.urlInput {
+  width: 200px;
+  height: 22px;
+  padding: 0 6px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 11px;
+  font-family: inherit;
+  outline: none;
+}
+
+.urlInput::placeholder {
+  color: var(--text-muted);
+}
+
+.urlInput:focus {
+  border-color: var(--accent);
+  background: var(--bg-secondary);
+}
