@@ -1,4 +1,4 @@
-/* ChangeCard -- Individual tailor suggestion card with diff, edit, accept/reject */
+/* ChangeCard -- Individual tailor suggestion card with Before/After blocks */
 
 .card {
   background: var(--bg-primary);
@@ -18,14 +18,6 @@
   opacity: 0.5;
 }
 
-/* Header: section badge + change type pill */
-.header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
 .sectionBadge {
   text-transform: uppercase;
   font-size: 11px;
@@ -35,71 +27,47 @@
   color: var(--text-muted);
   padding: 2px 6px;
   border-radius: var(--radius-sm);
+  display: inline-block;
+  margin-bottom: 6px;
 }
 
-.changeTypePill {
-  font-size: 11px;
-  font-weight: 500;
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-}
-
-.changeTypePill.add {
-  background: var(--success-light);
-  color: var(--success);
-}
-
-.changeTypePill.modify {
-  background: var(--warning-light);
-  color: var(--warning);
-}
-
-.changeTypePill.remove {
-  background: var(--error-light);
-  color: var(--error);
-}
-
-/* Description */
-.description {
-  font-size: 13px;
-  font-weight: 400;
-  line-height: 1.5;
+.title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
   color: var(--text-primary);
   margin-bottom: 8px;
 }
 
-/* Diff view */
-.diffView {
+.beforeBlock {
+  background: var(--error-light);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  margin-bottom: 6px;
+}
+
+.afterBlock {
+  background: var(--success-light);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
   margin-bottom: 8px;
 }
 
-.diffBlock {
+.blockLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
   margin-bottom: 4px;
 }
 
-.diffLabel {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-muted);
-  margin-bottom: 2px;
-}
-
-.diffContent {
+.blockContent {
   font-size: 13px;
   font-weight: 400;
   line-height: 1.5;
+  color: var(--text-primary);
   word-break: break-word;
-}
-
-.diffAdded {
-  background: var(--success-light);
-  color: var(--success);
-}
-
-.diffRemoved {
-  background: var(--error-light);
-  color: var(--error);
-  text-decoration: line-through;
 }
 
 /* Edit suggestion link */
@@ -171,39 +139,20 @@
 /* Action buttons */
 .actions {
   display: flex;
-  justify-content: flex-end;
   gap: 8px;
 }
 
-.acceptBtn {
-  background: var(--accent);
-  color: white;
-  font-size: 13px;
-  font-weight: 600;
-  padding: 6px 16px;
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-
-.acceptBtn:hover {
-  background: var(--accent-hover);
-}
-
-.acceptBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .rejectBtn {
+  flex: 1;
   background: transparent;
   color: var(--text-secondary);
   font-size: 13px;
   font-weight: 500;
-  padding: 6px 16px;
+  padding: 8px 16px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   cursor: pointer;
+  text-align: center;
 }
 
 .rejectBtn:hover {
@@ -212,6 +161,28 @@
 }
 
 .rejectBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.acceptBtn {
+  flex: 1;
+  background: var(--accent);
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: center;
+}
+
+.acceptBtn:hover {
+  background: var(--accent-hover);
+}
+
+.acceptBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
