@@ -281,6 +281,40 @@
   max-height: none !important;
 }
 
+/* Before / After view toggle */
+.viewToggle {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+}
+
+.viewToggleBtn {
+  flex: 1;
+  padding: 5px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius-sm) - 2px);
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.viewToggleBtn:hover {
+  color: var(--text-primary);
+}
+
+.viewToggleBtnActive {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
 /* Save bar at bottom of Tier 3 */
 .saveBarSticky {
   position: sticky;
@@ -289,6 +323,96 @@
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
   margin-top: 16px;
+}
+
+/* All-reviewed banner */
+.reviewedBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--success-light);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--success);
+  margin-top: 12px;
+}
+
+/* Prominent save button when all changes reviewed */
+.primaryBtnReady {
+  background: var(--success);
+  box-shadow: 0 0 0 3px var(--success-light);
+}
+
+.primaryBtnReady:hover {
+  background: #059669;
+}
+
+/* Post-save prompt */
+.postSavePrompt {
+  text-align: center;
+  padding: 24px 16px;
+  margin-top: 16px;
+}
+
+.postSaveIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--success-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+}
+
+.postSaveTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+.postSaveActions {
+  display: flex;
+  gap: 8px;
+}
+
+.postSaveSecondary {
+  flex: 1;
+  padding: 10px 16px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.postSaveSecondary:hover {
+  background: var(--bg-tertiary);
+}
+
+.postSavePrimary {
+  flex: 1;
+  padding: 10px 16px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.postSavePrimary:hover {
+  background: var(--accent-hover);
 }
 
 /* Responsive: bottom sheet below 1200px.

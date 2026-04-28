@@ -66,6 +66,9 @@ export function TunePanel({
   // Tier 3: diff review
   const [previewFormData, setPreviewFormData] = useState<CVFormData | null>(null);
   const [saving, setSaving] = useState(false);
+  const [viewMode, setViewMode] = useState<'before' | 'after'>('after');
+  const [savedSuccessfully, setSavedSuccessfully] = useState(false);
+  const [savedBaseId, setSavedBaseId] = useState<string | null>(null);
 
   // Refs for scroll sync
   const changePanelRef = useRef<HTMLDivElement>(null);
@@ -79,6 +82,12 @@ export function TunePanel({
       onPreviewUpdate(newFormData);
     },
   });
+
+  // Computed review state
+  const totalChanges = tailor.tailorResponse?.changes?.length ?? 0;
+  const reviewedCount = tailor.appliedChanges.size + tailor.skippedChanges.size;
+  const pendingCount = totalChanges - reviewedCount;
+  const allReviewed = totalChanges > 0 && pendingCount === 0;
 
   // Scroll sync between CV container and change panel
   useScrollSync(cvContainerRef, changePanelRef, activeTier === 3);
@@ -141,6 +150,7 @@ export function TunePanel({
     if (analysis) {
       setMatchAnalysis(analysis);
       setBaselineScore(analysis.match_score);
+      tailor.setBaselineScore(analysis.match_score);
       setTier2Complete(true);
       setActiveTier(3);
     }
@@ -173,10 +183,24 @@ export function TunePanel({
       parentVersionId: currentVersion.id,
     });
     if (saved) {
-      navigate('/dashboard', { state: { baseId: currentVersion.id } });
+      setSavedSuccessfully(true);
+      setSavedBaseId(currentVersion.id);
     }
     setSaving(false);
-  }, [activeVersion, previewFormData, jobDescription, companyName, roleName, baselineScore, tailor.estimatedCurrentScore, navigate]);
+  }, [activeVersion, previewFormData, jobDescription, companyName, roleName, baselineScore, tailor.estimatedCurrentScore]);
+
+  const handleViewInDashboard = useCallback(() => {
+    if (savedBaseId) {
+      navigate('/dashboard', { state: { baseId: savedBaseId } });
+    }
+  }, [savedBaseId, navigate]);
+
+  const handleKeepEditing = useCallback(() => {
+    setSavedSuccessfully(false);
+    setSavedBaseId(null);
+    onClose();
+    tailor.reset();
+  }, [onClose, tailor]);
 
   return (
     <div
@@ -346,6 +370,29 @@ export function TunePanel({
               </div>
             ) : (
               <>
+                {/* Before / After toggle */}
+                <div className={styles.viewToggle}>
+                  <button
+                    className={`${styles.viewToggleBtn}${viewMode === 'before' ? ` ${styles.viewToggleBtnActive}` : ''}`}
+                    onClick={() => {
+                      setViewMode('before');
+                      onPreviewUpdate(formData);
+                    }}
+                    type="button"
+                  >
+                    Before
+                  </button>
+                  <button
+                    className={`${styles.viewToggleBtn}${viewMode === 'after' ? ` ${styles.viewToggleBtnActive}` : ''}`}
+                    onClick={() => {
+                      setViewMode('after');
+                      onPreviewUpdate(previewFormData);
+                    }}
+                    type="button"
+                  >
+                    After
+                  </button>
+                </div>
                 <ChangePanel
                     changes={tailor.tailorResponse?.changes ?? []}
                     appliedChanges={tailor.appliedChanges}
@@ -364,20 +411,58 @@ export function TunePanel({
                     matchAnalysis={matchAnalysis}
                     baselineScore={baselineScore}
                     estimatedScore={tailor.estimatedCurrentScore}
+                    companyName={companyName}
+                    roleName={roleName}
                     panelRef={changePanelRef}
                     isOpen={true}
                     className={styles.changePanelInline}
                   />
-                <div className={styles.saveBarSticky}>
-                  <button
-                    className={styles.primaryBtn}
-                    onClick={handleSaveTailored}
-                    disabled={saving || tailor.appliedChanges.size === 0}
-                    type="button"
-                  >
-                    {saving ? (<><span className={styles.spinner} /> Saving...</>) : 'Save Tailored CV'}
-                  </button>
-                </div>
+                {allReviewed && !savedSuccessfully && (
+                  <div className={styles.reviewedBanner}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span>All {totalChanges} changes reviewed. Ready to save?</span>
+                  </div>
+                )}
+                {!savedSuccessfully && (
+                  <div className={styles.saveBarSticky}>
+                    <button
+                      className={`${styles.primaryBtn}${allReviewed ? ` ${styles.primaryBtnReady}` : ''}`}
+                      onClick={handleSaveTailored}
+                      disabled={saving || tailor.appliedChanges.size === 0}
+                      type="button"
+                    >
+                      {saving ? (<><span className={styles.spinner} /> Saving...</>) : 'Save Tailored CV'}
+                    </button>
+                  </div>
+                )}
+                {savedSuccessfully && (
+                  <div className={styles.postSavePrompt}>
+                    <div className={styles.postSaveIcon}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    </div>
+                    <div className={styles.postSaveTitle}>Tailored CV saved</div>
+                    <div className={styles.postSaveActions}>
+                      <button
+                        className={styles.postSaveSecondary}
+                        onClick={handleKeepEditing}
+                        type="button"
+                      >
+                        Keep Editing
+                      </button>
+                      <button
+                        className={styles.postSavePrimary}
+                        onClick={handleViewInDashboard}
+                        type="button"
+                      >
+                        View in Dashboard
+                      </button>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
