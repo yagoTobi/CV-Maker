@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 11-05 auto tasks (checkpoint pending human verification)
-last_updated: "2026-04-26T19:07:32.115Z"
+stopped_at: Phase 12 UI-SPEC approved
+last_updated: "2026-04-27T19:41:34.985Z"
 last_activity: 2026-04-26 -- Phase --phase execution started
 progress:
-  total_phases: 11
+  total_phases: 12
   completed_phases: 9
-  total_plans: 34
+  total_plans: 37
   completed_plans: 34
-  percent: 100
+  percent: 92
 ---
 
 # Project State
@@ -146,6 +146,7 @@ Recent decisions affecting current work:
 - Phase 9 added: Implement CV-to-job match scoring pipeline redesign — CVFormData input, two-pass hybrid pipeline, Groq fast inference, dimensional scoring
 - Phase 10 added: CV import speed overhaul — reduce import time from 60+ seconds to under 15 seconds via Haiku/Groq model swap, streaming progress, parallel extraction, and content caching
 - Phase 11 added: CV Save Identity — Name on first create, iterate in-place (no duplicate versions from editing)
+- Phase 12 added: Refine tuning UX — fix match score, redesign change cards, simplify flow
 
 ### Pending Todos
 
@@ -168,6 +169,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-26T09:59:15.776Z
-Stopped at: Completed 11-05 auto tasks (checkpoint pending human verification)
-Resume file: None
+Last session: --stopped-at
+Stopped at: Phase 12 UI-SPEC approved
+Resume file: --resume-file
+
+**Planned Phase:** 12 (Refine tuning UX) — 3 plans — 2026-04-26T20:19:43.197Z
