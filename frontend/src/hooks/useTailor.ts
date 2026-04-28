@@ -22,6 +22,7 @@ export interface UseTailorReturn {
   selectAlternative: (changeId: string, index: number) => void;
   editChangeValue: (changeId: string, newValue: string | string[]) => void;
   reset: () => void;
+  setBaselineScore: (score: number) => void;
 }
 
 interface UseTailorOpts {
@@ -43,6 +44,11 @@ export function useTailor({ originalFormData, templateId, onApply }: UseTailorOp
   const baseFormDataRef = useRef<CVFormData | null>(null);
   // Baseline score from the tailor response
   const baselineScoreRef = useRef(0);
+
+  const setBaselineScore = useCallback((score: number) => {
+    baselineScoreRef.current = score;
+  }, []);
+
   // Serialize accepts to prevent race conditions
   const queueRef = useRef<Promise<void>>(Promise.resolve());
   const abortRef = useRef<AbortController | null>(null);
@@ -211,12 +217,6 @@ export function useTailor({ originalFormData, templateId, onApply }: UseTailorOp
     queueRef.current = Promise.resolve();
   }, []);
 
-  // Set baseline score when match analysis happens (called externally)
-  // We expose it via the ref — caller sets baselineScoreRef.current
-  // Actually, let's derive it: baseline = estimatedScore minus improvement
-  // Simpler: the caller can pass it. For now, use 0 as default and
-  // the MatchSummaryBar shows the real baseline from match analysis.
-
   return {
     tailorResponse,
     isLoading,
@@ -235,5 +235,6 @@ export function useTailor({ originalFormData, templateId, onApply }: UseTailorOp
     selectAlternative,
     editChangeValue,
     reset,
+    setBaselineScore,
   };
 }

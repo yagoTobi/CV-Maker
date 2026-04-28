@@ -33,6 +33,8 @@ interface ChangePanelProps {
   matchAnalysis?: MatchAnalysis | null;
   baselineScore?: number;
   estimatedScore?: number;
+  companyName?: string;
+  roleName?: string;
   panelRef?: React.RefObject<HTMLDivElement>;
   isOpen?: boolean;
   className?: string;
@@ -56,6 +58,13 @@ interface SectionGroup {
   changes: TailorChange[];
 }
 
+function scoreLabel(score: number): string {
+  if (score >= 80) return 'Strong match';
+  if (score >= 60) return 'Getting close';
+  if (score >= 40) return 'Partial match';
+  return 'Weak match';
+}
+
 export function ChangePanel({
   changes,
   appliedChanges,
@@ -72,7 +81,10 @@ export function ChangePanel({
   onEditValue,
   onClose,
   matchAnalysis,
+  baselineScore,
   estimatedScore,
+  companyName,
+  roleName,
   panelRef: externalPanelRef,
   isOpen = true,
   className: classNameOverride,
@@ -109,13 +121,18 @@ export function ChangePanel({
     c => !appliedChanges.has(c.id) && !skippedChanges.has(c.id)
   ).length;
 
-  // Score display
-  const displayScore = estimatedScore ?? matchAnalysis?.match_score ?? 0;
+  const acceptedCount = appliedChanges.size;
+  const rejectedCount = skippedChanges.size;
+
+  // Score display — show estimated when changes are applied, else baseline
+  const baseScore = baselineScore ?? matchAnalysis?.match_score ?? 0;
+  const displayScore = estimatedScore ?? baseScore;
   const scoreClass = displayScore >= 80
     ? styles.good
     : displayScore >= 60
       ? styles.medium
       : styles.low;
+  const delta = estimatedScore != null && baseScore > 0 ? estimatedScore - baseScore : 0;
 
   return (
     <div
@@ -134,33 +151,61 @@ export function ChangePanel({
         <ChevronIcon />
       </button>
 
-      {/* Header */}
-      <div className={styles.header}>
-        <span>Review Changes ({changes.length})</span>
-      </div>
-
-      {/* Match summary */}
+      {/* Score header */}
       {matchAnalysis && (
-        <div className={styles.matchSummary}>
-          <div className={`${styles.scoreCircle} ${scoreClass}`}>
-            {displayScore}
+        <div className={styles.scoreHeader}>
+          {(companyName || roleName) && (
+            <div className={styles.contextBar}>
+              MATCH SCORE{companyName ? ` · ${companyName}` : ''}{roleName ? ` · ${roleName}` : ''}
+            </div>
+          )}
+          <div className={styles.scoreRow}>
+            <div className={`${styles.scoreCircle} ${scoreClass}`}>
+              {Math.round(displayScore)}%
+            </div>
+            <div className={styles.scoreMeta}>
+              <div className={styles.scoreLabel}>{scoreLabel(displayScore)}</div>
+              {delta > 0 && (
+                <div className={styles.deltaLine}>↑ +{Math.round(delta)} pts estimated</div>
+              )}
+              {changes.length > 0 && (
+                <div className={styles.changeCounts}>
+                  {acceptedCount} accepted · {rejectedCount} rejected · {pendingCount} remaining
+                </div>
+              )}
+            </div>
           </div>
-          <div className={styles.pillsContainer}>
-            {matchAnalysis.matching.length > 0 && (
-              <div className={styles.pills}>
-                {matchAnalysis.matching.map((item, i) => (
-                  <span key={`m-${i}`} className={`${styles.pill} ${styles.matched}`}>{item}</span>
-                ))}
-              </div>
-            )}
-            {matchAnalysis.missing.length > 0 && (
-              <div className={styles.pills}>
-                {matchAnalysis.missing.map((item, i) => (
-                  <span key={`g-${i}`} className={`${styles.pill} ${styles.missing}`}>{item}</span>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Collapsible pill summary */}
+          <details className={styles.pillDetails}>
+            <summary className={styles.pillSummary}>
+              <span className={styles.pillSummaryMatched}>{matchAnalysis.matching.length} matched</span>
+              <span className={styles.pillSummarySep}> · </span>
+              <span className={styles.pillSummaryMissing}>{matchAnalysis.missing.length} gaps</span>
+            </summary>
+            <div className={styles.pillsExpanded}>
+              {matchAnalysis.matching.length > 0 && (
+                <div className={styles.pills}>
+                  {matchAnalysis.matching.map((item, i) => (
+                    <span key={`m-${i}`} className={`${styles.pill} ${styles.matched}`}>{item}</span>
+                  ))}
+                </div>
+              )}
+              {matchAnalysis.missing.length > 0 && (
+                <div className={styles.pills}>
+                  {matchAnalysis.missing.map((item, i) => (
+                    <span key={`g-${i}`} className={`${styles.pill} ${styles.missing}`}>{item}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </details>
+        </div>
+      )}
+
+      {/* Header */}
+      {!matchAnalysis && (
+        <div className={styles.header}>
+          <span>Review Changes ({changes.length})</span>
         </div>
       )}
 
@@ -222,6 +267,30 @@ export function ChangePanel({
           >
             Accept All Remaining
           </button>
+
+          {/* Honest gaps — AI cannot address these */}
+          {matchAnalysis && matchAnalysis.missing.length > 0 && (
+            <details className={styles.gapsSection}>
+              <summary className={styles.gapsSummary}>
+                Genuine gaps — AI can't address these ({matchAnalysis.missing.length})
+              </summary>
+              <ul className={styles.gapsList}>
+                {matchAnalysis.missing.map((item, i) => (
+                  <li key={i}>{item}</li>
+                ))}
+              </ul>
+              {matchAnalysis.suggestions.length > 0 && (
+                <>
+                  <div className={styles.suggestionsHeading}>What you could do</div>
+                  <ol className={styles.suggestionsList}>
+                    {matchAnalysis.suggestions.map((item, i) => (
+                      <li key={i}>{item}</li>
+                    ))}
+                  </ol>
+                </>
+              )}
+            </details>
+          )}
         </>
       )}
     </div>
