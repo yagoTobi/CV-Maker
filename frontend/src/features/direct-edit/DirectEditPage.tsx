@@ -286,7 +286,7 @@ export default function DirectEditPage() {
       </div>
       <TunePanel
         isOpen={tunePanelOpen}
-        onClose={() => setTunePanelOpen(false)}
+        onToggle={() => setTunePanelOpen(prev => !prev)}
         formData={formData}
         activeVersion={activeVersion}
         onPreviewUpdate={handlePreviewUpdate}

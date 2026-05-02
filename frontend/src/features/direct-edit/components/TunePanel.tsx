@@ -22,9 +22,16 @@ import { ChangePanel } from './ChangePanel';
 import type { CVFormData, CVVersion, MatchAnalysis } from '../../../types';
 import styles from './TunePanel.module.css';
 
+function scoreLabel(score: number): string {
+  if (score >= 80) return 'Strong match';
+  if (score >= 60) return 'Getting close';
+  if (score >= 40) return 'Partial match';
+  return 'Weak match';
+}
+
 interface TunePanelProps {
   isOpen: boolean;
-  onClose: () => void;
+  onToggle: () => void;
   formData: CVFormData;
   activeVersion: CVVersion | null;
   onPreviewUpdate: (fd: CVFormData | null) => void;
@@ -35,7 +42,7 @@ interface TunePanelProps {
 
 export function TunePanel({
   isOpen,
-  onClose,
+  onToggle,
   formData,
   activeVersion,
   onPreviewUpdate,
@@ -50,6 +57,14 @@ export function TunePanel({
   const [activeTier, setActiveTier] = useState<1 | 2 | 3>(() => activeVersion ? 2 : 1);
   const [tier1Complete, setTier1Complete] = useState(() => !!activeVersion);
   const [tier2Complete, setTier2Complete] = useState(false);
+
+  // Sync tier state when activeVersion appears after mount (e.g. auto-save creates it)
+  useEffect(() => {
+    if (activeVersion && !tier1Complete) {
+      setTier1Complete(true);
+      setActiveTier(2);
+    }
+  }, [activeVersion, tier1Complete]);
 
   // Tier 1: save-as-base
   const [baseName, setBaseName] = useState('');
@@ -89,6 +104,15 @@ export function TunePanel({
   const pendingCount = totalChanges - reviewedCount;
   const allReviewed = totalChanges > 0 && pendingCount === 0;
 
+  // Score display values for sticky header
+  const displayScore = tailor.estimatedCurrentScore ?? baselineScore;
+  const scoreClass = displayScore >= 80
+    ? styles.scoreGood
+    : displayScore >= 60
+      ? styles.scoreMedium
+      : styles.scoreLow;
+  const delta = baselineScore > 0 ? (tailor.estimatedCurrentScore ?? baselineScore) - baselineScore : 0;
+
   // Scroll sync between CV container and change panel
   useScrollSync(cvContainerRef, changePanelRef, activeTier === 3);
 
@@ -111,11 +135,11 @@ export function TunePanel({
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') onToggle();
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, onToggle]);
 
   // Handle Tier 1 save (D-01, D-02, D-03)
   const handleSaveBase = useCallback(async () => {
@@ -198,9 +222,9 @@ export function TunePanel({
   const handleKeepEditing = useCallback(() => {
     setSavedSuccessfully(false);
     setSavedBaseId(null);
-    onClose();
+    onToggle();
     tailor.reset();
-  }, [onClose, tailor]);
+  }, [onToggle, tailor]);
 
   return (
     <div
@@ -208,169 +232,203 @@ export function TunePanel({
       role="complementary"
       aria-label="Tune for job panel"
     >
-      {/* Close button */}
+      {/* Toggle button — left-side arrow, flips when closed */}
       <button
-        className={styles.closeBtn}
-        onClick={onClose}
+        className={styles.toggleBtn}
+        onClick={onToggle}
         type="button"
-        aria-label="Close tune panel"
+        aria-label={isOpen ? 'Collapse tune panel' : 'Expand tune panel'}
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+        <svg
+          className={`${styles.toggleBtnIcon}${!isOpen ? ` ${styles.toggleBtnIconClosed}` : ''}`}
+          width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        >
+          <polyline points="9 18 15 12 9 6" />
         </svg>
       </button>
 
-      {/* Tier 1: Save as Base CV */}
-      <div className={styles.tier}>
-        <div
-          className={styles.tierHeader}
-          onClick={() => { if (tier1Complete) setActiveTier(1); }}
-          role="button"
-          aria-expanded={activeTier === 1}
-        >
-          <span className={`${styles.stepNumber}${tier1Complete ? ` ${styles.completed}` : activeTier === 1 ? ` ${styles.active}` : ''}`}>
-            {tier1Complete ? (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-            ) : '1'}
-          </span>
-          <span className={styles.tierTitle}>Save as Base CV</span>
-          {tier1Complete && (
-            <span className={styles.tierSummary}>
-              Base CV: {activeVersion?.name || baseName}
-            </span>
-          )}
-        </div>
-        <div className={`${styles.tierBody}${activeTier === 1 ? ` ${styles.tierBodyOpen}` : ''}`}>
-          <div className={styles.tierBodyInner}>
-            {activeVersion ? (
-              <div className={styles.preCompleted}>
-                Already saved as &quot;{activeVersion.name}&quot;
+      <div className={styles.panelScroll}>
+        {/* Sticky top section — all 3 tier headers + score + view toggle freeze here */}
+        <div className={activeTier === 3 ? styles.stickyScoreHeader : undefined}>
+          {/* Tier 1: Save as Base CV */}
+          <div className={`${styles.tier}${tier1Complete && activeTier !== 1 ? ` ${styles.tierCompact}` : ''}`}>
+            <div
+              className={`${styles.tierHeader}${tier1Complete && activeTier !== 1 ? ` ${styles.tierHeaderCompact}` : ''}`}
+              onClick={() => { if (tier1Complete) setActiveTier(1); }}
+              role="button"
+              aria-expanded={activeTier === 1}
+            >
+              <span className={`${styles.stepNumber}${tier1Complete ? ` ${styles.completed}` : activeTier === 1 ? ` ${styles.active}` : ''}`}>
+                {tier1Complete ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                ) : '1'}
+              </span>
+              <span className={styles.tierTitle}>Save as Base CV</span>
+              {tier1Complete && (
+                <span className={styles.tierSummary}>
+                  Base CV: {activeVersion?.name || baseName}
+                </span>
+              )}
+            </div>
+            <div className={`${styles.tierBody}${activeTier === 1 ? ` ${styles.tierBodyOpen}` : ''}${tier1Complete && activeTier !== 1 ? ` ${styles.tierBodyHidden}` : ''}`}>
+              <div className={styles.tierBodyInner}>
+                {activeVersion ? (
+                  <div className={styles.preCompleted}>
+                    Already saved as &quot;{activeVersion.name}&quot;
+                  </div>
+                ) : (
+                  <>
+                    <div className={styles.formGroup}>
+                      <label className={styles.label}>CV Name</label>
+                      <input
+                        className={styles.input}
+                        value={baseName}
+                        onChange={e => setBaseName(e.target.value)}
+                        placeholder="e.g., Creative CV"
+                        autoFocus={activeTier === 1 && !activeVersion}
+                      />
+                    </div>
+                    <button
+                      className={styles.primaryBtn}
+                      onClick={handleSaveBase}
+                      disabled={!baseName.trim() || savingBase}
+                      type="button"
+                    >
+                      {savingBase ? (<><span className={styles.spinner} /> Saving...</>) : 'Save as Base CV'}
+                    </button>
+                  </>
+                )}
               </div>
-            ) : (
-              <>
+            </div>
+          </div>
+
+          {/* Tier 2: Job Details */}
+          <div className={`${styles.tier}${tier2Complete && activeTier !== 2 ? ` ${styles.tierCompact}` : ''}`}>
+            <div
+              className={`${styles.tierHeader}${tier2Complete && activeTier !== 2 ? ` ${styles.tierHeaderCompact}` : ''}`}
+              onClick={() => { if (tier2Complete || tier1Complete) setActiveTier(2); }}
+              role="button"
+              aria-expanded={activeTier === 2}
+            >
+              <span className={`${styles.stepNumber}${tier2Complete ? ` ${styles.completed}` : activeTier === 2 ? ` ${styles.active}` : ''}`}>
+                {tier2Complete ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                ) : '2'}
+              </span>
+              <span className={styles.tierTitle}>Job Details</span>
+              {tier2Complete && (
+                <span className={styles.tierSummary}>
+                  {companyName}{roleName ? ` ${roleName}` : ''}{baselineScore ? ` ${Math.round(baselineScore)}%` : ''}
+                </span>
+              )}
+            </div>
+            <div className={`${styles.tierBody}${activeTier === 2 ? ` ${styles.tierBodyOpen}` : ''}${tier2Complete && activeTier !== 2 ? ` ${styles.tierBodyHidden}` : ''}`}>
+              <div className={styles.tierBodyInner}>
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Company Name</label>
+                    <input
+                      className={styles.input}
+                      value={companyName}
+                      onChange={e => setCompanyName(e.target.value)}
+                      placeholder="e.g., Google"
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Role</label>
+                    <input
+                      className={styles.input}
+                      value={roleName}
+                      onChange={e => setRoleName(e.target.value)}
+                      placeholder="e.g., Senior SWE"
+                    />
+                  </div>
+                </div>
                 <div className={styles.formGroup}>
-                  <label className={styles.label}>CV Name</label>
-                  <input
-                    className={styles.input}
-                    value={baseName}
-                    onChange={e => setBaseName(e.target.value)}
-                    placeholder="e.g., Creative CV"
-                    autoFocus={activeTier === 1 && !activeVersion}
+                  <label className={styles.label}>Job Description *</label>
+                  <textarea
+                    className={styles.textarea}
+                    value={jobDescription}
+                    onChange={e => setJobDescription(e.target.value)}
+                    placeholder="Paste the full job description here..."
                   />
                 </div>
                 <button
                   className={styles.primaryBtn}
-                  onClick={handleSaveBase}
-                  disabled={!baseName.trim() || savingBase}
+                  onClick={handleAnalyze}
+                  disabled={!jobDescription.trim() || analyzing}
                   type="button"
                 >
-                  {savingBase ? (<><span className={styles.spinner} /> Saving...</>) : 'Save as Base CV'}
+                  {analyzing ? (<><span className={styles.spinner} /> Analyzing...</>) : 'Analyze Match'}
                 </button>
-              </>
-            )}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Tier 2: Job Details */}
-      <div className={styles.tier}>
-        <div
-          className={styles.tierHeader}
-          onClick={() => { if (tier2Complete || tier1Complete) setActiveTier(2); }}
-          role="button"
-          aria-expanded={activeTier === 2}
-        >
-          <span className={`${styles.stepNumber}${tier2Complete ? ` ${styles.completed}` : activeTier === 2 ? ` ${styles.active}` : ''}`}>
-            {tier2Complete ? (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-            ) : '2'}
-          </span>
-          <span className={styles.tierTitle}>Job Details</span>
-          {tier2Complete && (
-            <span className={styles.tierSummary}>
-              {companyName}{roleName ? ` ${roleName}` : ''}{baselineScore ? ` ${Math.round(baselineScore)}%` : ''}
-            </span>
-          )}
-        </div>
-        <div className={`${styles.tierBody}${activeTier === 2 ? ` ${styles.tierBodyOpen}` : ''}`}>
-          <div className={styles.tierBodyInner}>
-            <div className={styles.formRow}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Company Name</label>
-                <input
-                  className={styles.input}
-                  value={companyName}
-                  onChange={e => setCompanyName(e.target.value)}
-                  placeholder="e.g., Google"
-                />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Role</label>
-                <input
-                  className={styles.input}
-                  value={roleName}
-                  onChange={e => setRoleName(e.target.value)}
-                  placeholder="e.g., Senior SWE"
-                />
-              </div>
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Job Description *</label>
-              <textarea
-                className={styles.textarea}
-                value={jobDescription}
-                onChange={e => setJobDescription(e.target.value)}
-                placeholder="Paste the full job description here..."
-              />
-            </div>
-            <button
-              className={styles.primaryBtn}
-              onClick={handleAnalyze}
-              disabled={!jobDescription.trim() || analyzing}
-              type="button"
+          {/* Tier 3 header */}
+          <div className={styles.tier}>
+            <div
+              className={styles.tierHeader}
+              onClick={() => { if (tier2Complete) setActiveTier(3); }}
+              role="button"
+              aria-expanded={activeTier === 3}
             >
-              {analyzing ? (<><span className={styles.spinner} /> Analyzing...</>) : 'Analyze Match'}
-            </button>
+              <span className={`${styles.stepNumber}${activeTier === 3 ? ` ${styles.active}` : ''}`}>
+                3
+              </span>
+              <span className={styles.tierTitle}>Review Changes</span>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Tier 3: Review Changes */}
-      <div className={styles.tier}>
-        <div
-          className={styles.tierHeader}
-          onClick={() => { if (tier2Complete) setActiveTier(3); }}
-          role="button"
-          aria-expanded={activeTier === 3}
-        >
-          <span className={`${styles.stepNumber}${activeTier === 3 ? ` ${styles.active}` : ''}`}>
-            3
-          </span>
-          <span className={styles.tierTitle}>Review Changes</span>
-        </div>
-        <div className={`${styles.tierBody}${activeTier === 3 ? ` ${styles.tierBodyOpen}` : ''}`}>
-          <div className={styles.tierBodyInner}>
-            {tailor.isLoading ? (
-              <div className={styles.loadingState}>
-                <div className={styles.spinnerLg} />
-                <span>Generating suggestions...</span>
-              </div>
-            ) : tailor.error ? (
-              <div className={styles.errorState}>
-                Could not generate suggestions. Check your connection and try again.
-              </div>
-            ) : (tailor.tailorResponse?.changes?.length ?? 0) === 0 && !tailor.isLoading ? (
-              <div className={styles.emptyState}>
-                <h3 className={styles.emptyHeading}>No changes suggested</h3>
-                <p className={styles.emptyBody}>Your CV already matches the job description well. Try a different job posting or edit your CV directly.</p>
-              </div>
-            ) : (
-              <>
-                {/* Before / After toggle */}
+          {/* Score + view toggle — inside sticky block */}
+          {activeTier === 3 && (tailor.tailorResponse?.changes?.length ?? 0) > 0 && !tailor.isLoading && !tailor.error && (
+            <>
+              {matchAnalysis && (
+                <div className={styles.scoreRow}>
+                  <div className={`${styles.scoreCircle} ${scoreClass}`}>
+                    {Math.round(displayScore)}%
+                  </div>
+                  <div className={styles.scoreMeta}>
+                    <div className={styles.scoreLabel}>{scoreLabel(displayScore)}</div>
+                    {delta > 0 && (
+                      <div className={styles.deltaLine}>↑ +{Math.round(delta)} pts estimated</div>
+                    )}
+                    <div className={styles.changeCounts}>
+                      {tailor.appliedChanges.size} accepted · {tailor.skippedChanges.size} rejected · {pendingCount} remaining
+                    </div>
+                  </div>
+                </div>
+              )}
+              {matchAnalysis && (
+                <details className={styles.pillDetails}>
+                  <summary className={styles.pillSummary}>
+                    <span className={styles.pillMatched}>{matchAnalysis.matching.length} matched</span>
+                    <span className={styles.pillSep}> · </span>
+                    <span className={styles.pillMissing}>{matchAnalysis.missing.length} gaps</span>
+                  </summary>
+                  <div className={styles.pillsExpanded}>
+                    {matchAnalysis.matching.length > 0 && (
+                      <div className={styles.pills}>
+                        {matchAnalysis.matching.map((item, i) => (
+                          <span key={`m-${i}`} className={`${styles.pill} ${styles.pillMatchedBg}`}>{item}</span>
+                        ))}
+                      </div>
+                    )}
+                    {matchAnalysis.missing.length > 0 && (
+                      <div className={styles.pills}>
+                        {matchAnalysis.missing.map((item, i) => (
+                          <span key={`g-${i}`} className={`${styles.pill} ${styles.pillMissingBg}`}>{item}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </details>
+              )}
+              {reviewedCount > 0 && (
                 <div className={styles.viewToggle}>
                   <button
                     className={`${styles.viewToggleBtn}${viewMode === 'before' ? ` ${styles.viewToggleBtnActive}` : ''}`}
@@ -393,30 +451,57 @@ export function TunePanel({
                     After
                   </button>
                 </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Tier 3 content — scrollable below the sticky header */}
+        {activeTier === 3 && (
+          <>
+            {tailor.isLoading ? (
+              <div className={styles.loadingState}>
+                <div className={styles.spinnerLg} />
+                <span>Generating suggestions...</span>
+              </div>
+            ) : tailor.error ? (
+              <div className={styles.errorState}>
+                Could not generate suggestions. Check your connection and try again.
+              </div>
+            ) : (tailor.tailorResponse?.changes?.length ?? 0) === 0 && !tailor.isLoading ? (
+              <div className={styles.emptyState}>
+                <h3 className={styles.emptyHeading}>No changes suggested</h3>
+                <p className={styles.emptyBody}>Your CV already matches the job description well. Try a different job posting or edit your CV directly.</p>
+              </div>
+            ) : (
+              <>
                 <ChangePanel
-                    changes={tailor.tailorResponse?.changes ?? []}
-                    appliedChanges={tailor.appliedChanges}
-                    skippedChanges={tailor.skippedChanges}
-                    selectedAlternatives={tailor.selectedAlternatives}
-                    isApplying={tailor.isApplying}
-                    isLoading={false}
-                    error={tailor.error}
-                    onAccept={tailor.acceptChange}
-                    onSkip={tailor.skipChange}
-                    onUndo={tailor.undoChange}
-                    onAcceptAll={tailor.acceptAllRemaining}
-                    onSelectAlternative={tailor.selectAlternative}
-                    onEditValue={tailor.editChangeValue}
-                    onClose={() => setActiveTier(2)}
-                    matchAnalysis={matchAnalysis}
-                    baselineScore={baselineScore}
-                    estimatedScore={tailor.estimatedCurrentScore}
-                    companyName={companyName}
-                    roleName={roleName}
-                    panelRef={changePanelRef}
-                    isOpen={true}
-                    className={styles.changePanelInline}
-                  />
+                  changes={tailor.tailorResponse?.changes ?? []}
+                  appliedChanges={tailor.appliedChanges}
+                  skippedChanges={tailor.skippedChanges}
+                  selectedAlternatives={tailor.selectedAlternatives}
+                  isApplying={tailor.isApplying}
+                  isLoading={false}
+                  error={tailor.error}
+                  onAccept={tailor.acceptChange}
+                  onSkip={tailor.skipChange}
+                  onUndo={tailor.undoChange}
+                  onAcceptAll={tailor.acceptAllRemaining}
+                  onSelectAlternative={tailor.selectAlternative}
+                  onEditValue={tailor.editChangeValue}
+                  onClose={() => setActiveTier(2)}
+                  matchAnalysis={matchAnalysis}
+                  baselineScore={baselineScore}
+                  estimatedScore={tailor.estimatedCurrentScore}
+                  companyName={companyName}
+                  roleName={roleName}
+                  panelRef={changePanelRef}
+                  isOpen={true}
+                  className={styles.changePanelInline}
+                  hideToggle
+                  hideScore
+                  hideFooter
+                />
                 {allReviewed && !savedSuccessfully && (
                   <div className={styles.reviewedBanner}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -465,8 +550,8 @@ export function TunePanel({
                 )}
               </>
             )}
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

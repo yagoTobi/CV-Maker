@@ -38,6 +38,9 @@ interface ChangePanelProps {
   panelRef?: React.RefObject<HTMLDivElement>;
   isOpen?: boolean;
   className?: string;
+  hideToggle?: boolean;
+  hideScore?: boolean;
+  hideFooter?: boolean;
 }
 
 /** Chevron right SVG icon */
@@ -88,6 +91,9 @@ export function ChangePanel({
   panelRef: externalPanelRef,
   isOpen = true,
   className: classNameOverride,
+  hideToggle = false,
+  hideScore = false,
+  hideFooter = false,
 }: ChangePanelProps) {
   const internalPanelRef = useRef<HTMLDivElement>(null);
   const panelRef = externalPanelRef ?? internalPanelRef;
@@ -141,18 +147,20 @@ export function ChangePanel({
       role="complementary"
       aria-label="AI suggestion review panel"
     >
-      {/* Toggle button */}
-      <button
-        className={styles.toggleBtn}
-        onClick={onClose}
-        aria-label="Close review panel"
-        type="button"
-      >
-        <ChevronIcon />
-      </button>
+      {/* Toggle button — hidden when embedded inline */}
+      {!hideToggle && (
+        <button
+          className={styles.toggleBtn}
+          onClick={onClose}
+          aria-label="Close review panel"
+          type="button"
+        >
+          <ChevronIcon />
+        </button>
+      )}
 
       {/* Score header */}
-      {matchAnalysis && (
+      {!hideScore && matchAnalysis && (
         <div className={styles.scoreHeader}>
           {(companyName || roleName) && (
             <div className={styles.contextBar}>
@@ -258,38 +266,41 @@ export function ChangePanel({
             </div>
           ))}
 
-          {/* Accept All Remaining button */}
-          <button
-            className={styles.acceptAllBtn}
-            onClick={onAcceptAll}
-            disabled={pendingCount === 0 || isApplying}
-            type="button"
-          >
-            Accept All Remaining
-          </button>
+          {/* Accept All + Gaps — hidden when embedded inline (TunePanel provides its own save bar) */}
+          {!hideFooter && (
+            <>
+              <button
+                className={styles.acceptAllBtn}
+                onClick={onAcceptAll}
+                disabled={pendingCount === 0 || isApplying}
+                type="button"
+              >
+                Accept All Remaining
+              </button>
 
-          {/* Honest gaps — AI cannot address these */}
-          {matchAnalysis && matchAnalysis.missing.length > 0 && (
-            <details className={styles.gapsSection}>
-              <summary className={styles.gapsSummary}>
-                Genuine gaps — AI can't address these ({matchAnalysis.missing.length})
-              </summary>
-              <ul className={styles.gapsList}>
-                {matchAnalysis.missing.map((item, i) => (
-                  <li key={i}>{item}</li>
-                ))}
-              </ul>
-              {matchAnalysis.suggestions.length > 0 && (
-                <>
-                  <div className={styles.suggestionsHeading}>What you could do</div>
-                  <ol className={styles.suggestionsList}>
-                    {matchAnalysis.suggestions.map((item, i) => (
+              {matchAnalysis && matchAnalysis.missing.length > 0 && (
+                <details className={styles.gapsSection}>
+                  <summary className={styles.gapsSummary}>
+                    Genuine gaps — AI can't address these ({matchAnalysis.missing.length})
+                  </summary>
+                  <ul className={styles.gapsList}>
+                    {matchAnalysis.missing.map((item, i) => (
                       <li key={i}>{item}</li>
                     ))}
-                  </ol>
-                </>
+                  </ul>
+                  {matchAnalysis.suggestions.length > 0 && (
+                    <>
+                      <div className={styles.suggestionsHeading}>What you could do</div>
+                      <ol className={styles.suggestionsList}>
+                        {matchAnalysis.suggestions.map((item, i) => (
+                          <li key={i}>{item}</li>
+                        ))}
+                      </ol>
+                    </>
+                  )}
+                </details>
               )}
-            </details>
+            </>
           )}
         </>
       )}

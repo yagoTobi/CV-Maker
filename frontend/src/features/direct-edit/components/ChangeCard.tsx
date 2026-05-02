@@ -37,6 +37,7 @@ export function ChangeCard({
   onEditValue,
 }: ChangeCardProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const sectionKey = fieldPathToSection(change.fieldPath);
   const activeAlt = change.alternatives[selectedAltIndex] ?? change.alternatives[0];
@@ -61,91 +62,110 @@ export function ChangeCard({
 
   return (
     <div
-      className={`${styles.card}${stateClass}`}
+      className={`${styles.card}${stateClass}${isExpanded ? ` ${styles.expanded}` : ''}`}
       data-change-section={sectionKey}
     >
-      <div className={styles.sectionBadge}>{change.section}</div>
+      {/* Collapsed header — always visible, click to expand */}
+      <div
+        className={styles.cardHeader}
+        onClick={() => setIsExpanded(!isExpanded)}
+        role="button"
+        aria-expanded={isExpanded}
+      >
+        <div className={styles.cardHeaderLeft}>
+          <div className={styles.title}>{change.description}</div>
+        </div>
+        <svg
+          className={`${styles.chevron}${isExpanded ? ` ${styles.chevronOpen}` : ''}`}
+          width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </div>
 
-      <div className={styles.title}>{change.description}</div>
+      {/* Expanded body — Before/After, alternatives, actions */}
+      {isExpanded && (
+        <div className={styles.cardBody}>
+          {isPending && change.alternatives.length > 1 && (
+            <div className={styles.alternatives}>
+              {change.alternatives.map((alt, idx) => (
+                <button
+                  key={idx}
+                  className={`${styles.altTab}${idx === selectedAltIndex ? ` ${styles.altTabActive}` : ''}`}
+                  onClick={() => onSelectAlternative(idx)}
+                  type="button"
+                >
+                  {alt.label}
+                </button>
+              ))}
+            </div>
+          )}
 
-      {isPending && change.alternatives.length > 1 && (
-        <div className={styles.alternatives}>
-          {change.alternatives.map((alt, idx) => (
-            <button
-              key={idx}
-              className={`${styles.altTab}${idx === selectedAltIndex ? ` ${styles.altTabActive}` : ''}`}
-              onClick={() => onSelectAlternative(idx)}
-              type="button"
-            >
-              {alt.label}
-            </button>
-          ))}
+          {isPending && (
+            <>
+              {!isEditing && (
+                <button className={styles.editLink} onClick={() => setIsEditing(true)} type="button">
+                  Edit suggestion
+                </button>
+              )}
+              {isEditing && (
+                <textarea
+                  className={styles.editTextarea}
+                  defaultValue={activeAlt ? toEditString(activeAlt.value) : ''}
+                  onBlur={handleEditBlur}
+                  aria-label={`Edit suggestion for ${change.section}: ${change.description}`}
+                  autoFocus
+                />
+              )}
+            </>
+          )}
+
+          <div className={styles.beforeBlock}>
+            <div className={styles.blockLabel}>BEFORE</div>
+            <div className={styles.blockContent}>{oldText}</div>
+          </div>
+
+          <div className={styles.afterBlock}>
+            <div className={styles.blockLabel}>AFTER</div>
+            <div className={styles.blockContent}>{newText}</div>
+          </div>
+
+          <div className={styles.actions}>
+            {isPending && (
+              <>
+                <button
+                  className={styles.rejectBtn}
+                  onClick={onSkip}
+                  disabled={isApplying}
+                  aria-label={`Reject change: ${change.description}`}
+                  type="button"
+                >
+                  Reject
+                </button>
+                <button
+                  className={styles.acceptBtn}
+                  onClick={onAccept}
+                  disabled={isApplying}
+                  aria-label={`Accept change: ${change.description}`}
+                  type="button"
+                >
+                  Accept
+                </button>
+              </>
+            )}
+            {(isApplied || isSkipped) && (
+              <button
+                className={styles.undoBtn}
+                onClick={onUndo}
+                disabled={isApplying}
+                type="button"
+              >
+                Undo
+              </button>
+            )}
+          </div>
         </div>
       )}
-
-      {isPending && (
-        <>
-          {!isEditing && (
-            <button className={styles.editLink} onClick={() => setIsEditing(true)} type="button">
-              Edit suggestion
-            </button>
-          )}
-          {isEditing && (
-            <textarea
-              className={styles.editTextarea}
-              defaultValue={activeAlt ? toEditString(activeAlt.value) : ''}
-              onBlur={handleEditBlur}
-              aria-label={`Edit suggestion for ${change.section}: ${change.description}`}
-              autoFocus
-            />
-          )}
-        </>
-      )}
-
-      <div className={styles.beforeBlock}>
-        <div className={styles.blockLabel}>BEFORE</div>
-        <div className={styles.blockContent}>{oldText}</div>
-      </div>
-
-      <div className={styles.afterBlock}>
-        <div className={styles.blockLabel}>AFTER</div>
-        <div className={styles.blockContent}>{newText}</div>
-      </div>
-
-      <div className={styles.actions}>
-        {isPending && (
-          <>
-            <button
-              className={styles.rejectBtn}
-              onClick={onSkip}
-              disabled={isApplying}
-              aria-label={`Reject change: ${change.description}`}
-              type="button"
-            >
-              Reject
-            </button>
-            <button
-              className={styles.acceptBtn}
-              onClick={onAccept}
-              disabled={isApplying}
-              aria-label={`Accept change: ${change.description}`}
-              type="button"
-            >
-              Accept
-            </button>
-          </>
-        )}
-        {(isApplied || isSkipped) && (
-          <button
-            className={styles.undoBtn}
-            onClick={onUndo}
-            disabled={isApplying}
-            type="button"
-          >
-            Undo
-          </button>
-        )}
-      </div>
     </div>
   );
 }
