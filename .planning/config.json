@@ -33,5 +33,9 @@
   },
   "agent_skills": {},
   "mode": "interactive",
-  "granularity": "standard"
+  "granularity": "standard",
+  "graphify": {
+    "enabled": true,
+    "label_communities": true
+  }
 }

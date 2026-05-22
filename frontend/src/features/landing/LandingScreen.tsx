@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../contexts/AppContext';
 import { api } from '../../services/api';
@@ -10,34 +10,18 @@ export default function LandingScreen() {
   const navigate = useNavigate();
   const { savedVersions, resetForNewBuild, cvImport, handleVersionLoad, setSelectedTemplateForBuild } = useAppContext();
   const [expandedPanel, setExpandedPanel] = useState<'build' | 'tune' | null>(null);
-  const switchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (switchTimeoutRef.current) clearTimeout(switchTimeoutRef.current);
-    };
-  }, []);
 
   const handleBuildClick = useCallback(() => {
-    if (switchTimeoutRef.current) clearTimeout(switchTimeoutRef.current);
-    // Prevent collapsing while an import is in progress
     if (expandedPanel === 'build' && cvImport.isImporting) return;
     if (expandedPanel === 'build') {
       setExpandedPanel(null);
       return;
     }
-    if (expandedPanel !== null) {
-      setExpandedPanel(null);
-      switchTimeoutRef.current = setTimeout(() => setExpandedPanel('build'), 250);
-      return;
-    }
-    resetForNewBuild();
+    if (expandedPanel === null) resetForNewBuild();
     setExpandedPanel('build');
   }, [expandedPanel, resetForNewBuild, cvImport.isImporting]);
 
   const handleTuneClick = useCallback(async () => {
-    if (switchTimeoutRef.current) clearTimeout(switchTimeoutRef.current);
     const baseCVs = savedVersions.filter(v => !v.parentVersionId);
     if (baseCVs.length === 1) {
       const version = await api.getVersion(baseCVs[0].id);
@@ -52,20 +36,12 @@ export default function LandingScreen() {
       setExpandedPanel(null);
       return;
     }
-    if (expandedPanel !== null) {
-      setExpandedPanel(null);
-      switchTimeoutRef.current = setTimeout(() => setExpandedPanel('tune'), 250);
-      return;
-    }
     setExpandedPanel('tune');
   }, [expandedPanel, savedVersions, navigate, handleVersionLoad, setSelectedTemplateForBuild]);
 
   const handleBuildFromTune = useCallback(() => {
-    setExpandedPanel(null);
-    switchTimeoutRef.current = setTimeout(() => {
-      resetForNewBuild();
-      setExpandedPanel('build');
-    }, 250);
+    resetForNewBuild();
+    setExpandedPanel('build');
   }, [resetForNewBuild]);
 
   const handleMyCV = () => {
