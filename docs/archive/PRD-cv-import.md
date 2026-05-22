@@ -1,3 +1,5 @@
+> **ARCHIVED 2026-05-23.** This PRD describes a feature that has shipped (see `docs/CHANGELOG.md` for the release entry and `.planning/ROADMAP.md` for the implementing phase). Kept for historical reference. **Do not treat as live spec.**
+
 # Product Requirements Document: CV Import
 
 **Author**: Yago

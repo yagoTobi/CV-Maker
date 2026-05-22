@@ -1,105 +1,102 @@
-# TODO: Multi-User & Cloud Deployment Preparation
+<!-- TL;DR: Cloud-refactor checklist. See `.planning/tmp/cloud-audit/PUNCH-LIST.md` for full audit context. This file tracks the actionable backlog. -->
 
-Tracks the work needed to take CV-Maker from a single-user localhost app to a multi-user cloud deployment.
+# Cloud-Refactor Checklist
 
----
-
-## Do Now (before building more features)
-
-### 1. Add `user_id` dependency to all data routes
-- [ ] Create `backend/dependencies.py` with a `get_current_user` FastAPI dependency
-  - Placeholder implementation: reads `X-User-Id` header, defaults to `"local"`
-  - Single place to swap in real auth later (JWT, OAuth, etc.)
-- [ ] Thread `user_id` into every data-touching route:
-  - `cv_versions.py` — all 5 endpoints (list, create, get, delete, patch)
-  - `user_data.py` — all 4 endpoints (get, save, add experience, clear)
-  - `cv_import.py` — upload endpoint
-- [ ] Namespace storage paths by user: `user_data/{user_id}/versions/`, `user_data/{user_id}/profile.json`
-
-### 2. Storage abstraction layer
-- [ ] Create `backend/services/storage.py` with a `StorageBackend` Protocol:
-  - `save_version(user_id, version) -> None`
-  - `load_version(user_id, version_id) -> dict`
-  - `list_versions(user_id) -> list[dict]`
-  - `delete_version(user_id, version_id) -> None`
-  - `save_profile(user_id, profile) -> None`
-  - `load_profile(user_id) -> dict`
-- [ ] Implement `FileStorage` class wrapping current `os.path` / `json.load` logic
-- [ ] Refactor `cv_versions.py` to use `StorageBackend` instead of direct file I/O (6 call sites)
-- [ ] Refactor `user_data.py` to use `StorageBackend` instead of direct file I/O
-
-### 3. Async compilation (quick win)
-- [ ] Wrap `compiler.compile()` calls in `run_in_executor` in `compile.py` to stop blocking the async event loop
-  ```python
-  result = await asyncio.get_event_loop().run_in_executor(
-      None, compiler.compile, tex_content, cls_content, template_id
-  )
-  ```
+Last updated: 2026-05-23
 
 ---
 
-## Do Before Deploy
+## Already Done
 
-### 4. Real authentication
-- [ ] Choose auth provider (Cognito, Clerk, Auth0, or self-hosted)
-- [ ] Replace placeholder `get_current_user` with real JWT/token validation
-- [ ] Add signup/login flow to frontend
-- [ ] HTTPS everywhere (required for auth tokens)
+~~**`get_current_user` dependency**~~ (done — `backend/dependencies.py`, shim reads `X-User-Id` header; real Cognito JWT integration is Phase C2 below)
 
-### 5. PostgreSQL storage backend
-- [ ] Implement `PostgresStorage` class conforming to `StorageBackend` Protocol
-- [ ] Schema: `users`, `cv_versions` (with indexes on `user_id`, `parent_version_id`, `created_at`), `user_profiles`
-- [ ] Migration tooling (Alembic or similar)
-- [ ] Connection pooling (asyncpg or SQLAlchemy async)
+~~**`StorageBackend` Protocol + `FileStorage`**~~ (done — ADR-019, `backend/services/storage.py` + `file_storage.py` + `dynamo_storage.py`)
 
-### 6. Rate limiting
-- [ ] Add rate limiting middleware (e.g., `slowapi`)
-- [ ] Per-user limits on expensive endpoints:
-  - `/api/chat` — AI inference
-  - `/api/chat/match-analysis` — AI inference
-  - `/api/compile` — CPU-bound subprocess
-  - `/api/cv-import` — AI extraction (8192 tokens per call)
-- [ ] Global request size limits beyond the existing 10MB import cap
-
-### 7. Docker containerization
-- [ ] Dockerfile for backend (Python + TeX Live + fonts)
-- [ ] Docker Compose for local dev (backend + future Postgres)
-- [ ] LaTeX compilation runs in sandboxed environment with resource limits
-- [ ] Consider separate container/service for LaTeX compilation workers
-
-### 8. Bedrock / AI cost controls
-- [ ] Per-user usage tracking (token counts per request)
-- [ ] Usage quotas or billing tiers
-- [ ] Queue for burst traffic on AI endpoints (SQS or similar)
+~~**Dockerfile + docker-compose**~~ (done — non-root user, TeX Live, DynamoDB Local, `cv-maker-data` volume)
 
 ---
 
-## Defer (only if needed at scale)
+## Phase C — Cloud-native correctness
 
-### 9. S3 for file storage
-- [ ] Store compiled PDFs in S3 instead of returning base64 inline
-- [ ] Store uploaded CV files (import) in S3 with pre-signed URLs
-- [ ] Only needed if storage volume becomes a concern
+### C1 — Non-blocking compilation
+- [ ] Wrap `compiler.compile()` in `await asyncio.to_thread(...)` in `routes/compile.py`
+- [ ] (Later) SQS + Fargate worker fleet + S3 presigned URL for compiled PDF
 
-### 10. LaTeX compilation workers
-- [ ] Move compilation to Celery workers or AWS Lambda
-- [ ] Job queue with status polling or WebSocket updates
-- [ ] Only needed if concurrent compilation becomes a bottleneck
+### C2 — Real auth: Cognito JWT
+- [ ] Replace `get_current_user` shim with JWT signature verification against Cognito JWK set
+- [ ] Return 401 for unverified requests
+- [ ] Frontend: send `Authorization: Bearer <token>` header
+- [ ] Gate old `X-User-Id` path behind `AUTH_MODE=dev` only
+- [ ] Drop `allow_credentials=True` from CORS once Bearer tokens are in place
 
-### 11. Frontend optimization
-- [ ] Code splitting / lazy loading per screen
-- [ ] CDN for static assets
-- [ ] Service worker for offline form editing
+### C3 — Force DynamoDB in production
+- [ ] Add startup assertion: if `ENV=production` and `STORAGE_BACKEND != dynamodb`, fail closed
+- [ ] Document `FileStorage` as dev-only in `docs/CONFIGURATION.md`
+
+### C4 — Atomic DDB updates
+- [ ] Add `version` attribute to DDB items
+- [ ] Switch `update_version` to `update_item` + `UpdateExpression` + `ConditionExpression`
+- [ ] Return HTTP 409 Conflict on race condition
+
+### C5 — DDB pagination
+- [ ] Loop on `LastEvaluatedKey` in `list_versions` and `update_children_of_deleted_parent`
+- [ ] Add GSI on `parentVersionId` for independent base-CV and job-application queries
+
+### C6 — Distributed LLM cache
+- [ ] Move `llm_cache` from in-memory to ElastiCache (Redis) or DDB-with-TTL
+- [ ] Include `user_id` in cache key
+
+### C7 — Voice session persistence
+- [ ] Move in-memory voice session dict to DDB-with-TTL
+- [ ] Remove app-level cleanup timer
+
+### C8 — Drop static AWS creds in Pipecat
+- [ ] Use ECS task role; verify `AWSNovaSonicLLMService` accepts a `boto3.Session`
+
+### C9 — Pydantic `BaseSettings`
+- [ ] Replace bare `os.getenv` calls with a `Settings` class from `pydantic-settings`
+- [ ] Validate at startup — `STORAGE_BACKEND` typo no longer silently falls back to file storage
+
+### C10 — Large blobs out of DDB
+- [ ] Move `texContent` and full `formData` to S3; store S3 key in DDB row
+- [ ] `list_versions` returns lightweight metadata only (stays under 400KB item limit)
 
 ---
 
-## Reference: Current File I/O Hotspots
+## Phase D — Operational polish
 
-Files that directly touch the filesystem for user data (all need the abstraction):
+### D1 — Structured logging + correlation IDs
+- [ ] Configure stdlib `logging` for JSON output
+- [ ] Add `X-Request-Id` middleware bound to a `contextvars.ContextVar`
+- [ ] Include request ID in 500 responses
 
-| File | What it does | Call sites |
-|------|-------------|------------|
-| `backend/routes/cv_versions.py` | Read/write/list/delete `user_data/versions/*.json` | 6 |
-| `backend/routes/user_data.py` | Read/write/delete `user_data/profile.json` | 4 |
-| `backend/services/latex_compiler.py` | `tempfile.TemporaryDirectory` + `subprocess.run` | 1 (already isolated) |
-| `backend/routes/cv_import.py` | Temp file for upload processing | 1 (already ephemeral) |
+### D2 — boto3 timeouts + retries
+- [ ] Apply `Config(connect_timeout=5, read_timeout=30, retries={"mode": "adaptive", "max_attempts": 3})` to Bedrock client and DDB resource
+
+### D3 — Specific exception handling
+- [ ] Replace bare `except Exception` with `botocore.exceptions.ClientError`, `json.JSONDecodeError`, `pydantic.ValidationError`
+- [ ] Always `logger.exception()` before returning user-facing message
+
+### D4 — LaTeX safety
+- [ ] Add `-no-shell-escape` flag to `subprocess.run` in `latex_compiler.py`
+- [ ] Compile in a locked-down container with read-only root FS and no IAM permissions
+
+### D5 — Atomic file writes in `FileStorage`
+- [ ] Write to `path.tmp` then `os.replace` (atomic on POSIX)
+- [ ] Catch `json.JSONDecodeError` specifically
+
+### D6 — Retry Bedrock throttles
+- [ ] `parse_json_with_retry` currently retries `JSONDecodeError` only
+- [ ] Also retry `ClientError` with `ThrottlingException` / `ServiceUnavailableException`
+
+### D7 — Iterative cycle detection
+- [ ] Replace recursion in `_validate_no_circular_reference` with explicit max-depth loop (e.g., depth ≤ 10)
+
+### D8 — CORS whitespace bug
+- [ ] Strip whitespace in `CORS_ORIGINS.split(",")` — one-line fix
+
+### D9 — DDB empty-string filter
+- [ ] Remove `_sanitize_for_dynamo` empty-string filter; DDB has accepted empty strings since 2020
+
+### D10 — Production console-log gating
+- [ ] Gate `VoiceWidget.tsx` lines 31–33, 41 with `import.meta.env.DEV` or remove

@@ -9,56 +9,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
-- **Apply to Job**: 3-step progressive flow for job applications (`/apply` route)
-  - Step 1: Job Details (company, role, description)
-  - Step 2: Match Analysis (reuses `POST /chat/match-analysis`)
-  - Step 3: Review Changes — AI-generated field-level suggestions with per-change checkboxes
-  - "Open in Tune Screen" button to continue in editor tune mode
-  - `ApplyToJobScreen.tsx` with step navigation and animations
-- **AI tailoring endpoint**: `POST /api/tailor/suggest-changes` generates field-level CV change suggestions
-  - Returns granular changes per-bullet, per-skill with section, type, description, old/new values
-  - `TAILOR_SUGGEST_PROMPT` in `prompts/cv_agent.py`
-  - `routes/tailor.py` route handler
-- **Editor tune mode**: Guided CV tailoring in the editor screen
-  - Collapsible job input section (company, role, description) with smooth animation
-  - `MatchSummaryBar` — compact score bar with gap count, progress indicator, expandable details
-  - `TailorPanel` — AI suggestion cards with accept/skip/undo, inline diff view, inline editing
-  - Auto-collapse reviewed cards to compact single-line (recovers ~58px per card)
-  - "Accept All Remaining" bulk action
-  - PDF auto-recompiles after each accepted change
-  - Auto-compile on tune mode entry
-  - `useTailor` hook managing suggestions, applied/skipped/pending state, estimated score
-- **Dashboard actions**: "Tune for a Job" and "Apply to Job" buttons per base CV group
-  - "Tune for a Job" navigates to `/editor` with `mode: 'tune'` and base CV loaded
-  - "Apply to Job" navigates to `/apply` with base CV loaded
-  - On-demand PDF download button from any version row
-  - `cvFilename.ts` utility generates formatted filenames (e.g., `John_Smith_Google_Staff_SWE_CV.pdf`)
-- **Form data patching**: `formDataPatch.ts` resolves nested paths like `workExperience[0].bullets[2]` for granular form updates
-- **Storage abstraction layer**: Pluggable storage backends for user data persistence
-  - `StorageBackend` Protocol with 11-method async interface (`services/storage.py`)
-  - `FileStorage` implementation wraps existing JSON file I/O — zero behavior change (`services/file_storage.py`)
-  - `DynamoStorage` implementation for DynamoDB single-table design (`services/dynamo_storage.py`)
-  - `get_storage()` FastAPI dependency reads `STORAGE_BACKEND` env var (defaults to `file`)
-  - `get_current_user()` dependency reads `X-User-Id` header (defaults to `"local"`)
-  - DynamoDB table creation script (`backend/scripts/create_table.py`)
-  - Migration script from FileStorage to DynamoDB (`backend/scripts/migrate_to_dynamodb.py`)
-  - `STORAGE_BACKEND`, `DYNAMODB_TABLE_NAME`, `DYNAMODB_ENDPOINT_URL` environment variables
-  - DynamoDB Local service in `docker-compose.yml`
 
 ### Changed
-- **CV Import workflow simplification**: Merged import review into form builder
-  - Removed dedicated `/import/review` screen (~965 lines)
-  - Import path now goes: upload → template selector → form builder (with inline indicators)
-  - New `ImportBanner` component displays source badge, confidence indicator, warnings at top of form
-  - Field-level confidence badges show amber left border + "Needs review" badge for low-confidence fields
-  - Banner auto-dismisses on first successful PDF generation
-  - Import state cleanup on form builder unmount via `cvImport.reset()`
-- **CV extraction optimization**: Switched from Sonnet 3.5 to Haiku 4.5 for PDF/DOCX extraction (faster, cheaper)
-- **Storage migration**: All routes now use `StorageBackend` abstraction
-  - `routes/cv_versions.py`, `routes/user_data.py`, `routes/voice_interview.py` refactored to use storage dependency
-  - Voice profile storage consolidated into main `user_data/` directory (was split to `backend/user_data/` previously)
-  - `X-User-Id` header added to CORS `allow_headers` in `main.py`
-- **Docker compose**: Consolidated to single data volume `cv-maker-data` (removed `cv-maker-voice-data`), added DynamoDB Local service
+
+### Fixed
+
+---
+
+## [0.1.0] - 2026-05-23
 
 ### Added
 - **Voice interview feature**: Pipecat + Amazon Nova Sonic speech-to-speech pipeline
@@ -119,6 +77,69 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - "Add Section" button in form builder sidebar nav
 - Custom favicon (`favicon.svg`) replacing default Vite icon
 - Page title changed to "CV Maker" in `index.html`
+- **Apply to Job**: 3-step progressive flow for job applications (`/apply` route)
+  - Step 1: Job Details (company, role, description)
+  - Step 2: Match Analysis (reuses `POST /chat/match-analysis`)
+  - Step 3: Review Changes — AI-generated field-level suggestions with per-change checkboxes
+  - "Open in Tune Screen" button to continue in editor tune mode
+  - `ApplyToJobScreen.tsx` with step navigation and animations
+- **AI tailoring endpoint**: `POST /api/tailor/suggest-changes` generates field-level CV change suggestions
+  - Returns granular changes per-bullet, per-skill with section, type, description, old/new values
+  - `TAILOR_SUGGEST_PROMPT` in `prompts/cv_agent.py`
+  - `routes/tailor.py` route handler
+- **Editor tune mode**: Guided CV tailoring in the editor screen
+  - Collapsible job input section (company, role, description) with smooth animation
+  - `MatchSummaryBar` — compact score bar with gap count, progress indicator, expandable details
+  - `TailorPanel` — AI suggestion cards with accept/skip/undo, inline diff view, inline editing
+  - Auto-collapse reviewed cards to compact single-line (recovers ~58px per card)
+  - "Accept All Remaining" bulk action
+  - PDF auto-recompiles after each accepted change
+  - Auto-compile on tune mode entry
+  - `useTailor` hook managing suggestions, applied/skipped/pending state, estimated score
+- **Dashboard actions**: "Tune for a Job" and "Apply to Job" buttons per base CV group
+  - "Tune for a Job" navigates to `/editor` with `mode: 'tune'` and base CV loaded
+  - "Apply to Job" navigates to `/apply` with base CV loaded
+  - On-demand PDF download button from any version row
+  - `cvFilename.ts` utility generates formatted filenames (e.g., `John_Smith_Google_Staff_SWE_CV.pdf`)
+- **Form data patching**: `formDataPatch.ts` resolves nested paths like `workExperience[0].bullets[2]` for granular form updates
+- **Storage abstraction layer**: Pluggable storage backends for user data persistence
+  - `StorageBackend` Protocol with 11-method async interface (`services/storage.py`)
+  - `FileStorage` implementation wraps existing JSON file I/O — zero behavior change (`services/file_storage.py`)
+  - `DynamoStorage` implementation for DynamoDB single-table design (`services/dynamo_storage.py`)
+  - `get_storage()` FastAPI dependency reads `STORAGE_BACKEND` env var (defaults to `file`)
+  - `get_current_user()` dependency reads `X-User-Id` header (defaults to `"local"`)
+  - DynamoDB table creation script (`backend/scripts/create_table.py`)
+  - Migration script from FileStorage to DynamoDB (`backend/scripts/migrate_to_dynamodb.py`)
+  - `STORAGE_BACKEND`, `DYNAMODB_TABLE_NAME`, `DYNAMODB_ENDPOINT_URL` environment variables
+  - DynamoDB Local service in `docker-compose.yml`
+
+### Changed
+- **Navigation architecture**: Replaced screen-based state machine with React Router v6
+  - App.tsx is now route definitions only; removed `currentScreen` state
+  - Navigation via `useNavigate()` and URL changes (enables browser back/forward)
+  - State passed between routes via `location.state` object
+- **State management**: App.tsx god component pattern replaced with AppContext
+  - All shared state moved to `contexts/AppContext.tsx`
+  - Components access state via `useAppContext()` hook
+- **Form builder right panel**: PDF preview with "Advanced Editor" escape hatch to `/editor`
+- CORS `allow_methods` expanded to include `DELETE`
+- Template selection screen now has a Back button (returns to landing)
+- Landing page layout: two-column (branding left, actions right), responsive collapse on mobile
+- `sectionOrder` now supports `additional-{index}` keys for dynamic additional sections
+- Form builder sidebar now includes VoiceWidget pill trigger with overlay portal
+- **CV Import workflow simplification**: Merged import review into form builder
+  - Removed dedicated `/import/review` screen (~965 lines)
+  - Import path now goes: upload → template selector → form builder (with inline indicators)
+  - New `ImportBanner` component displays source badge, confidence indicator, warnings at top of form
+  - Field-level confidence badges show amber left border + "Needs review" badge for low-confidence fields
+  - Banner auto-dismisses on first successful PDF generation
+  - Import state cleanup on form builder unmount via `cvImport.reset()`
+- **CV extraction optimization**: Switched from Sonnet 3.5 to Haiku 4.5 for PDF/DOCX extraction (faster, cheaper)
+- **Storage migration**: All routes now use `StorageBackend` abstraction
+  - `routes/cv_versions.py`, `routes/user_data.py`, `routes/voice_interview.py` refactored to use storage dependency
+  - Voice profile storage consolidated into main `user_data/` directory (was split to `backend/user_data/` previously)
+  - `X-User-Id` header added to CORS `allow_headers` in `main.py`
+- **Docker compose**: Consolidated to single data volume `cv-maker-data` (removed `cv-maker-voice-data`), added DynamoDB Local service
 
 ### Fixed
 - **McDowell CV template**: Bullet points overlapping with multi-line section headers
@@ -137,21 +158,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Professional CV: education entries with no GPA and no details no longer produce empty `\begin{list}` (invalid LaTeX) — renders header directly instead
 - McDowell CV: empty `\address{}` and `\contacts{}` blocks guarded with conditionals
 - Deedy template: removed `\lastupdated` command (was printing misleading compilation date)
-
-### Changed
-- **Navigation architecture**: Replaced screen-based state machine with React Router v6
-  - App.tsx is now route definitions only; removed `currentScreen` state
-  - Navigation via `useNavigate()` and URL changes (enables browser back/forward)
-  - State passed between routes via `location.state` object
-- **State management**: App.tsx god component pattern replaced with AppContext
-  - All shared state moved to `contexts/AppContext.tsx`
-  - Components access state via `useAppContext()` hook
-- **Form builder right panel**: PDF preview with "Advanced Editor" escape hatch to `/editor`
-- CORS `allow_methods` expanded to include `DELETE`
-- Template selection screen now has a Back button (returns to landing)
-- Landing page layout: two-column (branding left, actions right), responsive collapse on mobile
-- `sectionOrder` now supports `additional-{index}` keys for dynamic additional sections
-- Form builder sidebar now includes VoiceWidget pill trigger with overlay portal
 
 ---
 

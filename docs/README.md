@@ -95,4 +95,4 @@ CV-Maker/
 - [Architecture](./ARCHITECTURE.md) - Technical architecture and design system details
 - [Development Guide](./DEVELOPMENT.md) - Setup and development guidelines
 - [Changelog](./CHANGELOG.md) - Version history and changes
-- [Roadmap](./ROADMAP.md) - Future plans and TODO items
+- [Roadmap](./ROADMAP.md) - Redirects to the canonical phase-tracked roadmap in `.planning/ROADMAP.md`

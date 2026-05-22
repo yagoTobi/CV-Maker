@@ -413,6 +413,33 @@ pytest tests/test_template_rendering.py -v -k "my_template"
 pytest tests/test_template_compilation.py -v -k "my_template"
 ```
 
+## Where to Add New Code
+
+### New Feature Screen
+1. Create folder: `frontend/src/features/{feature-name}/`
+2. Add component: `FeatureName.tsx` + `FeatureName.module.css` + `index.ts`
+3. Add route: `frontend/src/App.tsx` (lazy import + `Route`)
+4. Wrap with `<FeatureErrorBoundary>` in the route definition
+
+### New Custom Hook
+1. Create: `frontend/src/hooks/use{Name}.ts`
+2. Export from: `frontend/src/hooks/index.ts`
+3. If it needs global state, wire it into the appropriate context in `frontend/src/contexts/`
+
+### New Storage Entity
+1. Add methods to Protocol: `backend/services/storage.py`
+2. Implement in both: `backend/services/file_storage.py` and `backend/services/dynamo_storage.py`
+3. DynamoDB: follow existing single-table design (`PK=USER#{id}`, `SK={ENTITY_TYPE}#{id}` or `{ENTITY_TYPE}`)
+
+### New AI Feature
+1. Add prompt to: `backend/prompts/cv_agent.py` (or create a new prompt file)
+2. Add route handler: `backend/routes/{feature}.py`
+3. Use Bedrock via `from services.bedrock import bedrock_client, MODEL_SONNET` (or `MODEL_HAIKU` for fast/cheap)
+4. Use `parse_json_with_retry()` from `backend/services/json_utils.py` for structured AI responses
+5. Consider wrapping expensive calls in `llm_cache` (1-hour TTL, SHA-256 keyed)
+
+---
+
 ## PR Process
 
 No formal PR template or `CONTRIBUTING.md` is currently configured in this repository. When submitting a pull request:
