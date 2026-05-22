@@ -145,9 +145,9 @@ This phase does NOT include: promoting tuned changes back to the base CV, multi-
 - `.planning/phases/08-streamlined-tune-flow-save-as-base-prompt-inline-tune-panel-/08-CONTEXT.md` — original 3-tier inline tune semantics, save-as-base gating
 
 ### Codebase maps
-- `.planning/codebase/ARCHITECTURE.md` — context split, EditorActionsContext, direct-edit feature dir
-- `.planning/codebase/CONVENTIONS.md` — CSS Modules + variable system, useCallback/useMemo patterns
-- `.planning/codebase/STRUCTURE.md` — direct-edit components co-location
+- `docs/ARCHITECTURE.md` — context split, EditorActionsContext, direct-edit feature dir
+- `CLAUDE.md` — CSS Modules + variable system, useCallback/useMemo patterns
+- `docs/ARCHITECTURE.md` § "Direct-Edit Feature Directory" — direct-edit components co-location
 
 </canonical_refs>
 
