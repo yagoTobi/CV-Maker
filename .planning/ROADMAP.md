@@ -240,3 +240,26 @@ Plans:
 - [ ] 12-01-PLAN.md -- Fix match score bug: expose setBaselineScore from useTailor, add "%" suffix to score circle
 - [ ] 12-02-PLAN.md -- Redesign change cards: Before/After tinted blocks, new layout order, no word-level diffs
 - [ ] 12-03-PLAN.md -- Flow simplification: post-save prompt, all-reviewed banner, prominent save button + visual checkpoint
+
+### Phase 13: Inline Tune Highlights — Grammarly-style review with gap prompt midpoint
+
+**Goal:** Replace TunePanel/cards with inline Grammarly-style highlights on the CV itself. JD submit → midpoint Gap Prompt (skills/topics chips) → AI runs tune → changes appear as inline underlines/highlights with severity tiers. One-at-a-time popover (Before/After + Accept/Skip), manual nav, section-level dismiss. Save Tailored CV enabled when ≥1 accepted.
+**Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12, D-13, D-14, D-15, D-16, D-17, D-18, D-19, D-20, D-21, D-22, D-23, D-24, D-25, D-26, D-27, D-28
+**Depends on:** Phase 12
+**Plans:** 5 plans
+**UI hint**: yes
+
+**Success Criteria** (what must be TRUE):
+  1. TunePanel removed from tune flow — review happens entirely on the inline CV
+  2. After JD submit, Gap Prompt step lets user add missing skills/experiences before AI tune
+  3. AI-suggested changes render as inline highlights on the CV with severity tiers (strong / minor / add / delete)
+  4. Clicking a highlight opens a popover with Before/After + Accept/Skip/Next; only the active change is fully highlighted, others are faintly marked
+  5. User navigates changes one-at-a-time (manual), with section-level dismiss available
+  6. Save Tailored CV enabled when ≥1 change accepted
+
+Plans:
+- [ ] 13-01-PLAN.md -- Backend userClarifications wiring + Wave 0 frontend test scaffolds (Wave 1)
+- [ ] 13-02-PLAN.md -- Frontend foundation: severity util, useChangeHighlights hook, EditableField/EditableBulletList highlight extensions, useTailor + api.ts userClarifications signature (Wave 2)
+- [ ] 13-03-PLAN.md -- Floating-ui install + ChangePopover + ChangeHighlight + GapPromptChips (Wave 2)
+- [ ] 13-04-PLAN.md -- TuneRail + ScoreCard + PostSavePrompt + MedLengthTemplate/EditorActionsContext/NavBar/DirectEditPage rewire + visual checkpoint (Wave 3)
+- [ ] 13-05-PLAN.md -- Delete TunePanel/ChangePanel/ChangeCard/useScrollSync legacy tree (Wave 4)
