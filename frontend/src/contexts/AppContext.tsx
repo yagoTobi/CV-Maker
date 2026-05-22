@@ -5,7 +5,7 @@ import { CVProvider, useCVContext } from './CVContext';
 import { ToolsProvider, useToolsContext } from './ToolsContext';
 import { useTemplates, useCompiler, useChat } from '../hooks';
 import { useImport } from '../hooks/useImport';
-import type { SaveVersionData } from '../features/dashboard/VersionSwitcher';
+import type { SaveVersionData } from '../features/dashboard';
 import type { UserProfile, CVFormData, CVVersion, CVVersionMeta } from '../types';
 
 // Full interface kept for backwards compatibility
