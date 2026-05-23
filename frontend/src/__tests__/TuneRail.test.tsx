@@ -192,15 +192,15 @@ describe('TuneRail', () => {
     const tailor = makeTailor({
       tailorResponse: {
         changes: [
-          makeChange({ id: 'c2', section: 'Skills' }),
-          makeChange({ id: 'c3', section: 'Skills' }),
+          makeChange({ id: 'c2', section: 'Skills', fieldPath: 'skills[0]' }),
+          makeChange({ id: 'c3', section: 'Skills', fieldPath: 'skills[1]' }),
         ],
         estimatedScore: 75,
         summary: '',
       },
       pendingChanges: [
-        makeChange({ id: 'c2', section: 'Skills' }),
-        makeChange({ id: 'c3', section: 'Skills' }),
+        makeChange({ id: 'c2', section: 'Skills', fieldPath: 'skills[0]' }),
+        makeChange({ id: 'c3', section: 'Skills', fieldPath: 'skills[1]' }),
       ],
     });
     render(<TuneRail {...defaultProps({ tailor })} />);
@@ -210,5 +210,76 @@ describe('TuneRail', () => {
     // Both Skills-section change ids must be passed to skipChange.
     const calls = tailor.skipChange.mock.calls.map((c: unknown[]) => c[0]);
     expect(calls).toEqual(expect.arrayContaining(['c2', 'c3']));
+  });
+
+  // -- Plan 04 additions ---------------------------------------------------
+
+  it('renders the all-reviewed banner once every change is applied or skipped (D-24)', () => {
+    const tailor = makeTailor({
+      tailorResponse: {
+        changes: [
+          makeChange({ id: 'c1' }),
+          makeChange({ id: 'c2' }),
+        ],
+        estimatedScore: 80,
+        summary: '',
+      },
+      appliedChanges: new Set(['c1']),
+      skippedChanges: new Set(['c2']),
+      pendingChanges: [],
+    });
+    render(<TuneRail {...defaultProps({ tailor })} />);
+    expect(screen.getByText(/all changes reviewed/i)).toBeInTheDocument();
+  });
+
+  it('Re-run guard: with non-empty decisions, clicking Re-run opens a confirm dialog without firing onReRunConfirm (D-11)', () => {
+    const onReRunConfirm = vi.fn();
+    const tailor = makeTailor({
+      tailorResponse: {
+        changes: [makeChange({ id: 'c1' })],
+        estimatedScore: 75,
+        summary: '',
+      },
+      appliedChanges: new Set(['c1']),
+      pendingChanges: [],
+    });
+    render(
+      <TuneRail
+        {...defaultProps({ tailor })}
+        isExpanded
+        onReRunConfirm={onReRunConfirm}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /re-run tune/i }));
+    expect(onReRunConfirm).not.toHaveBeenCalled();
+    expect(screen.getByText(/lose 1 review decision/i)).toBeInTheDocument();
+    // Cancel keeps onReRunConfirm un-called.
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+    expect(onReRunConfirm).not.toHaveBeenCalled();
+  });
+
+  it('Re-run guard: confirming after the dialog opens fires onReRunConfirm exactly once', () => {
+    const onReRunConfirm = vi.fn();
+    const tailor = makeTailor({
+      tailorResponse: {
+        changes: [makeChange({ id: 'c1' })],
+        estimatedScore: 75,
+        summary: '',
+      },
+      appliedChanges: new Set(['c1']),
+      pendingChanges: [],
+    });
+    render(
+      <TuneRail
+        {...defaultProps({ tailor })}
+        isExpanded
+        onReRunConfirm={onReRunConfirm}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /re-run tune/i }));
+    // Confirm sits inside the alertdialog block — re-grab by name.
+    const buttons = screen.getAllByRole('button', { name: /re-run tune/i });
+    fireEvent.click(buttons[buttons.length - 1]);
+    expect(onReRunConfirm).toHaveBeenCalledTimes(1);
   });
 });
