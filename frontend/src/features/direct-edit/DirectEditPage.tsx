@@ -27,6 +27,7 @@ import { useCVContext } from '../../contexts/CVContext';
 import { api } from '../../services/api';
 import { generateId } from '../../utils/idHelpers';
 import { generateCVFilename } from '../../utils/cvFilename';
+import { downloadPdf } from '../../utils/downloadPdf';
 import { noop, EMPTY_SET } from '../../utils/cvDisplayUtils';
 import type { CVFormData, SkillItem, CVVersion, CVVersionMeta } from '../../types';
 import { NamePromptDialog } from './components/NamePromptDialog';
@@ -197,20 +198,7 @@ export default function DirectEditPage() {
         return;
       }
       // Step 3: Trigger browser download
-      const byteChars = atob(result.pdf_base64);
-      const byteArray = new Uint8Array(byteChars.length);
-      for (let i = 0; i < byteChars.length; i++) {
-        byteArray[i] = byteChars.charCodeAt(i);
-      }
-      const blob = new Blob([byteArray], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = generateCVFilename({ fullName: formData.personalInfo.fullName });
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      downloadPdf(result.pdf_base64, generateCVFilename({ fullName: formData.personalInfo.fullName }));
     } catch (err) {
       console.error('Download failed:', err);
     }

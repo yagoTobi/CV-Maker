@@ -258,15 +258,25 @@ export const api = {
   },
 
   async deleteVersion(id: string): Promise<boolean> {
-    await axiosInstance.delete(`${API_BASE}/cv-versions/${id}`);
-    return true;
+    try {
+      await axiosInstance.delete(`${API_BASE}/cv-versions/${id}`);
+      return true;
+    } catch (err) {
+      console.error('[api:deleteVersion]', err);
+      return false;
+    }
   },
 
   async updateVersion(id: string, data: { parentVersionId?: string | null }): Promise<boolean> {
-    await axiosInstance.patch(`${API_BASE}/cv-versions/${id}`, {
-      parentVersionId: data.parentVersionId,
-    });
-    return true;
+    try {
+      await axiosInstance.patch(`${API_BASE}/cv-versions/${id}`, {
+        parentVersionId: data.parentVersionId,
+      });
+      return true;
+    } catch (err) {
+      console.error('[api:updateVersion]', err);
+      return false;
+    }
   },
 
   async updateVersionFull(
