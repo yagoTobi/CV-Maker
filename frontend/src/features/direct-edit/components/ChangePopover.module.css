@@ -1,0 +1,176 @@
+/* ChangePopover — Grammarly-style floating card with compact + expanded
+ * variants per D-18.
+ *
+ * Severity accents are applied via .severityStrong / .severityMinor /
+ * .severityAdd on the .popover root in addition to .compact or .expanded.
+ */
+
+.popover {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  min-width: 280px;
+  max-width: 480px;
+  z-index: 1000;
+  outline: none;
+}
+
+.popover:focus-visible {
+  box-shadow: var(--shadow-lg), 0 0 0 3px var(--accent-light);
+}
+
+.severityStrong {
+  border-top: 3px solid var(--error);
+}
+
+.severityMinor {
+  border-top: 3px solid var(--accent);
+}
+
+.severityAdd {
+  border-top: 3px solid var(--success);
+}
+
+/* Layout containers */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.compact .body {
+  padding: 8px 12px;
+}
+
+.expanded .body {
+  padding: 16px;
+  gap: 12px;
+}
+
+/* Per-block typography */
+.sectionBadge {
+  display: inline-block;
+  width: fit-content;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+}
+
+.description {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.beforeBlock {
+  background: var(--error-light);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+}
+
+.beforeBlock .blockContent {
+  text-decoration: line-through;
+  color: var(--text-secondary);
+}
+
+.afterBlock {
+  background: var(--success-light);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  border-left: 3px solid var(--success);
+}
+
+.afterBlock .blockContent {
+  font-weight: 600;
+}
+
+.blockLabel {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.blockContent {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  word-break: break-word;
+  user-select: text;
+}
+
+/* Compact one-line layout */
+.compactAfter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--accent-light);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+}
+
+.compactAfter .blockLabel {
+  margin-bottom: 0;
+}
+
+/* Action row */
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+}
+
+.skipButton {
+  flex: 0 0 auto;
+  padding: 6px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.skipButton:hover {
+  background: var(--error-light);
+  color: var(--error);
+}
+
+.acceptButton {
+  flex: 0 0 auto;
+  padding: 6px 14px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.acceptButton:hover {
+  background: var(--accent-hover);
+}
+
+.keyboardHint {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  gap: 2px;
+  justify-content: flex-end;
+}

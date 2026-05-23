@@ -66,4 +66,50 @@ describe('GapPromptChips', () => {
     // Only the touched chip's value is present
     expect(lastArg).toEqual(['I know Spanish']);
   });
+
+  // --- Behavior tests authored by Plan 03 Task 3 ---
+
+  it('keeps only one chip expanded at a time', () => {
+    render(<GapPromptChips {...defaultProps()} />);
+
+    // Open chip[0]
+    fireEvent.click(screen.getByRole('button', { name: /Spanish fluency/i }));
+    expect(screen.getAllByRole('textbox').length).toBe(1);
+
+    // Open chip[1] — chip[0]'s textarea must collapse.
+    fireEvent.click(screen.getByRole('button', { name: /AWS Lambda/i }));
+    const textareas = screen.getAllByRole('textbox') as HTMLTextAreaElement[];
+    expect(textareas.length).toBe(1);
+    // The single visible textarea must belong to the AWS Lambda chip, not Spanish.
+    expect(textareas[0].getAttribute('aria-label')).toMatch(/AWS Lambda/i);
+  });
+
+  it('enforces a 500-character maxLength on the textarea (T-13-03-02)', () => {
+    render(<GapPromptChips {...defaultProps()} />);
+    fireEvent.click(screen.getByRole('button', { name: /Spanish fluency/i }));
+    const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+    expect(textarea.maxLength).toBe(500);
+  });
+
+  it('removes a cleared chip from emitted clarifications on subsequent blur', () => {
+    const onChange = vi.fn();
+    render(<GapPromptChips {...defaultProps({ onClarificationsChange: onChange })} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Spanish fluency/i }));
+    const input = screen.getByRole('textbox') as HTMLTextAreaElement;
+
+    fireEvent.change(input, { target: { value: 'Native' } });
+    fireEvent.blur(input);
+    let lastArg = onChange.mock.calls[onChange.mock.calls.length - 1][0] as string[];
+    expect(lastArg).toEqual(['Native']);
+
+    // Re-open same chip, clear, blur — emitted array should now be empty.
+    fireEvent.click(screen.getByRole('button', { name: /Spanish fluency/i }));
+    const reopened = screen.getByRole('textbox') as HTMLTextAreaElement;
+    fireEvent.change(reopened, { target: { value: '' } });
+    fireEvent.blur(reopened);
+
+    lastArg = onChange.mock.calls[onChange.mock.calls.length - 1][0] as string[];
+    expect(lastArg).toEqual([]);
+  });
 });

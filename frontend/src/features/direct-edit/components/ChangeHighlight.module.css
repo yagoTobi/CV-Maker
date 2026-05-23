@@ -1,0 +1,55 @@
+/* ChangeHighlight — squiggle underline + severity-tier color tokens.
+ *
+ * Implements D-13 / D-14 from .planning/phases/13.../13-CONTEXT.md.
+ *
+ * Color tokens mirror those used by EditableField highlight rules so that
+ * inline highlights look identical whether the wrapped text lives inside an
+ * EditableField (e.g., a bullet) or as plain text inside MedLengthTemplate.
+ */
+
+.highlight {
+  text-decoration-line: underline;
+  text-decoration-style: wavy;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  text-decoration-skip-ink: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  border-radius: 2px;
+}
+
+/* Severity tiers — squiggle color (idle) */
+.tierStrong {
+  text-decoration-color: var(--error);
+}
+
+.tierMinor {
+  text-decoration-color: var(--accent);
+}
+
+.tierAdd {
+  text-decoration-color: var(--success);
+}
+
+.tierDelete {
+  text-decoration-color: var(--error);
+  text-decoration-line: line-through;
+  text-decoration-style: solid;
+}
+
+/* Active state — solid tinted background + same squiggle */
+.active.tierStrong {
+  background-color: var(--error-light);
+}
+
+.active.tierMinor {
+  background-color: var(--accent-light);
+}
+
+.active.tierAdd {
+  background-color: var(--success-light);
+}
+
+.active.tierDelete {
+  background-color: var(--error-light);
+}
