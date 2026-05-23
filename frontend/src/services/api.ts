@@ -194,6 +194,7 @@ export const api = {
     jobDescription: string,
     companyName?: string,
     role?: string,
+    userClarifications?: string[],
     signal?: AbortSignal
   ): Promise<TailorResponse | null> {
     try {
@@ -202,6 +203,9 @@ export const api = {
         job_description: jobDescription,
         company_name: companyName,
         role: role,
+        // Phase 13 D-07: clarifications wire field is snake_case (FastAPI convention).
+        // Optional — when undefined, axios omits and the backend treats as absent.
+        user_clarifications: userClarifications,
       }, {
         timeout: 60000,
         signal,

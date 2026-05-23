@@ -14,7 +14,13 @@ export interface UseTailorReturn {
   estimatedCurrentScore: number;
   isApplying: boolean;
 
-  fetchSuggestions: (formData: CVFormData, jobDesc: string, company: string, role: string) => Promise<void>;
+  fetchSuggestions: (
+    formData: CVFormData,
+    jobDesc: string,
+    company: string,
+    role: string,
+    userClarifications?: string[],
+  ) => Promise<void>;
   acceptChange: (changeId: string) => Promise<void>;
   skipChange: (changeId: string) => void;
   undoChange: (changeId: string) => Promise<void>;
@@ -89,7 +95,11 @@ export function useTailor({ originalFormData, templateId, onApply }: UseTailorOp
   }, [tailorResponse, onApply]);
 
   const fetchSuggestions = useCallback(async (
-    formData: CVFormData, jobDesc: string, company: string, role: string
+    formData: CVFormData,
+    jobDesc: string,
+    company: string,
+    role: string,
+    userClarifications?: string[],
   ) => {
     // Cancel previous request
     abortRef.current?.abort();
@@ -104,7 +114,16 @@ export function useTailor({ originalFormData, templateId, onApply }: UseTailorOp
     baseFormDataRef.current = structuredClone(formData);
 
     try {
-      const result = await api.suggestTailorChanges(formData, jobDesc, company, role, controller.signal);
+      // Phase 13 D-07: forward optional userClarifications to api.suggestTailorChanges.
+      // Pass through as-is (undefined when absent) so axios omits the wire field.
+      const result = await api.suggestTailorChanges(
+        formData,
+        jobDesc,
+        company,
+        role,
+        userClarifications,
+        controller.signal,
+      );
       if (controller.signal.aborted) return;
       if (result) {
         setTailorResponse(result);
