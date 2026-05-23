@@ -246,7 +246,7 @@ Plans:
 **Goal:** Replace TunePanel/cards with inline Grammarly-style highlights on the CV itself. JD submit → midpoint Gap Prompt (skills/topics chips) → AI runs tune → changes appear as inline underlines/highlights with severity tiers. One-at-a-time popover (Before/After + Accept/Skip), manual nav, section-level dismiss. Save Tailored CV enabled when ≥1 accepted.
 **Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12, D-13, D-14, D-15, D-16, D-17, D-18, D-19, D-20, D-21, D-22, D-23, D-24, D-25, D-26, D-27, D-28
 **Depends on:** Phase 12
-**Plans:** 5 plans
+**Plans:** 1/5 plans executed
 **UI hint**: yes
 
 **Success Criteria** (what must be TRUE):
@@ -259,7 +259,7 @@ Plans:
 
 Plans:
 **Wave 1**
-- [ ] 13-01-PLAN.md -- Backend userClarifications wiring + Wave 0 frontend test scaffolds (Wave 1)
+- [x] 13-01-PLAN.md -- Backend userClarifications wiring + Wave 0 frontend test scaffolds (Wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 13-02-PLAN.md -- Frontend foundation: severity util, useChangeHighlights hook, EditableField/EditableBulletList highlight extensions, useTailor + api.ts userClarifications signature (Wave 2)

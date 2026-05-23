@@ -204,6 +204,7 @@ This phase does NOT include: promoting tuned changes back to the base CV, multi-
 - **AI-driven severity labeling**: D-12 infers severity client-side from changeType + diff size. A future phase could add a `severity` field on `TailorChange` populated by the AI itself for higher accuracy — when match-analysis quality data shows the inference is wrong often enough.
 - **Re-run match-analysis with userClarifications**: D-08 locks the baseline score at JD-submit. A future phase could refine the baseline post-clarification (more accurate "before" score) — gated on whether users find the locked baseline confusing.
 - **Highlight support for additional templates**: med-length-proff-cv only in Phase 13. deedy-resume and mcdowell-cv highlight rendering belongs in a future template-expansion phase.
+- **Substring-level highlight offsets**: D-13 mandates inline severity highlights; Phase 13 MVP wraps the entire field (whole `EditableField` / `EditableBulletList` item gets the squiggle/tint). Pixel-precise substring offsets (Grammarly-style mid-sentence underline that targets only the changed words) deferred to a future phase pending UX validation of field-level granularity. Rationale: keeps `useChangeHighlights` consumer logic simple, lets the visual-checkpoint validate whether field-level granularity reads correctly across the four severity tiers before investing in substring rendering.
 
 </deferred>
 
