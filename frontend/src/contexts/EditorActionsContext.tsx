@@ -20,13 +20,6 @@ interface EditorActions {
   cvName: string;           // parent name when tuned, else activeVersion.name (set by DirectEditPage)
   tuneCompanyName: string;  // TunePanel Tier 2 companyName (set by DirectEditPage)
   tuneRole: string;         // TunePanel Tier 2 roleName (set by DirectEditPage)
-  // Plan 13-04 (D-22) — review-mode CTA swap. Optional with safe defaults so
-  // legacy callers (existing tests, pre-Plan-04 EditorActions producers)
-  // continue to compile without churn. NavBar reads with `?? false / ?? 0`.
-  isReviewing?: boolean;          // tailor.tailorResponse !== null && total > 0
-  acceptedCount?: number;         // tailor.appliedChanges.size
-  totalChanges?: number;          // tailor.tailorResponse.changes.length
-  onSaveTailored?: (() => void) | null;  // null until review state engaged
 }
 
 interface EditorActionsContextValue {

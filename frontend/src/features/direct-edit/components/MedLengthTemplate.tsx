@@ -29,8 +29,7 @@ import { SkillsSection } from './sections/SkillsSection';
 import { ProjectsSection } from './sections/ProjectsSection';
 import { AwardsSection } from './sections/AwardsSection';
 import { AdditionalSection } from './sections/AdditionalSection';
-import type { CVFormData, SkillItem, TailorChange } from '../../../types';
-import type { HighlightSpan } from './EditableField';
+import type { CVFormData, SkillItem } from '../../../types';
 import styles from './MedLengthTemplate.module.css';
 
 const DEFAULT_SECTION_ORDER = ['work', 'education', 'skills', 'projects', 'awards'];
@@ -61,22 +60,6 @@ export interface MedLengthTemplateProps {
   onRemoveSection?: (sectionKey: string) => void;
   onAddLink?: (label?: string, url?: string, side?: 'left' | 'right') => void;
   onRemoveLink?: (idx: number) => void;
-  // Plan 13-04 D-13 highlight wiring. MVP scope (W-02): Plan 04 ships
-  // whole-field highlight granularity wired on personalInfo.* / summary in
-  // this file; per-section EditableField/EditableBulletList wiring is the
-  // canonical extension point exposed via these maps so future plans can
-  // forward without touching this interface again.
-  highlightSpansByPath?: Map<string, HighlightSpan[]>;
-  /** fieldPath of bullet list -> add-tier TailorChange (rendered as ghost <li>). */
-  addChangeByPath?: Map<string, TailorChange>;
-  /** bulletId -> changeId for delete-tier strikethrough. */
-  deleteChangeIdsByBulletId?: Map<string, string>;
-  /** D-16 first-keystroke auto-dismiss inside a highlighted region. */
-  onAutoDismiss?: (changeId: string) => void;
-  /** D-13 click on `[data-change-id]`. DirectEditPage installs delegated
-   * handler on the container ref; this prop is forwarded for future explicit
-   * onClick wiring without changing the interface. */
-  onHighlightClick?: (changeId: string) => void;
 }
 
 export function MedLengthTemplate({
@@ -95,19 +78,7 @@ export function MedLengthTemplate({
   onRemoveSection,
   onAddLink,
   onRemoveLink,
-  highlightSpansByPath,
-  addChangeByPath,
-  deleteChangeIdsByBulletId,
-  onAutoDismiss,
-  onHighlightClick,
 }: MedLengthTemplateProps) {
-  // W-02 MVP scope: forward intentionally to silence the unused-prop lint and
-  // surface them for future per-section plumbing. addChangeByPath /
-  // deleteChangeIdsByBulletId / onHighlightClick are read by future EditableBulletList
-  // / sections wiring (no per-section forwarding in this MVP).
-  void addChangeByPath;
-  void deleteChangeIdsByBulletId;
-  void onHighlightClick;
   const [dropdownSide, setDropdownSide] = useState<'left' | 'right' | null>(null);
   const { personalInfo } = formData;
   const sectionOrder = formData.sectionOrder ?? DEFAULT_SECTION_ORDER;
@@ -348,8 +319,6 @@ export function MedLengthTemplate({
         placeholder="Your Name"
         onInput={onInput}
         readOnly={readOnly}
-        highlightSpans={highlightSpansByPath?.get('personalInfo.fullName')}
-        onAutoDismiss={onAutoDismiss}
       />
       <div className={styles.infoBar}>
         {addLinkBtn('left')}
@@ -368,8 +337,6 @@ export function MedLengthTemplate({
           multiline
           onInput={onInput}
           readOnly={readOnly}
-          highlightSpans={highlightSpansByPath?.get('personalInfo.summary')}
-          onAutoDismiss={onAutoDismiss}
         />
       )}
 

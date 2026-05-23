@@ -24,13 +24,6 @@ export function NavBar() {
   const isEditorPage = pathname === '/build/form' && editorActions !== null;
   const isTuning = editorActions?.isTuning ?? false;
   const isTunedVersion = editorActions?.isTunedVersion ?? false;
-  // Plan 13-04 D-22 — replace "Tune for Job" with "Save Tailored CV (n/m)"
-  // once a tailorResponse exists. Defaults keep legacy callers compiling.
-  const isReviewing = editorActions?.isReviewing ?? false;
-  const acceptedCount = editorActions?.acceptedCount ?? 0;
-  const totalChanges = editorActions?.totalChanges ?? 0;
-  const onSaveTailored = editorActions?.onSaveTailored ?? null;
-  const showSaveTailored = isReviewing && onSaveTailored !== null;
 
   return (
     <nav className={styles.navBar} aria-label="Main navigation">
@@ -90,24 +83,14 @@ export function NavBar() {
         {isEditorPage ? (
           <>
             <SaveIndicator status={editorActions.saveStatus} inline />
-            {showSaveTailored ? (
+            {!isTunedVersion && (
               <button
-                className={styles.saveTailoredBtn}
-                onClick={onSaveTailored ?? undefined}
+                className={`${styles.ghostBtn}${isTuning ? ` ${styles.ghostBtnActive}` : ''}`}
+                onClick={editorActions.onTuneForJob}
                 type="button"
               >
-                Save Tailored CV ({acceptedCount}/{totalChanges})
+                Tune for Job
               </button>
-            ) : (
-              !isTunedVersion && (
-                <button
-                  className={`${styles.ghostBtn}${isTuning ? ` ${styles.ghostBtnActive}` : ''}`}
-                  onClick={editorActions.onTuneForJob}
-                  type="button"
-                >
-                  Tune for Job
-                </button>
-              )
             )}
             <button
               className={styles.accentBtn}
