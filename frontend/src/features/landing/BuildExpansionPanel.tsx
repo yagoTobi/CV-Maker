@@ -1,12 +1,14 @@
 import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppContext } from '../../contexts/AppContext';
+import { useCVContext } from '../../contexts/CVContext';
+import { useToolsContext } from '../../contexts/ToolsContext';
 import { useFileUpload } from '../shared/useFileUpload';
 import styles from './BuildExpansionPanel.module.css';
 
 export function BuildExpansionPanel() {
   const navigate = useNavigate();
-  const { setFormData, resetForNewBuild, cvImport } = useAppContext();
+  const { setFormData, resetForNewBuild } = useCVContext();
+  const { cvImport } = useToolsContext();
 
   // Clear stale import state on every mount/expand
   useEffect(() => {

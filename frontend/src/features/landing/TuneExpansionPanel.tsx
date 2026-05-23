@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppContext } from '../../contexts/AppContext';
+import { useCVContext } from '../../contexts/CVContext';
+import { useToolsContext } from '../../contexts/ToolsContext';
 import { api } from '../../services/api';
 import { formatDate } from '../../utils/cvDisplayUtils';
 import styles from './TuneExpansionPanel.module.css';
@@ -11,7 +12,8 @@ interface TuneExpansionPanelProps {
 
 export function TuneExpansionPanel({ onBuildClick }: TuneExpansionPanelProps) {
   const navigate = useNavigate();
-  const { savedVersions, handleVersionLoad, setSelectedTemplateForBuild } = useAppContext();
+  const { savedVersions, setSelectedTemplateForBuild } = useCVContext();
+  const { handleVersionLoad } = useToolsContext();
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const baseCVs = savedVersions.filter(v => !v.parentVersionId);
 

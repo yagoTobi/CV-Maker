@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { FiMic, FiMicOff, FiPhoneOff, FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { useVoiceInterview } from "../../hooks/useVoiceInterview";
-import { useAppContext } from "../../contexts/AppContext";
+import { useCVContext } from "../../contexts/CVContext";
 import type { CVFormData } from "../../types";
 import styles from "./VoiceWidget.module.css";
 
@@ -22,7 +22,7 @@ interface VoiceWidgetProps {
 
 export default function VoiceWidget({ overlayContainerRef }: VoiceWidgetProps) {
   const navigate = useNavigate();
-  const { setFormData } = useAppContext();
+  const { setFormData } = useCVContext();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleFormDataReady = useCallback(

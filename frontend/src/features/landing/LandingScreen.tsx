@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppContext } from '../../contexts/AppContext';
+import { useCVContext } from '../../contexts/CVContext';
+import { useToolsContext } from '../../contexts/ToolsContext';
 import { api } from '../../services/api';
 import { BuildExpansionPanel } from './BuildExpansionPanel';
 import { TuneExpansionPanel } from './TuneExpansionPanel';
@@ -8,7 +9,8 @@ import styles from './LandingScreen.module.css';
 
 export default function LandingScreen() {
   const navigate = useNavigate();
-  const { savedVersions, resetForNewBuild, cvImport, handleVersionLoad, setSelectedTemplateForBuild } = useAppContext();
+  const { savedVersions, resetForNewBuild, setSelectedTemplateForBuild } = useCVContext();
+  const { cvImport, handleVersionLoad } = useToolsContext();
   const [expandedPanel, setExpandedPanel] = useState<'build' | 'tune' | null>(null);
 
   const handleBuildClick = useCallback(() => {
