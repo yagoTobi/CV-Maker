@@ -7,7 +7,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import { EditableBulletList } from '../features/direct-edit/components/EditableBulletList';
-import type { BulletItem } from '../types';
+import type { BulletItem, TailorChange } from '../types';
 
 describe('EditableBulletList', () => {
   const defaultBullets: BulletItem[] = [
@@ -117,5 +117,89 @@ describe('EditableBulletList', () => {
     expect(editableFields[0].getAttribute('data-field-path')).toBe('workExperience[0].bullets[0]');
     expect(editableFields[1].getAttribute('data-field-path')).toBe('workExperience[0].bullets[1]');
     expect(editableFields[2].getAttribute('data-field-path')).toBe('workExperience[0].bullets[2]');
+  });
+
+  describe('addChange ghost bullet (Phase 13 D-15)', () => {
+    const addChange: TailorChange = {
+      id: 'a1',
+      fieldPath: 'workExperience[0].bullets',
+      section: 'Work Experience',
+      description: 'Add new bullet',
+      currentValue: '',
+      alternatives: [{ label: 'A', value: 'New bullet text' }],
+      changeType: 'add',
+    };
+
+    it('renders an extra <li>-like row with contentEditable=false and data-change-id when addChange is set', () => {
+      const { container } = render(
+        <EditableBulletList {...defaultProps} addChange={addChange} />
+      );
+      const ghost = container.querySelector('[data-change-id="a1"]') as HTMLElement;
+      expect(ghost).not.toBeNull();
+      // jsdom reflects contentEditable as the attribute string 'false' in this code path.
+      expect(ghost.getAttribute('contenteditable')).toBe('false');
+    });
+
+    it('the ghost bullet text content matches addChange.alternatives[0].value', () => {
+      const { container } = render(
+        <EditableBulletList {...defaultProps} addChange={addChange} />
+      );
+      const ghost = container.querySelector('[data-change-id="a1"]') as HTMLElement;
+      // Text includes the marker '+' and the proposed text.
+      expect(ghost.textContent).toContain('New bullet text');
+    });
+
+    it('real bullet count is unchanged when addChange is rendered (focus refs unaffected)', () => {
+      const { container } = render(
+        <EditableBulletList {...defaultProps} addChange={addChange} />
+      );
+      const editableFields = container.querySelectorAll('[contenteditable="plaintext-only"]');
+      expect(editableFields.length).toBe(3); // same as default 3 bullets
+    });
+
+    it('ghost bullet rendered AFTER the last real bullet in DOM order', () => {
+      const { container } = render(
+        <EditableBulletList {...defaultProps} addChange={addChange} />
+      );
+      const realBullets = container.querySelectorAll('[contenteditable="plaintext-only"]');
+      const ghost = container.querySelector('[data-change-id="a1"]') as HTMLElement;
+      const lastReal = realBullets[realBullets.length - 1];
+      // documentPosition: lastReal precedes ghost
+      // Node.DOCUMENT_POSITION_FOLLOWING (4) means second arg follows first
+      expect(lastReal.compareDocumentPosition(ghost) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+  });
+
+  describe('deleteChangeIdsByBulletId (Phase 13 D-15)', () => {
+    it('flags the targeted bullet with a delete-tier highlight span', () => {
+      const deleteMap = new Map<string, string>();
+      deleteMap.set('b2', 'd1');
+
+      const { container } = render(
+        <EditableBulletList
+          {...defaultProps}
+          deleteChangeIdsByBulletId={deleteMap}
+          activeChangeId={null}
+        />
+      );
+      // The b2 bullet (index 1, "Led team Y") should now contain a span with delete tier.
+      const span = container.querySelector('span[data-change-id="d1"]') as HTMLElement;
+      expect(span).not.toBeNull();
+      expect(span.getAttribute('data-severity')).toBe('delete');
+      // Inline-text wrapping covers the whole bullet text.
+      expect(span.textContent).toBe('Led team Y');
+    });
+
+    it('does not affect non-targeted bullets', () => {
+      const deleteMap = new Map<string, string>();
+      deleteMap.set('b2', 'd1');
+
+      const { container } = render(
+        <EditableBulletList {...defaultProps} deleteChangeIdsByBulletId={deleteMap} />
+      );
+      // No delete span on bullets b1 or b3
+      const allDeleteSpans = container.querySelectorAll('span[data-severity="delete"]');
+      expect(allDeleteSpans.length).toBe(1);
+    });
   });
 });

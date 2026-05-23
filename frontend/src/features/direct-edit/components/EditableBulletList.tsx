@@ -4,10 +4,18 @@
  * (delete empty bullet) keyboard interactions.
  *
  * Covers: EDIT-03 (bullet keyboard handling).
+ *
+ * Phase 13 extension (D-15):
+ *   - `addChange` renders an extra ghost <li> AFTER the real bullets, with
+ *     contentEditable=false so it's untouchable until accepted.
+ *   - `deleteChangeIdsByBulletId` flags real bullets for delete-strikethrough by
+ *     forwarding a delete-tier highlightSpan to the underlying EditableField.
+ *   - `highlightSpansByBulletId` forwards modify-tier highlightSpans per bullet.
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { EditableField } from './EditableField';
-import type { BulletItem } from '../../../types';
+import type { HighlightSpan } from './EditableField';
+import type { BulletItem, TailorChange, TailorAlternative } from '../../../types';
 import styles from './EditableBulletList.module.css';
 
 interface EditableBulletListProps {
@@ -19,6 +27,24 @@ interface EditableBulletListProps {
   onInput?: () => void;
   readOnly?: boolean;
   rich?: boolean;
+  /** Phase 13 D-15: ghost bullet rendered after real bullets for an `add`-type change. */
+  addChange?: TailorChange;
+  /** Phase 13 D-15: bulletId -> changeId for delete-tier strikethrough on existing bullets. */
+  deleteChangeIdsByBulletId?: Map<string, string>;
+  /** Phase 13 D-13: bulletId -> highlightSpans for modify-tier highlights on existing bullets. */
+  highlightSpansByBulletId?: Map<string, HighlightSpan[]>;
+  /** Phase 13 D-16: forwarded to each underlying EditableField. */
+  onAutoDismiss?: (changeId: string) => void;
+  /** Phase 13: changeId of the active highlight (drives `isActive` on delete spans). */
+  activeChangeId?: string | null;
+}
+
+/** Coerce the alternatives[0].value (string | string[]) to a single display string. */
+function altDisplayString(alt: TailorAlternative | undefined): string {
+  if (!alt) return '';
+  if (typeof alt.value === 'string') return alt.value;
+  if (Array.isArray(alt.value)) return alt.value.join(' ');
+  return '';
 }
 
 export function EditableBulletList({
@@ -30,6 +56,11 @@ export function EditableBulletList({
   onInput,
   readOnly,
   rich,
+  addChange,
+  deleteChangeIdsByBulletId,
+  highlightSpansByBulletId,
+  onAutoDismiss,
+  activeChangeId,
 }: EditableBulletListProps) {
   const [hasFocus, setHasFocus] = useState(false);
   const bulletRefs = useRef<Map<string, HTMLElement>>(new Map());
@@ -126,22 +157,56 @@ export function EditableBulletList({
         }
       }}
     >
-      {bullets.map((bullet, i) => (
-        <div key={bullet.id} className={styles.bulletItem}>
-          <span className={styles.bulletMarker} />
-          <EditableField
-            ref={setRef(bullet.id)}
-            value={bullet.text}
-            fieldPath={`${basePath}[${i}]`}
-            onFieldChange={(_, text) => onBulletChange(i, text)}
-            tag="div"
-            onKeyDown={(e) => handleKeyDown(e, i)}
-            onInput={onInput}
-            placeholder="Describe an achievement..."
-            rich={rich}
-          />
+      {bullets.map((bullet, i) => {
+        // Compose highlightSpans for this bullet:
+        //   1. Pre-supplied modify-tier spans (from highlightSpansByBulletId)
+        //   2. Synthetic delete-tier span if this bullet is delete-targeted
+        const modifySpans = highlightSpansByBulletId?.get(bullet.id) ?? [];
+        const deleteChangeId = deleteChangeIdsByBulletId?.get(bullet.id);
+        const composedSpans: HighlightSpan[] = [...modifySpans];
+        if (deleteChangeId) {
+          composedSpans.push({
+            changeId: deleteChangeId,
+            severity: 'delete',
+            isActive: activeChangeId === deleteChangeId,
+            startOffset: 0,
+            endOffset: bullet.text.length,
+          });
+        }
+        const spansProp = composedSpans.length > 0 ? composedSpans : undefined;
+
+        return (
+          <div key={bullet.id} className={styles.bulletItem}>
+            <span className={styles.bulletMarker} />
+            <EditableField
+              ref={setRef(bullet.id)}
+              value={bullet.text}
+              fieldPath={`${basePath}[${i}]`}
+              onFieldChange={(_, text) => onBulletChange(i, text)}
+              tag="div"
+              onKeyDown={(e) => handleKeyDown(e, i)}
+              onInput={onInput}
+              placeholder="Describe an achievement..."
+              rich={rich}
+              highlightSpans={spansProp}
+              onAutoDismiss={onAutoDismiss}
+            />
+          </div>
+        );
+      })}
+      {addChange && (
+        <div
+          className={`${styles.bulletItem} ${styles.ghostBulletItem}`}
+          contentEditable={false}
+          suppressContentEditableWarning
+          data-change-id={addChange.id}
+        >
+          <span className={`${styles.bulletMarker} ${styles.ghostBulletMarker}`}>+</span>
+          <span className={styles.ghostBulletText}>
+            {altDisplayString(addChange.alternatives[0])}
+          </span>
         </div>
-      ))}
+      )}
       {hasFocus && (
         <div className={styles.hint}>
           Press Enter to add a new bullet

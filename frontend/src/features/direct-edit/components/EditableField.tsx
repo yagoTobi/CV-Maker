@@ -10,9 +10,31 @@
  * Uses contentEditable="plaintext-only" to strip rich text on paste (D-03), unless
  * rich=true is set, in which case it accepts HTML and provides a paste handler that
  * strips formatting to plain text.
+ *
+ * Phase 13 extension (D-13/D-14/D-16):
+ *   - Optional `highlightSpans` injects <span data-change-id data-severity> wrappers
+ *     ONLY when not focused, preserving the cursor-safety contract.
+ *   - Optional `onAutoDismiss` fires on first keystroke after a highlight is rendered
+ *     (D-16: typing through an AI suggestion auto-skips it).
+ *   - Per-span text content is appended via createTextNode (NOT string concat) to mitigate
+ *     XSS via crafted CV text (T-13-02-01).
  */
 import { useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
+import type { Severity } from '../utils/severity';
 import styles from './EditableField.module.css';
+
+export interface HighlightSpan {
+  /** Stable id of the TailorChange this span surfaces. */
+  changeId: string;
+  /** Severity tier (drives color class). */
+  severity: Severity;
+  /** True iff this is the active highlight (popover open). */
+  isActive: boolean;
+  /** Inclusive start offset into the field's plain text. */
+  startOffset: number;
+  /** Exclusive end offset into the field's plain text. */
+  endOffset: number;
+}
 
 interface EditableFieldProps {
   value: string;
@@ -27,6 +49,73 @@ interface EditableFieldProps {
   readOnly?: boolean;
   /** When true, enables HTML formatting (bold, italic, links) via execCommand */
   rich?: boolean;
+  /** Inline highlight spans (Phase 13 D-13). Injected only when blurred. */
+  highlightSpans?: HighlightSpan[];
+  /** Auto-dismiss callback fired on first keystroke after a highlight render (Phase 13 D-16). */
+  onAutoDismiss?: (changeId: string) => void;
+}
+
+/** Severity -> CSS module tier class name. Type-safe lookup, no string interpolation. */
+const tierClass: Record<Severity, string> = {
+  strong: styles.tierStrong ?? '',
+  minor: styles.tierMinor ?? '',
+  add: styles.tierAdd ?? '',
+  delete: styles.tierDelete ?? '',
+};
+
+/**
+ * Render `value` into `el` with `<span>` highlight wrappers around the given spans.
+ * Spans MUST be sorted ascending by startOffset and MUST NOT overlap.
+ * Per-span text is appended via createTextNode — innerHTML is NEVER built from user-typed
+ * content, defending against T-13-02-01 (XSS in highlight injection).
+ */
+function renderHighlightedDom(
+  el: HTMLElement,
+  value: string,
+  spans: HighlightSpan[],
+): void {
+  // Defensive: sort + filter overlaps (consumer is supposed to guarantee non-overlap).
+  const sorted = [...spans].sort((a, b) => a.startOffset - b.startOffset);
+  const safe: HighlightSpan[] = [];
+  let lastEnd = -1;
+  for (const s of sorted) {
+    if (s.startOffset < lastEnd) {
+      // Skip overlapping span; warn quietly per RESEARCH defensive guidance.
+      // eslint-disable-next-line no-console
+      console.warn('[EditableField] dropping overlapping highlight span', s.changeId);
+      continue;
+    }
+    if (s.startOffset >= s.endOffset) continue; // skip zero-width / inverted
+    safe.push(s);
+    lastEnd = s.endOffset;
+  }
+
+  // Clear current contents.
+  while (el.firstChild) el.removeChild(el.firstChild);
+
+  let cursor = 0;
+  for (const s of safe) {
+    const before = value.slice(cursor, Math.max(cursor, s.startOffset));
+    if (before.length > 0) el.appendChild(document.createTextNode(before));
+
+    const startClamped = Math.max(0, Math.min(s.startOffset, value.length));
+    const endClamped = Math.max(startClamped, Math.min(s.endOffset, value.length));
+    const inner = value.slice(startClamped, endClamped);
+
+    const span = document.createElement('span');
+    const classes = [styles.highlight, tierClass[s.severity]];
+    if (s.isActive) classes.push(styles.active ?? '');
+    span.className = classes.filter(Boolean).join(' ');
+    span.setAttribute('data-change-id', s.changeId);
+    span.setAttribute('data-severity', s.severity);
+    span.appendChild(document.createTextNode(inner));
+    el.appendChild(span);
+
+    cursor = endClamped;
+  }
+
+  const tail = value.slice(cursor);
+  if (tail.length > 0) el.appendChild(document.createTextNode(tail));
 }
 
 export const EditableField = forwardRef<HTMLElement, EditableFieldProps>(
@@ -43,43 +132,65 @@ export const EditableField = forwardRef<HTMLElement, EditableFieldProps>(
       onKeyDown,
       readOnly,
       rich = false,
+      highlightSpans,
+      onAutoDismiss,
     },
     forwardedRef
   ) {
     const ref = useRef<HTMLElement>(null);
     const isFocused = useRef(false);
     const isComposing = useRef(false);
+    /**
+     * D-16: fires onAutoDismiss only on the FIRST input event after a highlight
+     * rendering pass. Reset whenever highlightSpans changes shape (new render pass).
+     */
+    const autoDismissArmed = useRef(false);
 
     // Expose the DOM element to parent via forwardRef
     useImperativeHandle(forwardedRef, () => ref.current!, []);
 
-    // Sync value prop to DOM ONLY when not focused (D-04, EDIT-06)
-    // Rich mode syncs innerHTML; plain mode syncs textContent.
+    // Sync value prop to DOM ONLY when not focused (D-04, EDIT-06).
+    // Phase 13: when highlightSpans present and !rich, render <span> wrappers.
     useEffect(() => {
-      if (!isFocused.current && ref.current) {
-        if (rich) {
-          // When value is empty, clear innerHTML to make :empty CSS work
-          if (value === '' && ref.current.childNodes.length > 0) {
-            ref.current.innerHTML = '';
-          } else if (ref.current.innerHTML !== value) {
-            ref.current.innerHTML = value;
-          }
-        } else {
-          // When value is empty, the browser may leave stray <br> or text nodes
-          // that prevent CSS :empty from matching (so the placeholder won't show).
-          // Explicitly clear childNodes to make :empty work.
-          if (value === '' && ref.current.childNodes.length > 0) {
-            ref.current.textContent = '';
-          } else if (ref.current.textContent !== value) {
-            ref.current.textContent = value;
-          }
+      if (isFocused.current || !ref.current) return;
+
+      const hasHighlights = !!highlightSpans && highlightSpans.length > 0 && !rich;
+      if (hasHighlights && value !== '') {
+        renderHighlightedDom(ref.current, value, highlightSpans!);
+        // Re-arm auto-dismiss for the new highlight render pass.
+        autoDismissArmed.current = true;
+        return;
+      }
+
+      // No highlights: original behavior.
+      if (rich) {
+        if (value === '' && ref.current.childNodes.length > 0) {
+          ref.current.innerHTML = '';
+        } else if (ref.current.innerHTML !== value) {
+          ref.current.innerHTML = value;
+        }
+      } else {
+        if (value === '' && ref.current.childNodes.length > 0) {
+          ref.current.textContent = '';
+        } else if (ref.current.textContent !== value) {
+          ref.current.textContent = value;
         }
       }
-    }, [value, rich]);
+      autoDismissArmed.current = false;
+    }, [value, rich, highlightSpans]);
 
     const handleFocus = useCallback(() => {
       isFocused.current = true;
-    }, []);
+      // D-13: strip highlight <span> wrappers on focus so the user types into pristine
+      // text. textContent assignment collapses all child element nodes, leaving a single
+      // text node whose content equals the current displayed value (cursor-safe).
+      if (ref.current && highlightSpans && highlightSpans.length > 0 && !rich) {
+        const plain = ref.current.textContent ?? value;
+        // Force re-assignment to flatten span wrappers, even when the textContent value
+        // is already correct (the goal is to remove element children, not to change text).
+        ref.current.textContent = plain;
+      }
+    }, [highlightSpans, rich, value]);
 
     const handleBlur = useCallback(() => {
       isFocused.current = false;
@@ -89,14 +200,29 @@ export const EditableField = forwardRef<HTMLElement, EditableFieldProps>(
       if (newValue !== value) {
         onFieldChange(fieldPath, newValue);
       }
+      // After blur, the next render-effect pass will re-inject highlight spans
+      // (when value matches). autoDismissArmed will be re-armed at that point.
     }, [value, fieldPath, onFieldChange, rich]);
 
     const handleInput = useCallback(() => {
       // Gate onInput during IME composition (Pitfall 4)
       if (!isComposing.current) {
         onInput?.();
+        // D-16: first keystroke inside a highlighted region auto-dismisses the
+        // active span. We fire ONCE per highlight render pass.
+        if (
+          autoDismissArmed.current &&
+          highlightSpans &&
+          highlightSpans.length > 0 &&
+          onAutoDismiss
+        ) {
+          autoDismissArmed.current = false;
+          // Fire for the first span (active span if marked, else first-by-order).
+          const active = highlightSpans.find((s) => s.isActive) ?? highlightSpans[0];
+          if (active) onAutoDismiss(active.changeId);
+        }
       }
-    }, [onInput]);
+    }, [onInput, highlightSpans, onAutoDismiss]);
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent) => {
