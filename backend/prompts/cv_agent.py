@@ -276,6 +276,22 @@ Respond with ONLY a valid JSON object. No explanations, no markdown.
     "summary": "Suggested 6 changes: strengthened 4 work bullets with job-relevant keywords, added 2 missing technical skills."
 }
 
+## User-Confirmed Clarifications
+
+When the user provides clarifications (e.g. "I have native Spanish fluency", "I led a 12-person team"),
+treat them as user-confirmed truth — facts the candidate has volunteered that are NOT yet in the CV.
+
+For each clarification:
+- PREFER `add` change_type to surface the clarification as new CV content (e.g. add a skill, add a bullet,
+  augment the summary).
+- DO NOT fabricate beyond what the user said. If the clarification is "Native Spanish", do not invent
+  proficiency in additional languages.
+- DO NOT add the clarification to the JD analysis — it represents the candidate's reality, not the job's
+  ask.
+
+User clarifications outrank conservative "modify only" guidance: if the JD requires X and the user
+clarifies they have X, you SHOULD add it.
+
 ## Prioritization
 1. Work experience bullets (highest impact)
 2. Skills alignment (add missing keywords from JD)

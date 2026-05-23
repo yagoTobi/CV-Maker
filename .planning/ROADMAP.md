@@ -258,8 +258,15 @@ Plans:
   6. Save Tailored CV enabled when ≥1 change accepted
 
 Plans:
+**Wave 1**
 - [ ] 13-01-PLAN.md -- Backend userClarifications wiring + Wave 0 frontend test scaffolds (Wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 13-02-PLAN.md -- Frontend foundation: severity util, useChangeHighlights hook, EditableField/EditableBulletList highlight extensions, useTailor + api.ts userClarifications signature (Wave 2)
 - [ ] 13-03-PLAN.md -- Floating-ui install + ChangePopover + ChangeHighlight + GapPromptChips (Wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 13-04-PLAN.md -- TuneRail + ScoreCard + PostSavePrompt + MedLengthTemplate/EditorActionsContext/NavBar/DirectEditPage rewire + visual checkpoint (Wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 13-05-PLAN.md -- Delete TunePanel/ChangePanel/ChangeCard/useScrollSync legacy tree (Wave 4)
