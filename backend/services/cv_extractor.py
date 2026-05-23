@@ -10,7 +10,7 @@ from pydantic import BaseModel, ValidationError
 from docx import Document
 from io import BytesIO
 
-from routes.cv_versions import CVFormData
+from models.cv import CVFormData
 from services.bedrock import bedrock_client
 from utils.id_helpers import ensure_ids
 

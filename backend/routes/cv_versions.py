@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, field_validator
-from typing import Dict, List, Optional
+from pydantic import BaseModel
+from typing import Optional
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -8,6 +8,26 @@ from datetime import datetime, timezone
 from dependencies import get_current_user
 from services.storage import StorageBackend
 from services.storage_factory import get_storage
+
+# Domain models live in `models.cv` so services and other routes can import
+# them without depending on a route module. Re-imported here so existing
+# callers (and tests) that do `from routes.cv_versions import CVFormData`
+# keep working.
+from models.cv import (
+    AdditionalEntry,
+    AdditionalSection,
+    Award,
+    BulletItem,
+    CVFormData,
+    CVVersion,
+    CVVersionMeta,
+    EducationEntry,
+    PersonalInfo,
+    Project,
+    SkillCategory,
+    SkillItem,
+    WorkEntry,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -21,135 +41,9 @@ def _validate_version_id(version_id: str):
         raise HTTPException(status_code=400, detail="Invalid version ID")
 
 
-# --- Pydantic Models ---
-
-class BulletItem(BaseModel):
-    id: Optional[str] = None
-    text: str = ""
-
-
-class SkillItem(BaseModel):
-    id: Optional[str] = None
-    text: str = ""
-
-
-class PersonalInfo(BaseModel):
-    fullName: str = ""
-    email: str = ""
-    phone: str = ""
-    location: str = ""
-    links: List[dict] = []
-    summary: Optional[str] = None
-    personalOrder: Optional[List[str]] = None  # e.g. ['phone', 'email', 'location', 'links']
-
-
-class WorkEntry(BaseModel):
-    id: Optional[str] = None
-    company: str = ""
-    title: str = ""
-    startDate: str = ""
-    endDate: str = ""
-    location: str = ""
-    bullets: List[BulletItem] = []
-
-    @field_validator("bullets", mode="before")
-    @classmethod
-    def coerce_bullets(cls, v):
-        if isinstance(v, list):
-            return [BulletItem(text=b) if isinstance(b, str) else b for b in v]
-        return v
-
-
-class EducationEntry(BaseModel):
-    id: Optional[str] = None
-    school: str = ""
-    degree: str = ""
-    startDate: str = ""
-    endDate: str = ""
-    location: str = ""
-    gpa: Optional[str] = None
-    details: List[BulletItem] = []
-
-    @field_validator("details", mode="before")
-    @classmethod
-    def coerce_details(cls, v):
-        if isinstance(v, list):
-            return [BulletItem(text=b) if isinstance(b, str) else b for b in v]
-        return v
-
-
-class SkillCategory(BaseModel):
-    id: Optional[str] = None
-    category: str = ""
-    skills: List[SkillItem] = []
-
-    @field_validator("skills", mode="before")
-    @classmethod
-    def coerce_skills(cls, v):
-        if isinstance(v, list):
-            return [SkillItem(text=s) if isinstance(s, str) else s for s in v]
-        return v
-
-
-class Project(BaseModel):
-    id: Optional[str] = None
-    name: str = ""
-    year: str = ""
-    description: str = ""
-    technologies: Optional[str] = None
-    bullets: Optional[List[BulletItem]] = None
-
-    @field_validator("bullets", mode="before")
-    @classmethod
-    def coerce_bullets(cls, v):
-        if isinstance(v, list):
-            return [BulletItem(text=b) if isinstance(b, str) else b for b in v]
-        return v
-
-
-class Award(BaseModel):
-    id: Optional[str] = None
-    year: str = ""
-    title: str = ""
-    description: Optional[str] = None
-
-
-class AdditionalEntry(BaseModel):
-    id: Optional[str] = None
-    title: str = ""
-    subtitle: Optional[str] = None
-    startDate: Optional[str] = None
-    endDate: Optional[str] = None
-    location: Optional[str] = None
-    description: Optional[str] = None
-    bullets: List[BulletItem] = []
-
-    @field_validator("bullets", mode="before")
-    @classmethod
-    def coerce_bullets(cls, v):
-        if isinstance(v, list):
-            return [BulletItem(text=b) if isinstance(b, str) else b for b in v]
-        return v
-
-
-class AdditionalSection(BaseModel):
-    id: Optional[str] = None
-    title: str = ""
-    entries: List[AdditionalEntry] = []
-
-
-class CVFormData(BaseModel):
-    templateId: str
-    sectionOrder: Optional[List[str]] = None  # e.g. ['work', 'education', 'skills', 'projects', 'awards']
-    sectionLabels: Optional[Dict[str, str]] = None  # e.g. {'work': 'Erfahrung', 'education': 'Bildung'}
-    personalInfo: PersonalInfo = PersonalInfo()
-    workExperience: List[WorkEntry] = []
-    education: List[EducationEntry] = []
-    skills: List[SkillCategory] = []
-    projects: Optional[List[Project]] = None
-    awards: Optional[List[Award]] = None
-    additionalSections: Optional[List[AdditionalSection]] = None
-
+# --- Route-local request payload models ---
+# These are request shapes consumed only by handlers in this module. They
+# reference moved domain types (`CVFormData`) imported above.
 
 class CVVersionCreate(BaseModel):
     name: str
@@ -162,34 +56,6 @@ class CVVersionCreate(BaseModel):
     match_score: Optional[float] = None
     baseline_match_score: Optional[float] = None
     parent_version_id: Optional[str] = None  # ID of base CV this application derives from
-
-
-class CVVersion(BaseModel):
-    id: str
-    name: str
-    templateId: str
-    texContent: str
-    formData: Optional[CVFormData] = None
-    jobDescription: Optional[str] = None
-    companyName: Optional[str] = None
-    role: Optional[str] = None
-    matchScore: Optional[float] = None
-    baselineMatchScore: Optional[float] = None
-    parentVersionId: Optional[str] = None
-    createdAt: str
-
-
-class CVVersionMeta(BaseModel):
-    id: str
-    name: str
-    templateId: str
-    jobDescription: Optional[str] = None
-    companyName: Optional[str] = None
-    role: Optional[str] = None
-    matchScore: Optional[float] = None
-    baselineMatchScore: Optional[float] = None
-    parentVersionId: Optional[str] = None
-    createdAt: str
 
 
 # --- Helpers ---

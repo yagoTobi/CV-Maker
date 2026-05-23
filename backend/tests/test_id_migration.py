@@ -17,7 +17,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from utils.id_helpers import generate_id, ensure_ids
-from routes.cv_versions import (
+from models.cv import (
     CVFormData, PersonalInfo, WorkEntry, EducationEntry,
     SkillCategory, Project, Award, AdditionalEntry,
     AdditionalSection, BulletItem, SkillItem,

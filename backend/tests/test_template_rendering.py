@@ -29,7 +29,7 @@ from typing import List, Optional
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from jinja2 import Environment, FileSystemLoader
-from routes.cv_versions import (
+from models.cv import (
     CVFormData,
     PersonalInfo,
     WorkEntry,
