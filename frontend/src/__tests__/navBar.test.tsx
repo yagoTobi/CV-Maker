@@ -101,3 +101,74 @@ describe('NavBar — CV identity display', () => {
     expect(screen.queryByTestId('cv-switcher-dropdown')).not.toBeInTheDocument();
   });
 });
+
+// Plan 13-04 D-22 -- review-mode CTA swap.
+describe('NavBar -- review mode (D-22)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders "Save Tailored CV" button when isReviewing=true and onSaveTailored is set', () => {
+    mockUseLocation.mockReturnValue({ pathname: '/build/form' });
+    const onSaveTailored = vi.fn();
+    mockUseEditorActions.mockReturnValue(
+      makeEditorActions({
+        isReviewing: true,
+        acceptedCount: 2,
+        totalChanges: 5,
+        onSaveTailored,
+      }),
+    );
+
+    render(<NavBar />);
+
+    expect(screen.getByRole('button', { name: /save tailored cv/i })).toBeInTheDocument();
+  });
+
+  it('clicking "Save Tailored CV" calls onSaveTailored', () => {
+    mockUseLocation.mockReturnValue({ pathname: '/build/form' });
+    const onSaveTailored = vi.fn();
+    mockUseEditorActions.mockReturnValue(
+      makeEditorActions({
+        isReviewing: true,
+        acceptedCount: 1,
+        totalChanges: 3,
+        onSaveTailored,
+      }),
+    );
+
+    render(<NavBar />);
+    fireEvent.click(screen.getByRole('button', { name: /save tailored cv/i }));
+    expect(onSaveTailored).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT render "Tune for Job" while in review mode', () => {
+    mockUseLocation.mockReturnValue({ pathname: '/build/form' });
+    mockUseEditorActions.mockReturnValue(
+      makeEditorActions({
+        isReviewing: true,
+        acceptedCount: 0,
+        totalChanges: 4,
+        onSaveTailored: vi.fn(),
+      }),
+    );
+
+    render(<NavBar />);
+    expect(screen.queryByRole('button', { name: /tune for job/i })).not.toBeInTheDocument();
+  });
+
+  it('shows progress text "(2/5)" when acceptedCount=2 and totalChanges=5', () => {
+    mockUseLocation.mockReturnValue({ pathname: '/build/form' });
+    mockUseEditorActions.mockReturnValue(
+      makeEditorActions({
+        isReviewing: true,
+        acceptedCount: 2,
+        totalChanges: 5,
+        onSaveTailored: vi.fn(),
+      }),
+    );
+
+    render(<NavBar />);
+    expect(screen.getByRole('button', { name: /save tailored cv \(2\/5\)/i })).toBeInTheDocument();
+  });
+});
