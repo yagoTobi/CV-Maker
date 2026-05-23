@@ -67,6 +67,10 @@ class TailorRequest(BaseModel):
     job_description: str
     company_name: Optional[str] = None
     role: Optional[str] = None
+    # Phase 13 (D-07): user-confirmed clarifications volunteered via Gap Prompt chips.
+    # Treated by the LLM as user-confirmed truth (see TAILOR_SUGGEST_PROMPT).
+    # Empty / whitespace-only entries are filtered before joining (see suggest_changes).
+    user_clarifications: Optional[List[str]] = None
 
 
 class TailorAlternative(BaseModel):
@@ -139,19 +143,41 @@ async def suggest_changes(payload: TailorRequest):
     if payload.role:
         job_context += f"\nRole: {payload.role}"
 
+    # Phase 13 (D-07): render user clarifications as a labeled section in the user_message.
+    # Filter empty / whitespace-only entries so blank chip inputs don't pollute the prompt.
+    cleaned_clarifications = [
+        c.strip() for c in (payload.user_clarifications or []) if c and c.strip()
+    ]
+    clarifications_section = ""
+    if cleaned_clarifications:
+        clarifications_section = (
+            "\n\n## User-Confirmed Clarifications\n"
+            + "\n".join(f"- {c}" for c in cleaned_clarifications)
+            + "\n"
+        )
+
     user_message = f"""## CV Form Data (JSON)
 {form_text}
 
 ## Target Position
-{job_context}
+{job_context}{clarifications_section}
 
 Analyze this CV against the job description and suggest specific field-level changes."""
 
     serialized_form_data = form_text
 
     try:
-        # Check cache first
-        cache_key = llm_cache.cache_key(serialized_form_data, payload.job_description, payload.company_name or "", payload.role or "")
+        # Check cache first.
+        # Phase 13 (D-07, threat T-13-01-01): fold user_clarifications fingerprint into the
+        # cache key so two distinct clarification sets do NOT share a cached response.
+        clarifications_fingerprint = "|".join(cleaned_clarifications)
+        cache_key = llm_cache.cache_key(
+            serialized_form_data,
+            payload.job_description,
+            payload.company_name or "",
+            payload.role or "",
+            clarifications_fingerprint,
+        )
         cached = llm_cache.get(cache_key)
         if cached:
             try:
