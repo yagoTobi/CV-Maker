@@ -31,3 +31,28 @@
   user-select: none;
   opacity: 0.7;
 }
+
+/* Phase 13 D-15: ghost bullet preview for `add`-type TailorChange. */
+.ghostBulletItem {
+  font-style: italic;
+  color: var(--text-muted);
+  background-color: var(--success-light);
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  user-select: none;
+}
+
+.ghostBulletItem .bulletMarker::before {
+  content: '';
+}
+
+.ghostBulletMarker {
+  font-weight: 600;
+  color: var(--success);
+  margin-right: 4px;
+  font-style: normal;
+}
+
+.ghostBulletText {
+  font-style: italic;
+}
