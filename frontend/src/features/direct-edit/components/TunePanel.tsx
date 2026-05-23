@@ -4,7 +4,7 @@
  *
  * Tier 1: Save-as-Base CV (skipped if activeVersion is non-null)
  * Tier 2: Job Details (company, role, job description) + Analyze Match
- * Tier 3: Review Changes (ChangePanel + useTailor accept/reject) + Save Tailored CV
+ * Tier 3: Review Changes (Tier3Review + useTailor accept/reject) + Save Tailored CV
  *
  * Inline panel on the editor page for job-targeted CV tuning.
  * All tier bodies remain mounted (CSS expand/collapse)
@@ -18,16 +18,12 @@ import { api } from '../../../services/api';
 import { useCVContext } from '../../../contexts/CVContext';
 import { useTailor } from '../../../hooks/useTailor';
 import { useScrollSync } from '../hooks/useScrollSync';
-import { ChangePanel } from './ChangePanel';
+import { ScoreHeader } from './ScoreHeader';
+import { Tier1SaveBase } from './Tier1SaveBase';
+import { Tier2JobDetails } from './Tier2JobDetails';
+import { Tier3Review } from './Tier3Review';
 import type { CVFormData, CVVersion, MatchAnalysis } from '../../../types';
 import styles from './TunePanel.module.css';
-
-function scoreLabel(score: number): string {
-  if (score >= 80) return 'Strong match';
-  if (score >= 60) return 'Getting close';
-  if (score >= 40) return 'Partial match';
-  return 'Weak match';
-}
 
 interface TunePanelProps {
   isOpen: boolean;
@@ -85,7 +81,7 @@ export function TunePanel({
   const [savedSuccessfully, setSavedSuccessfully] = useState(false);
   const [savedBaseId, setSavedBaseId] = useState<string | null>(null);
 
-  // Refs for scroll sync
+  // Ref for scroll sync
   const changePanelRef = useRef<HTMLDivElement>(null);
 
   // useTailor hook wiring
@@ -102,16 +98,9 @@ export function TunePanel({
   const totalChanges = tailor.tailorResponse?.changes?.length ?? 0;
   const reviewedCount = tailor.appliedChanges.size + tailor.skippedChanges.size;
   const pendingCount = totalChanges - reviewedCount;
-  const allReviewed = totalChanges > 0 && pendingCount === 0;
 
-  // Score display values for sticky header
+  // Score display values for sticky ScoreHeader
   const displayScore = tailor.estimatedCurrentScore ?? baselineScore;
-  const scoreClass = displayScore >= 80
-    ? styles.scoreGood
-    : displayScore >= 60
-      ? styles.scoreMedium
-      : styles.scoreLow;
-  const delta = baselineScore > 0 ? (tailor.estimatedCurrentScore ?? baselineScore) - baselineScore : 0;
 
   // Scroll sync between CV container and change panel
   useScrollSync(cvContainerRef, changePanelRef, activeTier === 3);
@@ -153,7 +142,6 @@ export function TunePanel({
       formData,
     });
     if (saved) {
-      // Load the saved version as the active version
       const fullVersion = await api.getVersion(saved.id);
       if (fullVersion) {
         setActiveVersion(fullVersion);
@@ -179,7 +167,6 @@ export function TunePanel({
       setActiveTier(3);
     }
     setAnalyzing(false);
-    // Initialize preview and pre-fetch tailor suggestions
     setPreviewFormData(formData);
     tailor.fetchSuggestions(formData, jobDescription, companyName, roleName);
   }, [formData, jobDescription, companyName, roleName, tailor]);
@@ -226,6 +213,21 @@ export function TunePanel({
     tailor.reset();
   }, [onToggle, tailor]);
 
+  const handleViewModeChange = useCallback((mode: 'before' | 'after') => {
+    setViewMode(mode);
+    if (mode === 'before') {
+      onPreviewUpdate(formData);
+    } else {
+      onPreviewUpdate(previewFormData);
+    }
+  }, [formData, previewFormData, onPreviewUpdate]);
+
+  const showScoreHeader = activeTier === 3
+    && (totalChanges > 0)
+    && !tailor.isLoading
+    && !tailor.error
+    && matchAnalysis !== null;
+
   return (
     <div
       className={`${styles.panel}${isOpen ? '' : ` ${styles.panelClosed}`}`}
@@ -247,10 +249,10 @@ export function TunePanel({
         </svg>
       </button>
 
-      <div className={styles.panelScroll}>
-        {/* Sticky top section — all 3 tier headers + score + view toggle freeze here */}
+      <div className={styles.panelScroll} ref={changePanelRef}>
+        {/* Sticky top section — all 3 tier headers + score header freeze here in Tier 3 */}
         <div className={activeTier === 3 ? styles.stickyScoreHeader : undefined}>
-          {/* Tier 1: Save as Base CV */}
+          {/* Tier 1 header + body */}
           <div className={`${styles.tier}${tier1Complete && activeTier !== 1 ? ` ${styles.tierCompact}` : ''}`}>
             <div
               className={`${styles.tierHeader}${tier1Complete && activeTier !== 1 ? ` ${styles.tierHeaderCompact}` : ''}`}
@@ -273,38 +275,18 @@ export function TunePanel({
               )}
             </div>
             <div className={`${styles.tierBody}${activeTier === 1 ? ` ${styles.tierBodyOpen}` : ''}${tier1Complete && activeTier !== 1 ? ` ${styles.tierBodyHidden}` : ''}`}>
-              <div className={styles.tierBodyInner}>
-                {activeVersion ? (
-                  <div className={styles.preCompleted}>
-                    Already saved as &quot;{activeVersion.name}&quot;
-                  </div>
-                ) : (
-                  <>
-                    <div className={styles.formGroup}>
-                      <label className={styles.label}>CV Name</label>
-                      <input
-                        className={styles.input}
-                        value={baseName}
-                        onChange={e => setBaseName(e.target.value)}
-                        placeholder="e.g., Creative CV"
-                        autoFocus={activeTier === 1 && !activeVersion}
-                      />
-                    </div>
-                    <button
-                      className={styles.primaryBtn}
-                      onClick={handleSaveBase}
-                      disabled={!baseName.trim() || savingBase}
-                      type="button"
-                    >
-                      {savingBase ? (<><span className={styles.spinner} /> Saving...</>) : 'Save as Base CV'}
-                    </button>
-                  </>
-                )}
-              </div>
+              <Tier1SaveBase
+                activeVersion={activeVersion}
+                baseName={baseName}
+                onBaseNameChange={setBaseName}
+                onSave={handleSaveBase}
+                isSaving={savingBase}
+                isAutoFocused={activeTier === 1 && !activeVersion}
+              />
             </div>
           </div>
 
-          {/* Tier 2: Job Details */}
+          {/* Tier 2 header + body */}
           <div className={`${styles.tier}${tier2Complete && activeTier !== 2 ? ` ${styles.tierCompact}` : ''}`}>
             <div
               className={`${styles.tierHeader}${tier2Complete && activeTier !== 2 ? ` ${styles.tierHeaderCompact}` : ''}`}
@@ -327,45 +309,16 @@ export function TunePanel({
               )}
             </div>
             <div className={`${styles.tierBody}${activeTier === 2 ? ` ${styles.tierBodyOpen}` : ''}${tier2Complete && activeTier !== 2 ? ` ${styles.tierBodyHidden}` : ''}`}>
-              <div className={styles.tierBodyInner}>
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>Company Name</label>
-                    <input
-                      className={styles.input}
-                      value={companyName}
-                      onChange={e => setCompanyName(e.target.value)}
-                      placeholder="e.g., Google"
-                    />
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>Role</label>
-                    <input
-                      className={styles.input}
-                      value={roleName}
-                      onChange={e => setRoleName(e.target.value)}
-                      placeholder="e.g., Senior SWE"
-                    />
-                  </div>
-                </div>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Job Description *</label>
-                  <textarea
-                    className={styles.textarea}
-                    value={jobDescription}
-                    onChange={e => setJobDescription(e.target.value)}
-                    placeholder="Paste the full job description here..."
-                  />
-                </div>
-                <button
-                  className={styles.primaryBtn}
-                  onClick={handleAnalyze}
-                  disabled={!jobDescription.trim() || analyzing}
-                  type="button"
-                >
-                  {analyzing ? (<><span className={styles.spinner} /> Analyzing...</>) : 'Analyze Match'}
-                </button>
-              </div>
+              <Tier2JobDetails
+                companyName={companyName}
+                onCompanyNameChange={setCompanyName}
+                roleName={roleName}
+                onRoleNameChange={setRoleName}
+                jobDescription={jobDescription}
+                onJobDescriptionChange={setJobDescription}
+                onAnalyze={handleAnalyze}
+                isAnalyzing={analyzing}
+              />
             </div>
           </div>
 
@@ -384,173 +337,45 @@ export function TunePanel({
             </div>
           </div>
 
-          {/* Score + view toggle — inside sticky block */}
-          {activeTier === 3 && (tailor.tailorResponse?.changes?.length ?? 0) > 0 && !tailor.isLoading && !tailor.error && (
-            <>
-              {matchAnalysis && (
-                <div className={styles.scoreRow}>
-                  <div className={`${styles.scoreCircle} ${scoreClass}`}>
-                    {Math.round(displayScore)}%
-                  </div>
-                  <div className={styles.scoreMeta}>
-                    <div className={styles.scoreLabel}>{scoreLabel(displayScore)}</div>
-                    {delta > 0 && (
-                      <div className={styles.deltaLine}>↑ +{Math.round(delta)} pts estimated</div>
-                    )}
-                    <div className={styles.changeCounts}>
-                      {tailor.appliedChanges.size} accepted · {tailor.skippedChanges.size} rejected · {pendingCount} remaining
-                    </div>
-                  </div>
-                </div>
-              )}
-              {matchAnalysis && (
-                <details className={styles.pillDetails}>
-                  <summary className={styles.pillSummary}>
-                    <span className={styles.pillMatched}>{matchAnalysis.matching.length} matched</span>
-                    <span className={styles.pillSep}> · </span>
-                    <span className={styles.pillMissing}>{matchAnalysis.missing.length} gaps</span>
-                  </summary>
-                  <div className={styles.pillsExpanded}>
-                    {matchAnalysis.matching.length > 0 && (
-                      <div className={styles.pills}>
-                        {matchAnalysis.matching.map((item, i) => (
-                          <span key={`m-${i}`} className={`${styles.pill} ${styles.pillMatchedBg}`}>{item}</span>
-                        ))}
-                      </div>
-                    )}
-                    {matchAnalysis.missing.length > 0 && (
-                      <div className={styles.pills}>
-                        {matchAnalysis.missing.map((item, i) => (
-                          <span key={`g-${i}`} className={`${styles.pill} ${styles.pillMissingBg}`}>{item}</span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </details>
-              )}
-              {reviewedCount > 0 && (
-                <div className={styles.viewToggle}>
-                  <button
-                    className={`${styles.viewToggleBtn}${viewMode === 'before' ? ` ${styles.viewToggleBtnActive}` : ''}`}
-                    onClick={() => {
-                      setViewMode('before');
-                      onPreviewUpdate(formData);
-                    }}
-                    type="button"
-                  >
-                    Before
-                  </button>
-                  <button
-                    className={`${styles.viewToggleBtn}${viewMode === 'after' ? ` ${styles.viewToggleBtnActive}` : ''}`}
-                    onClick={() => {
-                      setViewMode('after');
-                      onPreviewUpdate(previewFormData);
-                    }}
-                    type="button"
-                  >
-                    After
-                  </button>
-                </div>
-              )}
-            </>
+          {/* Score header — inside sticky block, only in Tier 3 when data is ready */}
+          {showScoreHeader && (
+            <ScoreHeader
+              matchAnalysis={matchAnalysis}
+              displayScore={displayScore}
+              baselineScore={baselineScore}
+              appliedCount={tailor.appliedChanges.size}
+              rejectedCount={tailor.skippedChanges.size}
+              pendingCount={pendingCount}
+              size="sm"
+              viewMode={viewMode}
+              onViewModeChange={handleViewModeChange}
+            />
           )}
         </div>
 
         {/* Tier 3 content — scrollable below the sticky header */}
         {activeTier === 3 && (
-          <>
-            {tailor.isLoading ? (
-              <div className={styles.loadingState}>
-                <div className={styles.spinnerLg} />
-                <span>Generating suggestions...</span>
-              </div>
-            ) : tailor.error ? (
-              <div className={styles.errorState}>
-                Could not generate suggestions. Check your connection and try again.
-              </div>
-            ) : (tailor.tailorResponse?.changes?.length ?? 0) === 0 && !tailor.isLoading ? (
-              <div className={styles.emptyState}>
-                <h3 className={styles.emptyHeading}>No changes suggested</h3>
-                <p className={styles.emptyBody}>Your CV already matches the job description well. Try a different job posting or edit your CV directly.</p>
-              </div>
-            ) : (
-              <>
-                <ChangePanel
-                  changes={tailor.tailorResponse?.changes ?? []}
-                  appliedChanges={tailor.appliedChanges}
-                  skippedChanges={tailor.skippedChanges}
-                  selectedAlternatives={tailor.selectedAlternatives}
-                  isApplying={tailor.isApplying}
-                  isLoading={false}
-                  error={tailor.error}
-                  onAccept={tailor.acceptChange}
-                  onSkip={tailor.skipChange}
-                  onUndo={tailor.undoChange}
-                  onAcceptAll={tailor.acceptAllRemaining}
-                  onSelectAlternative={tailor.selectAlternative}
-                  onEditValue={tailor.editChangeValue}
-                  onClose={() => setActiveTier(2)}
-                  matchAnalysis={matchAnalysis}
-                  baselineScore={baselineScore}
-                  estimatedScore={tailor.estimatedCurrentScore}
-                  companyName={companyName}
-                  roleName={roleName}
-                  panelRef={changePanelRef}
-                  isOpen={true}
-                  className={styles.changePanelInline}
-                  hideToggle
-                  hideScore
-                  hideFooter
-                />
-                {allReviewed && !savedSuccessfully && (
-                  <div className={styles.reviewedBanner}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    <span>All {totalChanges} changes reviewed. Ready to save?</span>
-                  </div>
-                )}
-                {!savedSuccessfully && (
-                  <div className={styles.saveBarSticky}>
-                    <button
-                      className={`${styles.primaryBtn}${allReviewed ? ` ${styles.primaryBtnReady}` : ''}`}
-                      onClick={handleSaveTailored}
-                      disabled={saving || tailor.appliedChanges.size === 0}
-                      type="button"
-                    >
-                      {saving ? (<><span className={styles.spinner} /> Saving...</>) : 'Save Tailored CV'}
-                    </button>
-                  </div>
-                )}
-                {savedSuccessfully && (
-                  <div className={styles.postSavePrompt}>
-                    <div className={styles.postSaveIcon}>
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12"/>
-                      </svg>
-                    </div>
-                    <div className={styles.postSaveTitle}>Tailored CV saved</div>
-                    <div className={styles.postSaveActions}>
-                      <button
-                        className={styles.postSaveSecondary}
-                        onClick={handleKeepEditing}
-                        type="button"
-                      >
-                        Keep Editing
-                      </button>
-                      <button
-                        className={styles.postSavePrimary}
-                        onClick={handleViewInDashboard}
-                        type="button"
-                      >
-                        View in Dashboard
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </>
+          <Tier3Review
+            changes={tailor.tailorResponse?.changes ?? []}
+            appliedChanges={tailor.appliedChanges}
+            skippedChanges={tailor.skippedChanges}
+            selectedAlternatives={tailor.selectedAlternatives}
+            isApplying={tailor.isApplying}
+            isLoading={tailor.isLoading}
+            error={tailor.error}
+            onAccept={tailor.acceptChange}
+            onSkip={tailor.skipChange}
+            onUndo={tailor.undoChange}
+            onAcceptAll={tailor.acceptAllRemaining}
+            onSelectAlternative={tailor.selectAlternative}
+            onEditValue={tailor.editChangeValue}
+            matchAnalysis={matchAnalysis}
+            onSave={handleSaveTailored}
+            isSaving={saving}
+            savedSuccessfully={savedSuccessfully}
+            onKeepEditing={handleKeepEditing}
+            onViewInDashboard={handleViewInDashboard}
+          />
         )}
       </div>
     </div>

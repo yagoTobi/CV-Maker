@@ -1,18 +1,16 @@
 /**
- * ChangePanel -- Side panel container for reviewing AI tailor suggestions.
+ * ChangePanel -- Standalone side panel for reviewing AI tailor suggestions.
  *
- * Renders grouped ChangeCards with match summary header, loading/error/empty
- * states, and accept-all button. Pure renderer -- all state comes from props
- * (useTailor via parent).
- *
- * Reused in DirectEditPage via TunePanel.
+ * Always renders its own toggle, score header, change list, and footer.
+ * No hide* props — if you need to suppress chrome, compose ScoreHeader +
+ * ChangeList directly (as Tier3Review does inside TunePanel).
  *
  * Covers: D-01 (panel layout), D-02 (scroll sync via data-change-section).
  */
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef } from 'react';
 import type { TailorChange, MatchAnalysis } from '../../../types';
-import { fieldPathToSection } from '../../../utils/formDataPatch';
-import { ChangeCard } from './ChangeCard';
+import { ScoreHeader } from './ScoreHeader';
+import { ChangeList } from './ChangeList';
 import styles from './ChangePanel.module.css';
 
 interface ChangePanelProps {
@@ -38,9 +36,6 @@ interface ChangePanelProps {
   panelRef?: React.RefObject<HTMLDivElement>;
   isOpen?: boolean;
   className?: string;
-  hideToggle?: boolean;
-  hideScore?: boolean;
-  hideFooter?: boolean;
 }
 
 /** Chevron right SVG icon */
@@ -49,24 +44,6 @@ const ChevronIcon = () => (
     <polyline points="9 18 15 12 9 6" />
   </svg>
 );
-
-/** Spinner for loading state */
-const Spinner = () => (
-  <div className={styles.spinner} />
-);
-
-interface SectionGroup {
-  sectionKey: string;
-  sectionLabel: string;
-  changes: TailorChange[];
-}
-
-function scoreLabel(score: number): string {
-  if (score >= 80) return 'Strong match';
-  if (score >= 60) return 'Getting close';
-  if (score >= 40) return 'Partial match';
-  return 'Weak match';
-}
 
 export function ChangePanel({
   changes,
@@ -91,9 +68,6 @@ export function ChangePanel({
   panelRef: externalPanelRef,
   isOpen = true,
   className: classNameOverride,
-  hideToggle = false,
-  hideScore = false,
-  hideFooter = false,
 }: ChangePanelProps) {
   const internalPanelRef = useRef<HTMLDivElement>(null);
   const panelRef = externalPanelRef ?? internalPanelRef;
@@ -109,36 +83,12 @@ export function ChangePanel({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose, panelRef]);
 
-  // Group changes by section
-  const groups: SectionGroup[] = useMemo(() => {
-    const map = new Map<string, SectionGroup>();
-    for (const change of changes) {
-      const key = fieldPathToSection(change.fieldPath);
-      if (!map.has(key)) {
-        map.set(key, { sectionKey: key, sectionLabel: change.section, changes: [] });
-      }
-      map.get(key)!.changes.push(change);
-    }
-    return Array.from(map.values());
-  }, [changes]);
-
-  // Count pending changes for accept-all button
   const pendingCount = changes.filter(
     c => !appliedChanges.has(c.id) && !skippedChanges.has(c.id)
   ).length;
 
-  const acceptedCount = appliedChanges.size;
-  const rejectedCount = skippedChanges.size;
-
-  // Score display — show estimated when changes are applied, else baseline
   const baseScore = baselineScore ?? matchAnalysis?.match_score ?? 0;
   const displayScore = estimatedScore ?? baseScore;
-  const scoreClass = displayScore >= 80
-    ? styles.good
-    : displayScore >= 60
-      ? styles.medium
-      : styles.low;
-  const delta = estimatedScore != null && baseScore > 0 ? estimatedScore - baseScore : 0;
 
   return (
     <div
@@ -147,70 +97,32 @@ export function ChangePanel({
       role="complementary"
       aria-label="AI suggestion review panel"
     >
-      {/* Toggle button — hidden when embedded inline */}
-      {!hideToggle && (
-        <button
-          className={styles.toggleBtn}
-          onClick={onClose}
-          aria-label="Close review panel"
-          type="button"
-        >
-          <ChevronIcon />
-        </button>
-      )}
+      {/* Toggle button */}
+      <button
+        className={styles.toggleBtn}
+        onClick={onClose}
+        aria-label="Close review panel"
+        type="button"
+      >
+        <ChevronIcon />
+      </button>
 
       {/* Score header */}
-      {!hideScore && matchAnalysis && (
-        <div className={styles.scoreHeader}>
-          {(companyName || roleName) && (
-            <div className={styles.contextBar}>
-              MATCH SCORE{companyName ? ` · ${companyName}` : ''}{roleName ? ` · ${roleName}` : ''}
-            </div>
-          )}
-          <div className={styles.scoreRow}>
-            <div className={`${styles.scoreCircle} ${scoreClass}`}>
-              {Math.round(displayScore)}%
-            </div>
-            <div className={styles.scoreMeta}>
-              <div className={styles.scoreLabel}>{scoreLabel(displayScore)}</div>
-              {delta > 0 && (
-                <div className={styles.deltaLine}>↑ +{Math.round(delta)} pts estimated</div>
-              )}
-              {changes.length > 0 && (
-                <div className={styles.changeCounts}>
-                  {acceptedCount} accepted · {rejectedCount} rejected · {pendingCount} remaining
-                </div>
-              )}
-            </div>
-          </div>
-          {/* Collapsible pill summary */}
-          <details className={styles.pillDetails}>
-            <summary className={styles.pillSummary}>
-              <span className={styles.pillSummaryMatched}>{matchAnalysis.matching.length} matched</span>
-              <span className={styles.pillSummarySep}> · </span>
-              <span className={styles.pillSummaryMissing}>{matchAnalysis.missing.length} gaps</span>
-            </summary>
-            <div className={styles.pillsExpanded}>
-              {matchAnalysis.matching.length > 0 && (
-                <div className={styles.pills}>
-                  {matchAnalysis.matching.map((item, i) => (
-                    <span key={`m-${i}`} className={`${styles.pill} ${styles.matched}`}>{item}</span>
-                  ))}
-                </div>
-              )}
-              {matchAnalysis.missing.length > 0 && (
-                <div className={styles.pills}>
-                  {matchAnalysis.missing.map((item, i) => (
-                    <span key={`g-${i}`} className={`${styles.pill} ${styles.missing}`}>{item}</span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </details>
-        </div>
+      {matchAnalysis && (
+        <ScoreHeader
+          matchAnalysis={matchAnalysis}
+          displayScore={displayScore}
+          baselineScore={baseScore}
+          appliedCount={appliedChanges.size}
+          rejectedCount={skippedChanges.size}
+          pendingCount={pendingCount}
+          size="md"
+          companyName={companyName}
+          roleName={roleName}
+        />
       )}
 
-      {/* Header */}
+      {/* Fallback header when there's no match analysis */}
       {!matchAnalysis && (
         <div className={styles.header}>
           <span>Review Changes ({changes.length})</span>
@@ -220,7 +132,7 @@ export function ChangePanel({
       {/* Loading state */}
       {isLoading && (
         <div className={styles.loadingState}>
-          <Spinner />
+          <div className={styles.spinner} />
           <span>Generating suggestions...</span>
         </div>
       )}
@@ -242,67 +154,24 @@ export function ChangePanel({
         </div>
       )}
 
-      {/* Change cards grouped by section */}
+      {/* Change list */}
       {!isLoading && !error && changes.length > 0 && (
-        <>
-          {groups.map((group) => (
-            <div key={group.sectionKey} className={styles.sectionGroup}>
-              <div className={styles.sectionGroupLabel}>{group.sectionLabel}</div>
-              {group.changes.map((change) => (
-                <ChangeCard
-                  key={change.id}
-                  change={change}
-                  isApplied={appliedChanges.has(change.id)}
-                  isSkipped={skippedChanges.has(change.id)}
-                  selectedAltIndex={selectedAlternatives.get(change.id) ?? 0}
-                  isApplying={isApplying}
-                  onAccept={() => onAccept(change.id)}
-                  onSkip={() => onSkip(change.id)}
-                  onUndo={() => onUndo(change.id)}
-                  onSelectAlternative={(index) => onSelectAlternative(change.id, index)}
-                  onEditValue={(value) => onEditValue(change.id, value)}
-                />
-              ))}
-            </div>
-          ))}
-
-          {/* Accept All + Gaps — hidden when embedded inline (TunePanel provides its own save bar) */}
-          {!hideFooter && (
-            <>
-              <button
-                className={styles.acceptAllBtn}
-                onClick={onAcceptAll}
-                disabled={pendingCount === 0 || isApplying}
-                type="button"
-              >
-                Accept All Remaining
-              </button>
-
-              {matchAnalysis && matchAnalysis.missing.length > 0 && (
-                <details className={styles.gapsSection}>
-                  <summary className={styles.gapsSummary}>
-                    Genuine gaps — AI can't address these ({matchAnalysis.missing.length})
-                  </summary>
-                  <ul className={styles.gapsList}>
-                    {matchAnalysis.missing.map((item, i) => (
-                      <li key={i}>{item}</li>
-                    ))}
-                  </ul>
-                  {matchAnalysis.suggestions.length > 0 && (
-                    <>
-                      <div className={styles.suggestionsHeading}>What you could do</div>
-                      <ol className={styles.suggestionsList}>
-                        {matchAnalysis.suggestions.map((item, i) => (
-                          <li key={i}>{item}</li>
-                        ))}
-                      </ol>
-                    </>
-                  )}
-                </details>
-              )}
-            </>
-          )}
-        </>
+        <ChangeList
+          changes={changes}
+          appliedChanges={appliedChanges}
+          skippedChanges={skippedChanges}
+          selectedAlternatives={selectedAlternatives}
+          isApplying={isApplying}
+          pendingCount={pendingCount}
+          onAccept={onAccept}
+          onSkip={onSkip}
+          onUndo={onUndo}
+          onAcceptAll={onAcceptAll}
+          onSelectAlternative={onSelectAlternative}
+          onEditValue={onEditValue}
+          showFooter={true}
+          matchAnalysis={matchAnalysis}
+        />
       )}
     </div>
   );
