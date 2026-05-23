@@ -1,0 +1,78 @@
+/* GapPromptChips — chip array + inline textarea, seeded by match-analysis
+ * missing[] per D-04/D-05/D-06.
+ *
+ * `.chipGroup` forces wrap on the expanded row so the textarea always sits
+ * directly below its chip without breaking the wrap of subsequent chips.
+ */
+
+.chipArray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px;
+}
+
+.chipWrap {
+  display: inline-flex;
+}
+
+.chipGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-basis: 100%;
+}
+
+.chip {
+  padding: 6px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.chip:hover {
+  background: var(--bg-hover);
+}
+
+.chip:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.chipExpanded {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.textarea {
+  padding: 8px 12px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+  min-height: 60px;
+  max-height: 160px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  width: 100%;
+}
+
+.textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.emptyHeading {
+  color: var(--text-muted);
+  padding: 12px;
+  text-align: center;
+  font-weight: 400;
+  font-size: 14px;
+}

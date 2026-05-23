@@ -104,7 +104,6 @@ export function ChangePopover({
       getBoundingClientRect: () => {
         if (anchorRect) return anchorRect;
         if (!fallbackWarnedRef.current) {
-          // eslint-disable-next-line no-console
           console.warn(
             '[ChangePopover] anchorRect is null; falling back to centered position.',
           );
@@ -187,8 +186,12 @@ export function ChangePopover({
     if (fuiKeyDown && !e.defaultPrevented) fuiKeyDown(e);
   };
 
+  // floating-ui exposes `refs.setFloating` as a stable callback ref. The
+  // react-hooks/refs lint rule treats any `refs.x` access as a `.current`
+  // read, which is a false positive here.
   return (
     <div
+      // eslint-disable-next-line react-hooks/refs
       ref={refs.setFloating}
       style={floatingStyles}
       className={rootClass}
