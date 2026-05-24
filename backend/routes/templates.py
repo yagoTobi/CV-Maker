@@ -25,7 +25,7 @@ class TemplateContentResponse(BaseModel):
 
 
 def get_templates_dir() -> str:
-    return os.path.join(os.path.dirname(__file__), "..", "..", "cv-templates")
+    return os.path.join(os.path.dirname(__file__), "..", "latex_templates", "_source")
 
 
 @router.get("/templates", response_model=TemplateListResponse)

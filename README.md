@@ -105,11 +105,11 @@ CV-Maker/
 │   ├── latex_templates/  # Jinja2 .tex.j2 templates
 │   ├── tests/         # pytest test suite
 │   └── main.py        # FastAPI app
-├── cv-templates/      # LaTeX CV templates with class files
+├── backend/latex_templates/_source/  # LaTeX CV template source files (cls/sty/tex)
 │   ├── med-length-proff-cv/   # Professional CV (pdflatex)
 │   ├── deedy-resume/          # Deedy resume (xelatex)
 │   └── mcdowell-cv-master/    # McDowell CV (xelatex)
-├── user_data/         # User profile and saved CV versions (JSON files)
+├── backend/user_data/ # User profile and saved CV versions (JSON files; runtime, gitignored)
 └── docs/              # Project documentation
 ```
 

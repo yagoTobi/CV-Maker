@@ -258,8 +258,9 @@ sketch
 # GSD workflow planning artifacts (local only)
 .planning/
 
-# User data (runtime-generated)
-user_data/
+# User data (runtime-generated; directory tracked, contents ignored)
+backend/user_data/versions/
+backend/user_data/voice_profile.json
 
 # Playwright MCP state
 .playwright-mcp/

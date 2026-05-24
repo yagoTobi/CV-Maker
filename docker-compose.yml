@@ -7,7 +7,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - cv-maker-data:/app/user_data
+      - cv-maker-data:/app/backend/user_data
     environment:
       - CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}

@@ -141,7 +141,7 @@ All other settings have sensible defaults and the application runs without them:
 |---|---|
 | `CORS_ORIGINS` | Allows `localhost:5173` and `127.0.0.1:5173` (Vite dev server). |
 | `AWS_DEFAULT_REGION` | Defaults to `us-east-1`. |
-| `STORAGE_BACKEND` | Defaults to `file` (JSON files in `user_data/versions/`). |
+| `STORAGE_BACKEND` | Defaults to `file` (JSON files in `backend/user_data/versions/`). |
 | `VITE_API_URL` | Defaults to `http://localhost:8000/api`. |
 | `VITE_WS_URL` | Derived from `VITE_API_URL` by replacing the protocol. |
 | `TAILOR_MODEL_ID` | Defaults to Haiku for speed-optimized tailor suggestions. |
@@ -199,7 +199,7 @@ Variables with `${VAR:-default}` syntax are read from the host environment or a 
 
 Docker Compose also provisions:
 
-- **`cv-maker-data` volume**: Persistent storage for `user_data/` (version JSON files, profiles).
+- **`cv-maker-data` volume**: Persistent storage for `backend/user_data/` (version JSON files, profiles).
 - **`dynamodb-data` volume**: Persistent storage for DynamoDB Local data files.
 
 ### Production Deployment

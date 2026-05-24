@@ -28,7 +28,7 @@ The Dockerfile uses a multi-layer build strategy for cache efficiency:
 
 1. **Layer 1** -- TeX Live + system fonts (~2-3 GB, cached unless base image changes). Installs `texlive-base`, `texlive-latex-base`, `texlive-latex-recommended`, `texlive-latex-extra`, `texlive-xetex`, `texlive-fonts-recommended`, `texlive-fonts-extra`, `texlive-bibtex-extra`, `texlive-plain-generic`, `ttf-mscorefonts-installer`, and `fontconfig`.
 2. **Layer 2** -- Python dependencies (cached unless `backend/requirements.txt` changes).
-3. **Layer 3** -- Application code (`backend/` and `cv-templates/`).
+3. **Layer 3** -- Application code (`backend/` only; LaTeX template sources live under `backend/latex_templates/_source/`).
 
 The container runs as a non-root user `appuser` (UID/GID 1000) and exposes port 8000.
 
@@ -51,7 +51,7 @@ Persistent volumes:
 
 | Volume | Mount Point | Purpose |
 |--------|-------------|---------|
-| `cv-maker-data` | `/app/user_data` | CV versions, user profiles (FileStorage mode) |
+| `cv-maker-data` | `/app/backend/user_data` | CV versions, user profiles (FileStorage mode) |
 | `dynamodb-data` | `/data` (DynamoDB container) | DynamoDB Local database files |
 
 ### Running Standalone (Without Docker Compose)
@@ -62,7 +62,7 @@ To run only the backend container with file-based storage:
 docker run -d \
   --name cv-maker-backend \
   -p 8000:8000 \
-  -v cv-maker-data:/app/user_data \
+  -v cv-maker-data:/app/backend/user_data \
   -e CORS_ORIGINS=http://localhost:5173 \
   -e AWS_DEFAULT_REGION=us-east-1 \
   -e AWS_ACCESS_KEY_ID=your-key \
@@ -161,11 +161,11 @@ CV-Maker supports two storage backends, selected via the `STORAGE_BACKEND` envir
 
 When `STORAGE_BACKEND=file` (or unset), data is stored as JSON files on disk:
 
-- CV versions: `user_data/versions/{uuid}.json`
-- User profile: `user_data/profile.json`
-- Voice profile: `user_data/voice_profile.json`
+- CV versions: `backend/user_data/versions/{uuid}.json`
+- User profile: `backend/user_data/profile.json`
+- Voice profile: `backend/user_data/voice_profile.json`
 
-In Docker, mount a persistent volume at `/app/user_data` to preserve data across container restarts. The Docker Compose config already defines a `cv-maker-data` volume for this.
+In Docker, mount a persistent volume at `/app/backend/user_data` to preserve data across container restarts. The Docker Compose config already defines a `cv-maker-data` volume for this.
 
 ### DynamoDB Setup
 
@@ -209,7 +209,7 @@ To use DynamoDB for multi-user persistence:
    docker exec cv-maker-backend python scripts/migrate_to_dynamodb.py
    ```
 
-   The migration script copies CV versions, user profile, and voice profile from `user_data/` into DynamoDB.
+   The migration script copies CV versions, user profile, and voice profile from `backend/user_data/` into DynamoDB.
 
 ## AWS Bedrock Access
 

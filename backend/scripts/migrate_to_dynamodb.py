@@ -18,7 +18,7 @@ import asyncio
 from services.dynamo_storage import DynamoStorage
 
 
-USER_DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "user_data")
+USER_DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "user_data")
 
 
 async def migrate(user_id: str = "local"):
@@ -52,22 +52,17 @@ async def migrate(user_id: str = "local"):
         except Exception as e:
             print(f"  SKIP profile: {e}", file=sys.stderr)
 
-    # --- Voice Profile (check both locations) ---
-    voice_paths = [
-        os.path.join(USER_DATA_DIR, "voice_profile.json"),
-        os.path.join(os.path.dirname(__file__), "..", "user_data", "voice_profile.json"),
-    ]
-    for vp in voice_paths:
-        if os.path.isfile(vp):
-            try:
-                with open(vp, "r") as f:
-                    voice = json.load(f)
-                await storage.save_voice_profile(user_id, voice)
-                migrated += 1
-                print(f"  Migrated voice profile from {vp}")
-            except Exception as e:
-                print(f"  SKIP voice profile {vp}: {e}", file=sys.stderr)
-            break  # Only migrate the first one found
+    # --- Voice Profile ---
+    voice_path = os.path.join(USER_DATA_DIR, "voice_profile.json")
+    if os.path.isfile(voice_path):
+        try:
+            with open(voice_path, "r") as f:
+                voice = json.load(f)
+            await storage.save_voice_profile(user_id, voice)
+            migrated += 1
+            print(f"  Migrated voice profile from {voice_path}")
+        except Exception as e:
+            print(f"  SKIP voice profile {voice_path}: {e}", file=sys.stderr)
 
     print(f"\nMigration complete: {migrated} items migrated for user '{user_id}'.")
 
