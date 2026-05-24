@@ -1,5 +1,3 @@
 # Roadmap
 
-The canonical project roadmap lives at [`.planning/ROADMAP.md`](../.planning/ROADMAP.md).
-
-This file used to mirror it but the two diverged. The planning copy is the single source of truth — it tracks live phase state with checkbox progress.
+The canonical project roadmap lives at [`.planning/ROADMAP.md`](../.planning/ROADMAP.md). This file is intentionally a stub so external links continue to resolve.

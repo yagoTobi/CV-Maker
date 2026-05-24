@@ -15,7 +15,7 @@
 <!-- GSD:project-end -->
 
 <!-- GSD:stack-start -->
-## Stack (essentials only — full inventory lives in `.planning/codebase/STACK.md`)
+## Stack
 
 - **Frontend:** React 19 + TypeScript (strict, `verbatimModuleSyntax: true`) + Vite. CSS Modules. Vitest + Testing Library. React Router v6.
 - **Backend:** FastAPI + Pydantic on Python 3.12. Uvicorn. pytest (slow tests gated by `@pytest.mark.slow`).
@@ -28,11 +28,11 @@
 <!-- GSD:conventions-start -->
 ## Conventions (the non-obvious bits)
 
-Most rules are enforced by ESLint / TypeScript / Pydantic — read `.planning/codebase/CONVENTIONS.md` if you need the full list. The things you'd actually get wrong:
+Most rules are enforced by ESLint / TypeScript / Pydantic. The things you'd actually get wrong:
 
 - **Imports:** `verbatimModuleSyntax` is on. Type-only imports must use `import type`. No path aliases — relative paths only.
 - **API methods (`services/api.ts`) never throw** — they return `null` or `{ success: false, ... }`. Callers branch on the return value.
-- **Hooks return memoized objects.** State updaters wrapped in `useCallback`. `useFormBuilder` is the canonical (and admittedly large) example.
+- **Hooks return memoized objects.** State updaters wrapped in `useCallback`. `useDirectEditor` (in `frontend/src/features/direct-edit/hooks/`) is the canonical (and admittedly large) example.
 - **Contexts are split into `JobContext`, `CVContext`, `ToolsContext`.** New code uses the domain-specific hook. `useAppContext()` is a back-compat shim — don't add to it.
 - **Drag-and-drop pattern (canonical):** no `draggable` in JSX. Add `data-drag-card` on the card. Grip `onMouseDown` flips `closest('[data-drag-card]').draggable = true`. `onDragEnd` flips it back. Anything else breaks text-cursor in child inputs.
 - **LaTeX escape:** `latex_escape` is single-pass regex over all specials. `latex_url_escape` only handles `%` and `#` (for `\href{}`). Order of operations matters — escape *items* first, then `join` with raw LaTeX separators.
@@ -42,7 +42,7 @@ Most rules are enforced by ESLint / TypeScript / Pydantic — read `.planning/co
 <!-- GSD:conventions-end -->
 
 <!-- GSD:architecture-start -->
-## Architecture (orientation only — full map in `.planning/codebase/ARCHITECTURE.md` and graph at `.planning/graphs/graph.html`)
+## Architecture (orientation only - full map in `docs/ARCHITECTURE.md`, graph at `.planning/graphs/graph.html`)
 
 **Layers:**
 - `frontend/src/features/*` — feature folders (landing, build-choice, form-builder, cv-import, apply-to-job, dashboard).
@@ -80,9 +80,3 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 **Note on this file:** the GSD section markers intentionally have no `source:` attributes. This file is hand-curated. Running `gsd-tools generate-claude-md` will replace these blocks with full dumps from `.planning/codebase/*.md` — don't run it without trimming the result back, or restore from git.
 <!-- GSD:workflow-end -->
 
-<!-- GSD:profile-start -->
-## Developer Profile
-
-> Profile not yet configured. Run `/gsd-profile-user` to generate your developer profile.
-> This section is managed by `generate-claude-profile` -- do not edit manually.
-<!-- GSD:profile-end -->
