@@ -1,0 +1,103 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-05-25T09:28:58.736Z",
+  "context": "quick-task-multi-tranche",
+  "phase": null,
+  "phase_name": "Repo hygiene refactor — 5 tranches",
+  "phase_dir": ".planning/quick/",
+  "plan": 2,
+  "task": 2,
+  "total_tasks": 5,
+  "status": "paused",
+  "completed_tasks": [
+    {
+      "id": 1,
+      "name": "Tranche 1 — gitignore audit, ROADMAP dedupe, archive done phases/quicks, fix stale CLAUDE.md hook ref",
+      "status": "done",
+      "commit": "be48607",
+      "summary_path": ".planning/quick/260524-wk2-repo-hygiene-tranche-1-gitignore-runtime/260524-wk2-SUMMARY.md"
+    },
+    {
+      "id": 2,
+      "name": "Tranche 2 — consolidate user_data/ and cv-templates/ into backend/",
+      "status": "done",
+      "commit": "d1f1f59",
+      "summary_path": ".planning/quick/260524-ws1-repo-hygiene-tranche-2-directory-consoli/260524-ws1-SUMMARY.md"
+    }
+  ],
+  "remaining_tasks": [
+    {
+      "id": 3,
+      "name": "Tranche 3 — frontend/src/features/direct-edit/components/ regroup",
+      "status": "not_started",
+      "scope": "25+ flat files into subfolders: change-review/ (ChangeCard/List/Panel/Popover/Highlight/GapPromptChips), tune-tiers/ (Tier1/2/3, TunePanel), editor-primitives/ (Editable*, Section/EntryWrapper, FloatingFormatToolbar, GripIcon, DropLine), dialogs/ (Confirm, NamePrompt, SaveCV)",
+      "risk": "many import path updates; use git mv to preserve history; run tests + tsc after each subfolder"
+    },
+    {
+      "id": 4,
+      "name": "Tranche 4 — backend/services/ regroup",
+      "status": "not_started",
+      "scope": "subfolders: storage/ (storage.py, file_storage, dynamo_storage, storage_factory, version_service), voice/ (voice_*), ai/ (bedrock, llm_cache). Keep latex_compiler.py at top level. cv_extractor/ already grouped.",
+      "risk": "import path churn across routes/; backend test suite must pass"
+    },
+    {
+      "id": 5,
+      "name": "Tranche 5 — frontend/src/hooks/ feature-coupling",
+      "status": "not_started",
+      "scope": "Move feature-coupled hooks (useTailor, useImport, useChat, useVoiceInterview) into respective features. Keep useCompiler/useTemplates as shared in /hooks/.",
+      "risk": "feature import boundaries; verify no cross-feature leakage after move"
+    }
+  ],
+  "blockers": [
+    {
+      "description": "16 template-rendering tests fail with 'No filter named html_latex' — pre-existing on stash baseline, not caused by tranche 2. Phase 13 in-flight work.",
+      "type": "external",
+      "workaround": "Ignore for hygiene work. Verify counts stay at 16/349 after each tranche."
+    }
+  ],
+  "human_actions_pending": [
+    {
+      "action": "Docker volume migration on existing deployments",
+      "context": "Tranche 2 moved cv-maker-data mount target from /app/user_data to /app/backend/user_data. Documented in .planning/quick/260524-ws1-*/260524-ws1-SUMMARY.md. Local dev unaffected.",
+      "blocking": false
+    }
+  ],
+  "decisions": [
+    {
+      "decision": "Full move accepting breaking deployment change",
+      "rationale": "User chose 'Full move, accept breaking' over symlink/compat-shim. Single atomic commit per tranche, no half-states.",
+      "phase": "tranche-2"
+    },
+    {
+      "decision": "user_data/ → backend/user_data/ (option 3)",
+      "rationale": "User picked option 3: live alongside the code that owns it. backend/user_data/voice_profile.json was already stranded there.",
+      "phase": "tranche-2"
+    },
+    {
+      "decision": "cv-templates/ → backend/latex_templates/_source/",
+      "rationale": "Co-locate raw LaTeX cls/sty/font assets with the Jinja2 .tex.j2 templates that consume them. Dropped redundant Dockerfile COPY since backend/ already covers it.",
+      "phase": "tranche-2"
+    },
+    {
+      "decision": "Plain mv for untracked content, git mv for tracked",
+      "rationale": "git mv refused on empty/gitignored dirs (user_data/versions/* contents are gitignored runtime data). cv-templates/ tracked → git mv preserved cls/sty/tex/font/png history.",
+      "phase": "tranche-2"
+    },
+    {
+      "decision": "Single atomic commit per tranche",
+      "rationale": "User explicit ask: '/gsd-quick per tranche'. Keep refactor steps reviewable as discrete units.",
+      "phase": "all"
+    },
+    {
+      "decision": "Leave graphify-out/ alone",
+      "rationale": "User chose 'Keep, leave alone' — graph viewer artifacts are useful, gitignored already.",
+      "phase": "tranche-1"
+    }
+  ],
+  "uncommitted_files": [
+    ".mcp.json (pre-existing dirty, NOT tranche work)",
+    ".planning/STATE.md (pre-existing dirty, NOT tranche work)"
+  ],
+  "next_action": "Start tranche 3: /gsd-quick \"Repo hygiene tranche 3 of 5: frontend/src/features/direct-edit/components/ regroup. ~25 flat files → subfolders change-review/, tune-tiers/, editor-primitives/, dialogs/. Use git mv to preserve history. Update all import paths. Run cd frontend && npm run typecheck && npm test after each subfolder. Single atomic commit.\"",
+  "context_notes": "Two of five tranches landed cleanly. Remaining three are import-path-heavy refactors; each needs a fresh context budget because of the import update fan-out. Tranches 3 and 5 are frontend (need typecheck + vitest). Tranche 4 is backend (needs pytest -x --ignore=tests/slow). Pre-existing test failures (16 template-rendering, html_latex filter missing) must NOT be attributed to tranche work — verify baseline count before each commit."
+}
