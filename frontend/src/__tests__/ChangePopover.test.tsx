@@ -2,11 +2,11 @@
 // Implements D-12, D-17, D-19 contract per .planning/phases/13.../13-CONTEXT.md.
 //
 // Wave 0 scaffold: imports the still-missing ChangePopover from
-// `features/direct-edit/components/ChangePopover`. Plan 03 implements it.
+// `features/direct-edit/components/change-review/ChangePopover`. Plan 03 implements it.
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { ChangePopover } from '../features/direct-edit/components/ChangePopover';
+import { ChangePopover } from '../features/direct-edit/components/change-review/ChangePopover';
 import type { TailorChange } from '../types';
 
 function makeChange(overrides: Partial<TailorChange> = {}): TailorChange {

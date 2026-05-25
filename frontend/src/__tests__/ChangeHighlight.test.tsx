@@ -4,7 +4,7 @@
 // severity-tier squiggle underline span. Covers D-13 / D-14 contract.
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent, screen } from '@testing-library/react';
-import { ChangeHighlight } from '../features/direct-edit/components/ChangeHighlight';
+import { ChangeHighlight } from '../features/direct-edit/components/change-review/ChangeHighlight';
 
 describe('ChangeHighlight', () => {
   it('renders span with data-change-id and data-severity attributes', () => {

@@ -7,8 +7,8 @@
  *
  * Covers: D-07, D-11, D-12.
  */
-import type { TailorChange, MatchAnalysis } from '../../../types';
-import { ChangeList } from './ChangeList';
+import type { TailorChange, MatchAnalysis } from '../../../../types';
+import { ChangeList } from '../change-review/ChangeList';
 import styles from './Tier3Review.module.css';
 
 interface Tier3ReviewProps {

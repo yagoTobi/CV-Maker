@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
-import { EditableField } from '../features/direct-edit/components/EditableField';
+import { EditableField } from '../features/direct-edit/components/editor-primitives/EditableField';
 
 describe('EditableField', () => {
   const defaultProps = {

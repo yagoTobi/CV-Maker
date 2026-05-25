@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
-import { EditableBulletList } from '../features/direct-edit/components/EditableBulletList';
+import { EditableBulletList } from '../features/direct-edit/components/editor-primitives/EditableBulletList';
 import type { BulletItem, TailorChange } from '../types';
 
 describe('EditableBulletList', () => {

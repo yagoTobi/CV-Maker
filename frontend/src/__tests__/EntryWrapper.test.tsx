@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { EntryWrapper } from '../features/direct-edit/components/EntryWrapper';
+import { EntryWrapper } from '../features/direct-edit/components/editor-primitives/EntryWrapper';
 
 describe('EntryWrapper', () => {
   it('renders children content', () => {

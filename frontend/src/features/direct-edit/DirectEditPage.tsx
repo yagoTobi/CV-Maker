@@ -22,7 +22,7 @@ import { usePageBreak } from './hooks/usePageBreak';
 import { MedLengthTemplate } from './components/MedLengthTemplate';
 import { useSetEditorActions } from '../../contexts/EditorActionsContext';
 import { PageBreakIndicator } from './components/PageBreakIndicator';
-import { TunePanel } from './components/TunePanel';
+import { TunePanel } from './components/tune-tiers/TunePanel';
 import { useCVContext } from '../../contexts/CVContext';
 import { api } from '../../services/api';
 import { generateId } from '../../utils/idHelpers';
@@ -30,7 +30,7 @@ import { generateCVFilename } from '../../utils/cvFilename';
 import { downloadPdf } from '../../utils/downloadPdf';
 import { noop, EMPTY_SET } from '../../utils/cvDisplayUtils';
 import type { CVFormData, SkillItem, CVVersion, CVVersionMeta } from '../../types';
-import { NamePromptDialog } from './components/NamePromptDialog';
+import { NamePromptDialog } from './components/dialogs/NamePromptDialog';
 import styles from './DirectEditPage.module.css';
 
 const DEFAULT_TEMPLATE = 'med-length-proff-cv';

@@ -1,8 +1,8 @@
 import React, { memo } from 'react';
-import { EditableField } from '../EditableField';
-import { SectionWrapper } from '../SectionWrapper';
-import { EntryWrapper } from '../EntryWrapper';
-import { DropLine } from '../DropLine';
+import { EditableField } from '../editor-primitives/EditableField';
+import { SectionWrapper } from '../editor-primitives/SectionWrapper';
+import { EntryWrapper } from '../editor-primitives/EntryWrapper';
+import { DropLine } from '../editor-primitives/DropLine';
 import { EntryDragContainer } from './EntryDragContainer';
 import { DropZoneTail } from './DropZoneTail';
 import type { Award, SkillItem } from '../../../../types';

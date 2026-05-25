@@ -15,7 +15,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { EditableField } from './EditableField';
 import type { HighlightSpan } from './EditableField';
-import type { BulletItem, TailorChange, TailorAlternative } from '../../../types';
+import type { BulletItem, TailorChange, TailorAlternative } from '../../../../types';
 import styles from './EditableBulletList.module.css';
 
 interface EditableBulletListProps {

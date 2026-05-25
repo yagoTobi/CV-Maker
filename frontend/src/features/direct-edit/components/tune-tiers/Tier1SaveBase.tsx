@@ -7,7 +7,7 @@
  *
  * Covers: D-01, D-02, D-03.
  */
-import type { CVVersion } from '../../../types';
+import type { CVVersion } from '../../../../types';
 import styles from './Tier1SaveBase.module.css';
 
 interface Tier1SaveBaseProps {

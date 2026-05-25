@@ -9,7 +9,7 @@
  * does not compute layout offsets.
  */
 import type React from 'react';
-import type { Severity } from '../utils/severity';
+import type { Severity } from '../../utils/severity';
 import styles from './ChangeHighlight.module.css';
 
 export interface ChangeHighlightProps {

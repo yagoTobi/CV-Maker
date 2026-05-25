@@ -5,7 +5,7 @@
  * Backspace on empty label removes the link. Blue text indicates a URL is set.
  */
 import { useCallback } from 'react';
-import { EditableField } from './EditableField';
+import { EditableField } from './editor-primitives/EditableField';
 import styles from './LinkHeaderItem.module.css';
 
 interface LinkHeaderItemProps {

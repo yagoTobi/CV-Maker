@@ -30,8 +30,8 @@ import {
   useRole,
   FloatingFocusManager,
 } from '@floating-ui/react';
-import type { TailorChange } from '../../../types';
-import type { Severity } from '../utils/severity';
+import type { TailorChange } from '../../../../types';
+import type { Severity } from '../../utils/severity';
 import styles from './ChangePopover.module.css';
 
 export interface ChangePopoverProps {

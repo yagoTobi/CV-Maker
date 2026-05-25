@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { SectionWrapper } from '../features/direct-edit/components/SectionWrapper';
+import { SectionWrapper } from '../features/direct-edit/components/editor-primitives/SectionWrapper';
 
 describe('SectionWrapper', () => {
   const mockDragHandlers = {

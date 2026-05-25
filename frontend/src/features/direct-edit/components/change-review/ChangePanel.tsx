@@ -8,8 +8,8 @@
  * Covers: D-01 (panel layout), D-02 (scroll sync via data-change-section).
  */
 import { useEffect, useRef } from 'react';
-import type { TailorChange, MatchAnalysis } from '../../../types';
-import { ScoreHeader } from './ScoreHeader';
+import type { TailorChange, MatchAnalysis } from '../../../../types';
+import { ScoreHeader } from '../ScoreHeader';
 import { ChangeList } from './ChangeList';
 import styles from './ChangePanel.module.css';
 

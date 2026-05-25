@@ -9,8 +9,8 @@
  *   - Tier3Review (embedded in TunePanel) — composing ChangeList directly
  */
 import { useMemo } from 'react';
-import type { TailorChange, MatchAnalysis } from '../../../types';
-import { fieldPathToSection } from '../../../utils/formDataPatch';
+import type { TailorChange, MatchAnalysis } from '../../../../types';
+import { fieldPathToSection } from '../../../../utils/formDataPatch';
 import { ChangeCard } from './ChangeCard';
 import styles from './ChangeList.module.css';
 

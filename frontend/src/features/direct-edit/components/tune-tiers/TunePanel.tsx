@@ -14,15 +14,15 @@
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../../../services/api';
-import { useCVContext } from '../../../contexts/CVContext';
-import { useTailor } from '../../../hooks/useTailor';
-import { useScrollSync } from '../hooks/useScrollSync';
-import { ScoreHeader } from './ScoreHeader';
+import { api } from '../../../../services/api';
+import { useCVContext } from '../../../../contexts/CVContext';
+import { useTailor } from '../../../../hooks/useTailor';
+import { useScrollSync } from '../../hooks/useScrollSync';
+import { ScoreHeader } from '../ScoreHeader';
 import { Tier1SaveBase } from './Tier1SaveBase';
 import { Tier2JobDetails } from './Tier2JobDetails';
 import { Tier3Review } from './Tier3Review';
-import type { CVFormData, CVVersion, MatchAnalysis } from '../../../types';
+import type { CVFormData, CVVersion, MatchAnalysis } from '../../../../types';
 import styles from './TunePanel.module.css';
 
 interface TunePanelProps {

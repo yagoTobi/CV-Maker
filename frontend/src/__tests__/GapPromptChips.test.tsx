@@ -2,11 +2,11 @@
 // Implements D-04 contract per .planning/phases/13.../13-CONTEXT.md.
 //
 // Wave 0 scaffold: imports the still-missing GapPromptChips from
-// `features/direct-edit/components/GapPromptChips`. Plan 04 Task ?? implements it.
+// `features/direct-edit/components/change-review/GapPromptChips`. Plan 04 Task ?? implements it.
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { GapPromptChips } from '../features/direct-edit/components/GapPromptChips';
+import { GapPromptChips } from '../features/direct-edit/components/change-review/GapPromptChips';
 
 function defaultProps(overrides = {}) {
   return {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { TailorChange } from '../../../types';
-import { fieldPathToSection } from '../../../utils/formDataPatch';
+import type { TailorChange } from '../../../../types';
+import { fieldPathToSection } from '../../../../utils/formDataPatch';
 import styles from './ChangeCard.module.css';
 
 interface ChangeCardProps {

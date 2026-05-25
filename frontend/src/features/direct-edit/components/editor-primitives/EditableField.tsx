@@ -20,7 +20,7 @@
  *     XSS via crafted CV text (T-13-02-01).
  */
 import { useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
-import type { Severity } from '../utils/severity';
+import type { Severity } from '../../utils/severity';
 import styles from './EditableField.module.css';
 
 export interface HighlightSpan {

@@ -13,7 +13,7 @@
  */
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { ConfirmDialog } from './ConfirmDialog';
+import { ConfirmDialog } from '../dialogs/ConfirmDialog';
 import { GripIcon } from './GripIcon';
 import styles from './SectionWrapper.module.css';
 

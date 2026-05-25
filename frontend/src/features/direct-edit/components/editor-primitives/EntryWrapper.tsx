@@ -14,7 +14,7 @@
 import { useState, useCallback } from 'react';
 import { GripIcon } from './GripIcon';
 import { DropLine } from './DropLine';
-import { ConfirmDialog } from './ConfirmDialog';
+import { ConfirmDialog } from '../dialogs/ConfirmDialog';
 import styles from './EntryWrapper.module.css';
 
 /** No-op drag handlers for backward compatibility when drag is not wired */
