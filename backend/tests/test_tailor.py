@@ -98,7 +98,7 @@ def captured_messages(monkeypatch):
             captured.append(messages[0]["content"])
         return _fake_ai_response()
 
-    from services import bedrock as bedrock_module
+    from services.ai import bedrock as bedrock_module
 
     monkeypatch.setattr(bedrock_module.bedrock_client, "chat", fake_chat)
     return captured
@@ -107,7 +107,7 @@ def captured_messages(monkeypatch):
 @pytest.fixture
 def fresh_cache(monkeypatch):
     """Force every call to skip the cache by stubbing get → None."""
-    from services import llm_cache as cache_module
+    from services.ai import llm_cache as cache_module
 
     monkeypatch.setattr(cache_module, "get", lambda _key: None)
     monkeypatch.setattr(cache_module, "put", lambda *_args, **_kwargs: None)
@@ -169,8 +169,8 @@ def test_user_clarifications_empty_strings_are_filtered(captured_messages, fresh
 
 def test_user_clarifications_separate_cache_keys(monkeypatch):
     """Two requests with identical form_data/jd but different clarifications produce DIFFERENT cache keys."""
-    from services import llm_cache as cache_module
-    from services import bedrock as bedrock_module
+    from services.ai import llm_cache as cache_module
+    from services.ai import bedrock as bedrock_module
 
     cache_key_spy = MagicMock(side_effect=lambda *parts: "key-" + "|".join(parts))
     monkeypatch.setattr(cache_module, "cache_key", cache_key_spy)

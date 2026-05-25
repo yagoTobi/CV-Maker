@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import asyncio
 
-from services.dynamo_storage import DynamoStorage
+from services.storage import DynamoStorage
 
 
 USER_DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "user_data")

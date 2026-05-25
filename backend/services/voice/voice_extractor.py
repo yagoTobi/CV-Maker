@@ -19,7 +19,7 @@ from prompts.voice_interview import (
     VOICE_EXTRACTION_PROMPT,
     VOICE_PROFILE_SUMMARY_PROMPT,
 )
-from services.bedrock import bedrock_client
+from services.ai import bedrock_client
 from services.json_utils import parse_markdown_json, parse_json_with_retry
 
 

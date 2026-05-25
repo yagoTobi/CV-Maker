@@ -103,9 +103,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - `cvFilename.ts` utility generates formatted filenames (e.g., `John_Smith_Google_Staff_SWE_CV.pdf`)
 - **Form data patching**: `formDataPatch.ts` resolves nested paths like `workExperience[0].bullets[2]` for granular form updates
 - **Storage abstraction layer**: Pluggable storage backends for user data persistence
-  - `StorageBackend` Protocol with 11-method async interface (`services/storage.py`)
-  - `FileStorage` implementation wraps existing JSON file I/O — zero behavior change (`services/file_storage.py`)
-  - `DynamoStorage` implementation for DynamoDB single-table design (`services/dynamo_storage.py`)
+  - `StorageBackend` Protocol with 11-method async interface (`services/storage/storage.py`)
+  - `FileStorage` implementation wraps existing JSON file I/O — zero behavior change (`services/storage/file_storage.py`)
+  - `DynamoStorage` implementation for DynamoDB single-table design (`services/storage/dynamo_storage.py`)
   - `get_storage()` FastAPI dependency reads `STORAGE_BACKEND` env var (defaults to `file`)
   - `get_current_user()` dependency reads `X-User-Id` header (defaults to `"local"`)
   - DynamoDB table creation script (`backend/scripts/create_table.py`)

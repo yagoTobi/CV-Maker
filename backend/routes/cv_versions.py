@@ -4,9 +4,7 @@ from typing import Optional
 import logging
 
 from dependencies import get_current_user
-from services.storage import StorageBackend
-from services.storage_factory import get_storage
-from services import version_service
+from services.storage import StorageBackend, get_storage, version_service
 
 # Domain models live in `models.cv` so services and other routes can import
 # them without depending on a route module. Re-imported here so existing

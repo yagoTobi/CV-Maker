@@ -1,8 +1,8 @@
 """FastAPI router for voice interview WebSocket + extract-CV / profile REST.
 
-Pipeline construction lives in ``services.voice_pipeline``; transcript session
-state lives in ``services.voice_session_store``; Bedrock extraction calls live
-in ``services.voice_extractor``. This module is the thin orchestration layer.
+Pipeline construction lives in ``services.voice.voice_pipeline``; transcript session
+state lives in ``services.voice.voice_session_store``; Bedrock extraction calls live
+in ``services.voice.voice_extractor``. This module is the thin orchestration layer.
 """
 
 import json
@@ -14,20 +14,15 @@ from prompts.voice_interview import get_voice_system_prompt
 from pydantic import BaseModel
 
 from dependencies import get_current_user
-from services.storage import StorageBackend
-from services.storage_factory import get_storage
-from services.voice_extractor import (
-    extract_cv_from_transcript,
-    summarize_profile_from_cv,
-)
-from services.voice_pipeline import (
+from services.storage import StorageBackend, get_storage
+from services.voice import (
     LLMRunFrame,
     PIPECAT_AVAILABLE,
-    build_voice_pipeline,
-)
-from services.voice_session_store import (
     VoiceSessionStore,
+    build_voice_pipeline,
+    extract_cv_from_transcript,
     get_voice_session_store,
+    summarize_profile_from_cv,
 )
 
 

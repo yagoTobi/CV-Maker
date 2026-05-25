@@ -5,8 +5,7 @@ from typing import List, Dict, Optional, Literal
 import json
 import logging
 
-from services.bedrock import bedrock_client, MODEL_SONNET
-from services import llm_cache
+from services.ai import bedrock_client, MODEL_SONNET, llm_cache
 from services.json_utils import strip_markdown_json, parse_json_with_retry
 
 logger = logging.getLogger(__name__)

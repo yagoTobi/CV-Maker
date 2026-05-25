@@ -10,7 +10,7 @@ Last updated: 2026-05-23
 
 ~~**`get_current_user` dependency**~~ (done — `backend/dependencies.py`, shim reads `X-User-Id` header; real Cognito JWT integration is Phase C2 below)
 
-~~**`StorageBackend` Protocol + `FileStorage`**~~ (done — ADR-019, `backend/services/storage.py` + `file_storage.py` + `dynamo_storage.py`)
+~~**`StorageBackend` Protocol + `FileStorage`**~~ (done — ADR-019, `backend/services/storage/storage.py` + `file_storage.py` + `dynamo_storage.py`)
 
 ~~**Dockerfile + docker-compose**~~ (done — non-root user, TeX Live, DynamoDB Local, `cv-maker-data` volume)
 

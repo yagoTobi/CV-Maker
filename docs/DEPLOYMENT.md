@@ -251,7 +251,7 @@ The `LaTeXCompiler` (`backend/services/latex_compiler.py`) sanitizes all LaTeX c
 
 ### LLM Response Cache
 
-An in-memory TTL cache (`backend/services/llm_cache.py`) caches AI responses for 1 hour (max 256 entries). Cache keys are SHA-256 hashes of concatenated inputs. This reduces redundant Bedrock API calls for match analysis and tailor endpoints. Note: the cache is in-memory and resets on container restart.
+An in-memory TTL cache (`backend/services/ai/llm_cache.py`) caches AI responses for 1 hour (max 256 entries). Cache keys are SHA-256 hashes of concatenated inputs. This reduces redundant Bedrock API calls for match analysis and tailor endpoints. Note: the cache is in-memory and resets on container restart.
 
 ## Build Pipeline
 

@@ -13,8 +13,7 @@ from pydantic import BaseModel
 from typing import List, Optional, Union
 
 from models.cv import CVFormData
-from services.bedrock import bedrock_client, MODEL_TAILOR
-from services import llm_cache
+from services.ai import bedrock_client, MODEL_TAILOR, llm_cache
 from services.json_utils import strip_markdown_json, parse_json_with_retry
 from prompts.cv_agent import TAILOR_SUGGEST_PROMPT
 

@@ -115,8 +115,8 @@ Frontend api.ts (axios/fetch)
 | `usePageBreak` | `frontend/src/features/direct-edit/hooks/usePageBreak.ts` | `ResizeObserver`-based detector for CV content exceeding one US Letter page. Returns pixel Y offset of page 2 start (or null). |
 | `useSectionDrag` / `useEntryDrag` | `frontend/src/features/direct-edit/hooks/` | HTML Drag-and-Drop hooks for reordering sections and entries. Use dynamic `draggable` toggling on `mousedown` to remain compatible with `contentEditable`. Ghost image suppressed via a 1x1 canvas. |
 | `useScrollSync` | `frontend/src/features/direct-edit/hooks/useScrollSync.ts` | `IntersectionObserver`-based scroll sync from CV sections to `ChangePanel` cards (one-way; anti-jitter flag prevents feedback loops). |
-| `StorageBackend` | `backend/services/storage.py` | Python Protocol (Strategy) for persistence. `FileStorage` writes `user_data/versions/*.json`; `DynamoStorage` uses DynamoDB single-table design (`PK=USER#{id}`, `SK=VERSION#{id}`). Selected by `STORAGE_BACKEND` env var via `storage_factory.py`. |
-| `BedrockClient` | `backend/services/bedrock.py` | Singleton AWS Bedrock client. Model selection per task: `MODEL_HAIKU` for extraction (speed), `MODEL_SONNET` for match analysis and chat (quality), `MODEL_TAILOR` (defaults to Haiku, overridable via `TAILOR_MODEL_ID` env var). |
+| `StorageBackend` | `backend/services/storage/storage.py` | Python Protocol (Strategy) for persistence. `FileStorage` writes `user_data/versions/*.json`; `DynamoStorage` uses DynamoDB single-table design (`PK=USER#{id}`, `SK=VERSION#{id}`). Selected by `STORAGE_BACKEND` env var via `storage_factory.py`. |
+| `BedrockClient` | `backend/services/ai/bedrock.py` | Singleton AWS Bedrock client. Model selection per task: `MODEL_HAIKU` for extraction (speed), `MODEL_SONNET` for match analysis and chat (quality), `MODEL_TAILOR` (defaults to Haiku, overridable via `TAILOR_MODEL_ID` env var). |
 | `TEMPLATES` registry | `backend/config/templates.py` | Dict of `TemplateConfig` dataclasses mapping template IDs to folder paths, LaTeX engine (`pdflatex` vs `xelatex`), and extra files. Three templates: `med-length-proff-cv`, `deedy-resume`, `mcdowell-cv`. |
 | `setAtPath` / `getAtPath` | `frontend/src/utils/formDataPatch.ts` | Dot-bracket path utilities for reading and writing nested `CVFormData` fields (e.g., `workExperience[0].bullets[2]`). ID-aware: updates `BulletItem.text` without generating a new ID. |
 
@@ -239,8 +239,8 @@ CV-Maker/
 |---|---|---|
 | HTTP routes | `backend/routes/` | Request validation (Pydantic), response formatting, thin delegation to services |
 | Services | `backend/services/` | Business logic, external integrations, data persistence |
-| Storage | `backend/services/storage.py` (Protocol) | Persistence abstraction — FileStorage or DynamoStorage |
-| AI client | `backend/services/bedrock.py` | Singleton Bedrock client, streaming + non-streaming, model-per-task selection |
+| Storage | `backend/services/storage/storage.py` (Protocol) | Persistence abstraction — FileStorage or DynamoStorage |
+| AI client | `backend/services/ai/bedrock.py` | Singleton Bedrock client, streaming + non-streaming, model-per-task selection |
 | LaTeX pipeline | `backend/routes/generate_latex.py` + `backend/services/latex_compiler.py` | Form data -> Jinja2 -> .tex -> pdflatex/xelatex subprocess -> PDF |
 | Template registry | `backend/config/templates.py` | Maps template IDs to folder paths, engine, and extra files |
 | Prompts | `backend/prompts/` | System prompts for chat, match analysis, tailor, and voice interview |
@@ -286,7 +286,7 @@ CV-Maker/
 
 **LaTeX sanitization:** `LaTeXCompiler._sanitize_content()` (`backend/services/latex_compiler.py:54`) strips dangerous commands (shell escape, file I/O, `\def`, `\let`, `\special`) before compilation. UUID validation on version IDs prevents path traversal.
 
-**Caching:** In-memory LLM response cache (`backend/services/llm_cache.py`) with 1-hour TTL, keyed by SHA-256 of concatenated inputs. Used by match analysis and tailor endpoints to avoid redundant Bedrock calls.
+**Caching:** In-memory LLM response cache (`backend/services/ai/llm_cache.py`) with 1-hour TTL, keyed by SHA-256 of concatenated inputs. Used by match analysis and tailor endpoints to avoid redundant Bedrock calls.
 
 **Security headers:** `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin` applied via middleware in `backend/main.py`.
 
@@ -298,7 +298,7 @@ CV-Maker/
 
 ### AWS Bedrock (AI)
 
-All AI features route through a single `BedrockClient` singleton (`backend/services/bedrock.py`). Auth uses `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`.
+All AI features route through a single `BedrockClient` singleton (`backend/services/ai/bedrock.py`). Auth uses `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`.
 
 | Variable | Model ID | Used for |
 |---|---|---|

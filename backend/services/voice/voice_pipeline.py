@@ -14,7 +14,7 @@ from typing import Any
 
 from loguru import logger
 
-from services.voice_session_store import VoiceSessionStore
+from .voice_session_store import VoiceSessionStore
 
 
 # Optional Pipecat import — the app still starts if pipecat isn't installed
@@ -45,7 +45,7 @@ try:
     logger.info("Pipecat loaded successfully")
 except ImportError as e:
     PIPECAT_AVAILABLE = False
-    # Stubs so callers can do ``from services.voice_pipeline import LLMRunFrame``
+    # Stubs so callers can do ``from services.voice import LLMRunFrame``
     # at module load time. Any actual use is gated on ``PIPECAT_AVAILABLE``.
     LLMRunFrame = None  # type: ignore[assignment,misc]
     logger.warning("Pipecat not available: {}", e)

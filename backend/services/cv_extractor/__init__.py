@@ -31,7 +31,7 @@ from prompts.cv_extraction import (
     CV_EXTRACTION_SYSTEM_PROMPT,
     CV_EXTRACTION_USER_PROMPT,
 )
-from services.bedrock import bedrock_client  # noqa: F401  (used + re-exported)
+from services.ai import bedrock_client  # noqa: F401  (used + re-exported)
 
 from .docx_parser import extract_docx_text as _extract_docx_text
 from .llm_client import parse_extraction_response as _parse_extraction_response
