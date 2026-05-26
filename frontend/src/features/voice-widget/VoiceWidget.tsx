@@ -2,7 +2,7 @@ import { useState, useCallback, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { FiMic, FiMicOff, FiPhoneOff, FiChevronDown, FiChevronUp } from "react-icons/fi";
-import { useVoiceInterview } from "../../hooks/useVoiceInterview";
+import { useVoiceInterview } from "./hooks/useVoiceInterview";
 import { useCVContext } from "../../contexts/CVContext";
 import type { CVFormData } from "../../types";
 import styles from "./VoiceWidget.module.css";

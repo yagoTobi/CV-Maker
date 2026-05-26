@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { api } from '../services/api';
-import { applyTailorChanges } from '../utils/formDataPatch';
-import type { CVFormData, TailorResponse, TailorChange } from '../types';
+import { api } from '../../../services/api';
+import { applyTailorChanges } from '../../../utils/formDataPatch';
+import type { CVFormData, TailorResponse, TailorChange } from '../../../types';
 
 export interface UseTailorReturn {
   tailorResponse: TailorResponse | null;

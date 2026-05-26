@@ -16,7 +16,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../../../services/api';
 import { useCVContext } from '../../../../contexts/CVContext';
-import { useTailor } from '../../../../hooks/useTailor';
+import { useTailor } from '../../hooks/useTailor';
 import { useScrollSync } from '../../hooks/useScrollSync';
 import { ScoreHeader } from '../ScoreHeader';
 import { Tier1SaveBase } from './Tier1SaveBase';

@@ -8,8 +8,8 @@ import {
 import type {
   VoiceWidgetState,
   VoiceTranscriptLine,
-} from "../types";
-import { API_BASE } from "../services/api";
+} from "../../../types";
+import { API_BASE } from "../../../services/api";
 
 const WS_URL = import.meta.env.VITE_WS_URL || API_BASE.replace(/^http/, 'ws') + '/ws/voice-interview';
 
