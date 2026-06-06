@@ -156,9 +156,9 @@ export default function SaveCVModal({
                   className={styles.radio}
                 />
                 <div>
-                  <span className={styles.typeLabel}>Base CV</span>
+                  <span className={styles.typeLabel}>Baseline CV</span>
                   <span className={styles.typeHint}>
-                    A template to tailor for roles
+                    Your reusable source CV
                   </span>
                 </div>
               </label>
@@ -185,7 +185,7 @@ export default function SaveCVModal({
           {/* Name field */}
           <div className={styles.field}>
             <label className={styles.fieldLabel} htmlFor="save-name">
-              {isBaseCV ? "Name" : "Version name (optional)"}
+              {isBaseCV ? "Baseline name" : "Application name (optional)"}
             </label>
             <input
               id="save-name"
@@ -195,7 +195,7 @@ export default function SaveCVModal({
               onChange={(e) => setSaveName(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={
-                isBaseCV ? "e.g., Creative CV" : "e.g., Spotify Designer"
+                isBaseCV ? "e.g., Software baseline" : "e.g., Spotify Designer"
               }
             />
           </div>
@@ -270,7 +270,7 @@ export default function SaveCVModal({
             {isSaving ? (
               <span className={styles.spinner} />
             ) : isBaseCV ? (
-              "Save Base CV"
+              "Save Baseline"
             ) : (
               "Save Application"
             )}

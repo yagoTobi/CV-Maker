@@ -1,5 +1,5 @@
 /**
- * Tier1SaveBase -- "Save as Base CV" tier body for TunePanel.
+ * Tier1SaveBase -- baseline setup tier body for TunePanel.
  *
  * Shown when activeTier === 1. Handles the name input and save action.
  * If the active version is already set (CV was previously saved), shows
@@ -31,17 +31,17 @@ export function Tier1SaveBase({
     <div className={styles.tierBodyInner}>
       {activeVersion ? (
         <div className={styles.preCompleted}>
-          Already saved as &quot;{activeVersion.name}&quot;
+          Using baseline &quot;{activeVersion.name}&quot;
         </div>
       ) : (
         <>
           <div className={styles.formGroup}>
-            <label className={styles.label}>CV Name</label>
+            <label className={styles.label}>Baseline name</label>
             <input
               className={styles.input}
               value={baseName}
               onChange={e => onBaseNameChange(e.target.value)}
-              placeholder="e.g., Creative CV"
+              placeholder="e.g., Software baseline"
               autoFocus={isAutoFocused}
             />
           </div>
@@ -51,7 +51,7 @@ export function Tier1SaveBase({
             disabled={!baseName.trim() || isSaving}
             type="button"
           >
-            {isSaving ? (<><span className={styles.spinner} /> Saving...</>) : 'Save as Base CV'}
+            {isSaving ? (<><span className={styles.spinner} /> Saving...</>) : 'Set baseline'}
           </button>
         </>
       )}

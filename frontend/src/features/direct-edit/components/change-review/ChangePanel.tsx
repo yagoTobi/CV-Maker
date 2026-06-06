@@ -125,7 +125,7 @@ export function ChangePanel({
       {/* Fallback header when there's no match analysis */}
       {!matchAnalysis && (
         <div className={styles.header}>
-          <span>Review Changes ({changes.length})</span>
+          <span>Pick changes ({changes.length})</span>
         </div>
       )}
 

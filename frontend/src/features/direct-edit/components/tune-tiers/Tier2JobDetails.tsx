@@ -2,7 +2,7 @@
  * Tier2JobDetails -- Job description input + match analysis trigger tier body.
  *
  * Shown when activeTier === 2. Handles company name, role, and job description
- * fields, then triggers the Analyze Match action.
+ * fields, then triggers job-fit analysis.
  *
  * Covers: D-04, D-05, D-06.
  */
@@ -66,7 +66,7 @@ export function Tier2JobDetails({
         disabled={!jobDescription.trim() || isAnalyzing}
         type="button"
       >
-        {isAnalyzing ? (<><span className={styles.spinner} /> Analyzing...</>) : 'Analyze Match'}
+        {isAnalyzing ? (<><span className={styles.spinner} /> Analyzing...</>) : 'Find best fit'}
       </button>
     </div>
   );

@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 ### Fixed
+- Direct-edit bullet rows can now be removed entirely with Backspace when empty, and empty bullet-capable entries provide an inline `Add bullet...` starter to re-add bullet points without forcing one by default.
 
 ---
 

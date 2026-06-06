@@ -76,7 +76,7 @@ export default function AppCard({
           onClick={() => onOpen(app.id)}
           disabled={loadingId === app.id}
         >
-          {loadingId === app.id ? <span className={styles.spinnerSm} /> : 'Open'}
+          {loadingId === app.id ? <span className={styles.spinnerSm} /> : 'Review'}
         </button>
 
         <button
@@ -99,7 +99,7 @@ export default function AppCard({
           <button
             className={styles.moveBtn}
             onClick={() => onSetMoveDropdown(isThisMoveOpen ? null : app.id)}
-            title="Move to different base CV"
+            title="Move to different baseline CV"
           >
             <MoveIcon />
           </button>

@@ -2,9 +2,9 @@
  * TunePanel -- Right-side panel with 3 progressive tiers for tuning a CV
  * to a specific job posting.
  *
- * Tier 1: Save-as-Base CV (skipped if activeVersion is non-null)
- * Tier 2: Job Details (company, role, job description) + Analyze Match
- * Tier 3: Review Changes (Tier3Review + useTailor accept/reject) + Save Tailored CV
+ * Tier 1: Baseline CV (skipped if activeVersion is non-null)
+ * Tier 2: Job target (company, role, job description) + fit analysis
+ * Tier 3: Pick changes (Tier3Review + useTailor accept/reject) + save application
  *
  * Inline panel on the editor page for job-targeted CV tuning.
  * All tier bodies remain mounted (CSS expand/collapse)
@@ -232,7 +232,7 @@ export function TunePanel({
     <div
       className={`${styles.panel}${isOpen ? '' : ` ${styles.panelClosed}`}`}
       role="complementary"
-      aria-label="Tune for job panel"
+      aria-label="Apply to job panel"
     >
       {/* Toggle button — left-side arrow, flips when closed */}
       <button
@@ -267,10 +267,10 @@ export function TunePanel({
                   </svg>
                 ) : '1'}
               </span>
-              <span className={styles.tierTitle}>Save as Base CV</span>
+              <span className={styles.tierTitle}>Baseline CV</span>
               {tier1Complete && (
                 <span className={styles.tierSummary}>
-                  Base CV: {activeVersion?.name || baseName}
+                  {activeVersion?.name || baseName}
                 </span>
               )}
             </div>
@@ -301,7 +301,7 @@ export function TunePanel({
                   </svg>
                 ) : '2'}
               </span>
-              <span className={styles.tierTitle}>Job Details</span>
+              <span className={styles.tierTitle}>Target job</span>
               {tier2Complete && (
                 <span className={styles.tierSummary}>
                   {companyName}{roleName ? ` ${roleName}` : ''}{baselineScore ? ` ${Math.round(baselineScore)}%` : ''}
@@ -333,7 +333,7 @@ export function TunePanel({
               <span className={`${styles.stepNumber}${activeTier === 3 ? ` ${styles.active}` : ''}`}>
                 3
               </span>
-              <span className={styles.tierTitle}>Review Changes</span>
+              <span className={styles.tierTitle}>Pick changes</span>
             </div>
           </div>
 

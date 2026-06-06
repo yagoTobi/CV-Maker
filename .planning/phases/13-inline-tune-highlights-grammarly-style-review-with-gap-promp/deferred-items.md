@@ -29,17 +29,19 @@ to the changes that surfaced it; they're logged here for follow-up.
   - `useImport.test.ts` — 3 failures in "Test 4: JSON Import Link Label Derivation"
     (asserts that labels NOT starting with `http(s)://` are preserved verbatim, but
     code currently mutates them).
-  - `useDirectEditor.test.ts` — 1 failure: "removeBullet on last remaining bullet
-    does nothing (minimum 1 bullet)".
   - `SectionWrapper.test.tsx` — 1 failure: "clicking remove button applies
     sectionConfirming class to wrapper".
   - `entryFactories.test.ts` — 1 failure: "emptyEducationEntry returns
     EducationEntry with empty strings and empty details array".
 
-  All six failures reproduce on `main` without any of the 13-02 changes touching
+  The remaining failures reproduce on `main` without any of the 13-02 changes touching
   the offending modules. They are out of scope for 13-02 (SCOPE BOUNDARY: only
   auto-fix issues caused by current task changes). Route to a quick task or the
   feature owners.
+
+  Note: the old `useDirectEditor.test.ts` failure for "removeBullet on last
+  remaining bullet does nothing (minimum 1 bullet)" has since been cleared by the
+  empty-bullet editing UX quick fix.
 
 - **`vitest --reporter=basic` fails to load in this Vitest 4 toolchain.** The plan's
   acceptance command uses `--reporter=basic`; the executor dropped the flag and used

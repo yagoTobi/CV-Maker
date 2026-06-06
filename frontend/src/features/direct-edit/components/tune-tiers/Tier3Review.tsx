@@ -1,7 +1,7 @@
 /**
  * Tier3Review -- Review/accept/reject suggested changes tier body for TunePanel.
  *
- * Handles loading, error, empty, and populated states for the change review
+ * Handles loading, error, empty, and populated states for the application review
  * flow. Composes ChangeList directly (the ScoreHeader lives in TunePanel's
  * sticky section above, so it is NOT rendered here).
  *
@@ -123,7 +123,7 @@ export function Tier3Review({
             disabled={isSaving || appliedChanges.size === 0}
             type="button"
           >
-            {isSaving ? (<><span className={styles.spinner} /> Saving...</>) : 'Save Tailored CV'}
+            {isSaving ? (<><span className={styles.spinner} /> Saving...</>) : 'Save application'}
           </button>
         </div>
       )}
@@ -135,7 +135,7 @@ export function Tier3Review({
               <polyline points="20 6 9 17 4 12"/>
             </svg>
           </div>
-          <div className={styles.postSaveTitle}>Tailored CV saved</div>
+          <div className={styles.postSaveTitle}>Application CV saved</div>
           <div className={styles.postSaveActions}>
             <button
               className={styles.postSaveSecondary}
@@ -149,7 +149,7 @@ export function Tier3Review({
               onClick={onViewInDashboard}
               type="button"
             >
-              View in Dashboard
+              View applications
             </button>
           </div>
         </div>
