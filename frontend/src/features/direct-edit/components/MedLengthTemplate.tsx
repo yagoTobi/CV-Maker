@@ -48,7 +48,7 @@ export interface MedLengthTemplateProps {
   formData: CVFormData;
   readOnly?: boolean;
   onFieldChange: (path: string, value: string | SkillItem[]) => void;
-  onBulletAdd: (basePath: string, afterIndex: number) => void;
+  onBulletAdd: (basePath: string, afterIndex: number) => string | void;
   onBulletRemove: (basePath: string, index: number) => void;
   onAddEntry: (sectionKey: string) => void;
   onRemoveEntry: (sectionKey: string, index: number) => void;

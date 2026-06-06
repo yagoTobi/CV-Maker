@@ -22,7 +22,7 @@ interface EditableBulletListProps {
   bullets: BulletItem[];
   basePath: string;
   onBulletChange: (index: number, text: string) => void;
-  onBulletAdd: (afterIndex: number) => void;
+  onBulletAdd: (afterIndex: number) => string | void;
   onBulletRemove: (index: number) => void;
   onInput?: () => void;
   readOnly?: boolean;
@@ -63,8 +63,22 @@ export function EditableBulletList({
   activeChangeId,
 }: EditableBulletListProps) {
   const [hasFocus, setHasFocus] = useState(false);
+  const [emptyStarterHasText, setEmptyStarterHasText] = useState(false);
   const bulletRefs = useRef<Map<string, HTMLElement>>(new Map());
   const pendingFocusId = useRef<string | null>(null);
+
+  const addFirstBullet = useCallback(
+    (text: string) => {
+      const newId = onBulletAdd(-1);
+      if (newId) {
+        pendingFocusId.current = newId;
+      }
+      if (text.trim() !== '') {
+        onBulletChange(0, text);
+      }
+    },
+    [onBulletAdd, onBulletChange]
+  );
 
   // Focus management: after React re-renders with new bullets, focus the pending one
   useEffect(() => {
@@ -93,29 +107,58 @@ export function EditableBulletList({
         // Commit current text before adding (innerHTML for rich, textContent for plain)
         const el = e.currentTarget as HTMLElement;
         onBulletChange(index, rich ? (el.innerHTML ?? '') : (el.textContent ?? ''));
-        onBulletAdd(index);
-        // The new bullet will be at index+1; we need to know its ID
-        // after the state update. Set pending focus to be resolved in useEffect.
-        // The parent is expected to create the new bullet -- we set a flag that
-        // the next useEffect will handle focus.
+        const newId = onBulletAdd(index);
+        if (newId) {
+          pendingFocusId.current = newId;
+        }
       }
       if (
         e.key === 'Backspace' &&
         (e.currentTarget as HTMLElement).textContent === ''
       ) {
-        if (bullets.length > 1) {
-          e.preventDefault();
-          // Focus previous bullet after removal
-          const prevIndex = Math.max(0, index - 1);
-          const prevBullet = bullets[prevIndex === index ? index + 1 : prevIndex];
-          if (prevBullet) {
-            pendingFocusId.current = prevBullet.id;
-          }
-          onBulletRemove(index);
+        e.preventDefault();
+        // Focus previous bullet after removal when another bullet remains.
+        const prevIndex = Math.max(0, index - 1);
+        const prevBullet = bullets[prevIndex === index ? index + 1 : prevIndex];
+        if (prevBullet) {
+          pendingFocusId.current = prevBullet.id;
         }
+        onBulletRemove(index);
       }
     },
     [bullets, onBulletChange, onBulletAdd, onBulletRemove, rich]
+  );
+
+  const handleEmptyStarterKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const el = e.currentTarget;
+      const text = rich ? (el.innerHTML ?? '') : (el.textContent ?? '');
+      addFirstBullet((el.textContent ?? '').trim() === '' ? '' : text);
+      el.textContent = '';
+      setEmptyStarterHasText(false);
+    },
+    [addFirstBullet, rich]
+  );
+
+  const handleEmptyStarterBlur = useCallback(
+    (e: React.FocusEvent<HTMLDivElement>) => {
+      const el = e.currentTarget;
+      if ((el.textContent ?? '').trim() === '') return;
+      addFirstBullet(rich ? (el.innerHTML ?? '') : (el.textContent ?? ''));
+      el.textContent = '';
+      setEmptyStarterHasText(false);
+    },
+    [addFirstBullet, rich]
+  );
+
+  const handleEmptyStarterInput = useCallback(
+    (e: React.FormEvent<HTMLDivElement>) => {
+      setEmptyStarterHasText((e.currentTarget.textContent ?? '').trim() !== '');
+      onInput?.();
+    },
+    [onInput]
   );
 
   const setRef = useCallback(
@@ -157,6 +200,26 @@ export function EditableBulletList({
         }
       }}
     >
+      {bullets.length === 0 && (
+        <div className={styles.bulletItem}>
+          <span
+            className={`${styles.bulletMarker} ${emptyStarterHasText ? '' : styles.emptyStarterMarkerHidden}`}
+            data-empty-starter-marker
+            data-visible={emptyStarterHasText ? 'true' : 'false'}
+          />
+          <div
+            className={styles.emptyStarter}
+            contentEditable={rich ? 'true' : 'plaintext-only'}
+            suppressContentEditableWarning
+            data-field-path={`${basePath}[0]`}
+            data-placeholder="Add bullet..."
+            data-rich={rich ? 'true' : undefined}
+            onKeyDown={handleEmptyStarterKeyDown}
+            onBlur={handleEmptyStarterBlur}
+            onInput={handleEmptyStarterInput}
+          />
+        </div>
+      )}
       {bullets.map((bullet, i) => {
         // Compose highlightSpans for this bullet:
         //   1. Pre-supplied modify-tier spans (from highlightSpansByBulletId)

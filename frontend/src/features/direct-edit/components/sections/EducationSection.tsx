@@ -111,7 +111,7 @@ export const EducationSection = memo(function EducationSection({
                       />
                     </div>
                   )}
-                  {edu.details.length > 0 && (
+                  {(edu.details.length > 0 || !readOnly) && (
                     <EditableBulletList
                       bullets={edu.details}
                       basePath={`education[${i}].details`}
@@ -183,6 +183,18 @@ export const EducationSection = memo(function EducationSection({
                     readOnly={readOnly}
                   />
                 </div>
+                {!readOnly && (
+                  <EditableBulletList
+                    bullets={edu.details}
+                    basePath={`education[${i}].details`}
+                    onBulletChange={(bi, text) => onFieldChange(`education[${i}].details[${bi}]`, text)}
+                    onBulletAdd={(afterIdx) => onBulletAdd(`education[${i}].details`, afterIdx)}
+                    onBulletRemove={(bi) => onBulletRemove(`education[${i}].details`, bi)}
+                    onInput={onInput}
+                    readOnly={readOnly}
+                    rich={true}
+                  />
+                )}
               </div>
             </EntryWrapper>
           </React.Fragment>

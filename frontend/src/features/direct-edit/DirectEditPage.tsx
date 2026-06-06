@@ -256,7 +256,7 @@ export default function DirectEditPage() {
             formData={displayFormData}
             readOnly={isReadOnly}
             onFieldChange={isReadOnly ? noopFieldChange : updateField}
-            onBulletAdd={isReadOnly ? noop as (basePath: string, afterIndex: number) => void : addBullet}
+            onBulletAdd={isReadOnly ? noop as (basePath: string, afterIndex: number) => string | void : addBullet}
             onBulletRemove={isReadOnly ? noop as (basePath: string, index: number) => void : removeBullet}
             onAddEntry={isReadOnly ? noop as (sectionKey: string) => void : addEntry}
             onRemoveEntry={isReadOnly ? noop as (sectionKey: string, index: number) => void : removeEntry}

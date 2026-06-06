@@ -77,7 +77,7 @@ describe('EditableBulletList', () => {
     expect(onBulletRemove).toHaveBeenCalledWith(0);
   });
 
-  it('on Backspace keydown with empty text and only 1 bullet: does NOT call onBulletRemove', () => {
+  it('on Backspace keydown with empty text and only 1 bullet: calls onBulletRemove', () => {
     const onBulletRemove = vi.fn();
     const bullets: BulletItem[] = [
       { id: 'b1', text: '' },
@@ -95,7 +95,7 @@ describe('EditableBulletList', () => {
     firstBullet.textContent = '';
     fireEvent.keyDown(firstBullet, { key: 'Backspace' });
 
-    expect(onBulletRemove).not.toHaveBeenCalled();
+    expect(onBulletRemove).toHaveBeenCalledWith(0);
   });
 
   it('passes onInput to each EditableField', () => {
@@ -108,6 +108,67 @@ describe('EditableBulletList', () => {
     fireEvent.input(editableFields[0]);
 
     expect(onInput).toHaveBeenCalled();
+  });
+
+  it('renders a focusable starter row when there are no bullets', () => {
+    const { container } = render(
+      <EditableBulletList {...defaultProps} bullets={[]} />
+    );
+
+    const starter = container.querySelector('[data-field-path="workExperience[0].bullets[0]"]');
+    const marker = container.querySelector('[data-empty-starter-marker]');
+    expect(starter).not.toBeNull();
+    expect(starter?.getAttribute('data-placeholder')).toBe('Add bullet...');
+    expect(marker?.getAttribute('data-visible')).toBe('false');
+  });
+
+  it('shows the empty starter bullet marker as soon as the user types', () => {
+    const { container } = render(
+      <EditableBulletList {...defaultProps} bullets={[]} />
+    );
+    const starter = container.querySelector('[contenteditable]') as HTMLElement;
+    const marker = container.querySelector('[data-empty-starter-marker]');
+
+    starter.textContent = 'First bullet';
+    fireEvent.input(starter);
+
+    expect(marker?.getAttribute('data-visible')).toBe('true');
+  });
+
+  it('on Enter in empty starter: calls onBulletAdd(-1)', () => {
+    const onBulletAdd = vi.fn();
+    const { container } = render(
+      <EditableBulletList
+        {...defaultProps}
+        bullets={[]}
+        onBulletAdd={onBulletAdd}
+      />
+    );
+    const starter = container.querySelector('[contenteditable]') as HTMLElement;
+
+    fireEvent.keyDown(starter, { key: 'Enter' });
+
+    expect(onBulletAdd).toHaveBeenCalledWith(-1);
+  });
+
+  it('commits typed starter text as the first bullet on blur', () => {
+    const onBulletAdd = vi.fn();
+    const onBulletChange = vi.fn();
+    const { container } = render(
+      <EditableBulletList
+        {...defaultProps}
+        bullets={[]}
+        onBulletAdd={onBulletAdd}
+        onBulletChange={onBulletChange}
+      />
+    );
+    const starter = container.querySelector('[contenteditable]') as HTMLElement;
+
+    starter.textContent = 'Built the first item';
+    fireEvent.blur(starter);
+
+    expect(onBulletAdd).toHaveBeenCalledWith(-1);
+    expect(onBulletChange).toHaveBeenCalledWith(0, 'Built the first item');
   });
 
   it('renders with correct fieldPath for each bullet', () => {

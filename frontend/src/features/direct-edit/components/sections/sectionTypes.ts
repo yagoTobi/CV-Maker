@@ -5,7 +5,7 @@ import type { useSectionDrag } from '../../hooks/useSectionDrag';
 export interface SharedSectionProps {
   readOnly?: boolean;
   onFieldChange: (path: string, value: string | SkillItem[]) => void;
-  onBulletAdd: (basePath: string, afterIndex: number) => void;
+  onBulletAdd: (basePath: string, afterIndex: number) => string | void;
   onBulletRemove: (basePath: string, index: number) => void;
   onAddEntry: (sectionKey: string) => void;
   onRemoveEntry: (sectionKey: string, index: number) => void;
