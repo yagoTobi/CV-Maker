@@ -9,7 +9,7 @@ error scenarios, edge cases, and failure resilience that are NOT covered by:
 - test_cv_import_integration.py (tests via HTTP route, not direct function calls)
 
 Coverage areas:
-1. extract_from_pdf: Bedrock exceptions, empty/non-JSON/truncated responses, argument passing
+1. extract_from_pdf: local text path, Bedrock exceptions, empty/non-JSON/truncated responses, argument passing
 2. extract_from_docx: python-docx failures, empty text, Bedrock exceptions, argument verification
 3. extract_from_json: invalid UTF-8, missing fields, Pydantic validation, edge cases
 4. _extract_docx_text: mock-based structural tests for headings, lists, bold, tables, indents
@@ -32,6 +32,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from services.cv_extractor import (
     CVImportResult,
+    EXTRACTION_MODEL_ID,
     ImportSummary,
     _extract_docx_text,
     extract_from_docx,
@@ -121,10 +122,30 @@ def _make_valid_response(**overrides) -> str:
 
 
 # ===========================================================================
-# 1. extract_from_pdf — mocked Bedrock responses
+# 1. extract_from_pdf — local text path + mocked Bedrock responses
 # ===========================================================================
 class TestExtractFromPdf:
     """Tests for PDF extraction with mocked Bedrock client."""
+
+    @patch("services.cv_extractor.bedrock_client")
+    @patch("services.cv_extractor._extract_pdf_text")
+    def test_text_based_pdf_uses_local_text_then_chat(
+        self, mock_extract_pdf_text, mock_bedrock
+    ):
+        mock_extract_pdf_text.return_value = "Jane Doe\nSenior Engineer at Acme"
+        mock_bedrock.chat.return_value = _make_valid_response()
+
+        result = run(extract_from_pdf(b"%PDF-1.4 text pdf" + b"x" * 100))
+
+        assert result.success is True
+        assert result.source == "pdf"
+        mock_extract_pdf_text.assert_called_once()
+        mock_bedrock.chat.assert_called_once()
+        mock_bedrock.chat_with_document.assert_not_called()
+        call_kwargs = mock_bedrock.chat.call_args.kwargs
+        assert call_kwargs["stream"] is False
+        assert call_kwargs["model_id"] == EXTRACTION_MODEL_ID
+        assert "Jane Doe" in call_kwargs["messages"][0]["content"]
 
     @patch("services.cv_extractor.bedrock_client")
     def test_successful_extraction(self, mock_bedrock):
@@ -250,6 +271,7 @@ class TestExtractFromPdf:
         assert call_kwargs["document_bytes"] == pdf_bytes
         assert call_kwargs["document_media_type"] == "application/pdf"
         assert call_kwargs["max_tokens"] == 8192
+        assert call_kwargs["model_id"] == EXTRACTION_MODEL_ID
 
     @patch("services.cv_extractor.bedrock_client")
     def test_error_result_has_no_form_data(self, mock_bedrock):
@@ -444,6 +466,7 @@ class TestExtractFromDocx:
         call_kwargs = mock_bedrock.chat.call_args.kwargs
         assert call_kwargs["stream"] is False
         assert call_kwargs["max_tokens"] == 8192
+        assert call_kwargs["model_id"] == EXTRACTION_MODEL_ID
         # The user prompt should include the extracted text
         messages = call_kwargs["messages"]
         assert len(messages) == 1
