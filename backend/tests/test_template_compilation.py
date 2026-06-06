@@ -28,7 +28,7 @@ from typing import Optional
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from jinja2 import Environment, FileSystemLoader
-from routes.cv_versions import CVFormData, BulletItem
+from models.cv import CVFormData, BulletItem
 from routes.generate_latex import latex_escape, latex_url_escape, _build_personal_items, _flatten_for_template
 from services.latex_compiler import LaTeXCompiler, CompileResult
 from config.templates import get_template

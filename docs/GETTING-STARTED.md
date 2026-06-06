@@ -68,7 +68,7 @@ AWS_DEFAULT_REGION=us-east-1
 AWS_ACCESS_KEY_ID=your-access-key-here
 AWS_SECRET_ACCESS_KEY=your-secret-key-here
 
-# Storage — "file" stores CV versions as JSON files in user_data/
+# Storage — "file" stores CV versions as JSON files in backend/user_data/
 STORAGE_BACKEND=file
 ```
 

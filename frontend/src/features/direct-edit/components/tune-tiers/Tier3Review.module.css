@@ -1,0 +1,189 @@
+/* Tier3Review -- Review/accept/reject changes tier body */
+
+/* Loading state */
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.spinnerLg {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--border-color);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Error state */
+.errorState {
+  padding: 16px;
+  color: var(--error);
+  font-size: 13px;
+}
+
+/* Empty state */
+.emptyState {
+  text-align: center;
+  padding: 48px 16px;
+}
+
+.emptyHeading {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.emptyBody {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* All-reviewed banner */
+.reviewedBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--success-light);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--success);
+  margin-top: 12px;
+}
+
+/* Save bar at bottom — full-bleed, sticks to scroll bottom */
+.saveBarSticky {
+  position: sticky;
+  bottom: -16px; /* offset panelScroll padding-bottom */
+  z-index: 4;
+  padding: 16px;
+  margin: 16px -16px -16px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  box-shadow: 0 -4px 12px var(--bg-secondary);
+}
+
+.primaryBtn {
+  width: 100%;
+  padding: 10px 16px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 150ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.primaryBtn:hover {
+  background: var(--accent-hover);
+}
+
+.primaryBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Prominent save button when all changes reviewed */
+.primaryBtnReady {
+  background: var(--success);
+  box-shadow: 0 0 0 3px var(--success-light);
+}
+
+.primaryBtnReady:hover {
+  background: #059669;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+/* Post-save prompt */
+.postSavePrompt {
+  text-align: center;
+  padding: 24px 16px;
+  margin-top: 16px;
+}
+
+.postSaveIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--success-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+}
+
+.postSaveTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+.postSaveActions {
+  display: flex;
+  gap: 8px;
+}
+
+.postSaveSecondary {
+  flex: 1;
+  padding: 10px 16px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.postSaveSecondary:hover {
+  background: var(--bg-tertiary);
+}
+
+.postSavePrimary {
+  flex: 1;
+  padding: 10px 16px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.postSavePrimary:hover {
+  background: var(--accent-hover);
+}

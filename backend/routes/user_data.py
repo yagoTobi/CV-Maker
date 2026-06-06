@@ -4,8 +4,7 @@ from typing import List, Optional, Dict, Any
 import logging
 
 from dependencies import get_current_user
-from services.storage import StorageBackend
-from services.storage_factory import get_storage
+from services.storage import StorageBackend, get_storage
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

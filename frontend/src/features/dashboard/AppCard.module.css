@@ -1,0 +1,281 @@
+/* Job application card (child of base CV) */
+.appCard {
+  display: flex;
+  align-items: center;
+  padding: 0.875rem 1.25rem 0.875rem 3rem;
+  border-top: 1px solid var(--border-color);
+  transition: background 0.12s ease;
+}
+
+.appCard:first-child {
+  border-top: none;
+}
+
+.appCard:hover {
+  background: var(--bg-tertiary);
+}
+
+.appInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.appRole {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: text;
+}
+
+.appMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.125rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.appMeta .separator {
+  color: var(--border-strong);
+}
+
+/* Match score badges */
+.scoreBadge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.125rem 0.375rem;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.scoreBadge.good {
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.scoreBadge.medium {
+  background: var(--warning-light);
+  color: var(--warning);
+}
+
+.scoreBadge.low {
+  background: var(--error-light);
+  color: var(--error);
+}
+
+.scoreDelta {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--success);
+  margin-left: -0.25rem;
+}
+
+/* App card actions */
+.appActions {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-left: 0.75rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.appCard:hover .appActions {
+  opacity: 1;
+}
+
+.appOpenBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.625rem;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.appOpenBtn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.appOpenBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Download button */
+.downloadBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.375rem;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.downloadBtn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.downloadBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Move dropdown */
+.moveContainer {
+  position: relative;
+}
+
+.moveBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.375rem;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.moveBtn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.moveDropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  min-width: 200px;
+  z-index: 20;
+  padding: 0.25rem;
+  animation: fadeIn 0.12s ease-out;
+}
+
+.moveDropdownTitle {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  padding: 0.5rem 0.75rem 0.25rem;
+}
+
+.moveOption {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.moveOption:hover {
+  background: var(--bg-tertiary);
+}
+
+.moveOption.active {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.moveOptionUngroup {
+  composes: moveOption;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-color);
+  margin-top: 0.25rem;
+  padding-top: 0.625rem;
+}
+
+.appDeleteBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.375rem;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.appDeleteBtn:hover:not(:disabled) {
+  background: var(--error-light);
+  color: var(--error);
+  border-color: var(--error);
+}
+
+.appDeleteBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Spinners */
+.spinnerSm {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+.spinnerSmDark {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 640px) {
+  .appCard {
+    padding-left: 2rem;
+  }
+
+  .appActions {
+    opacity: 1;
+  }
+}

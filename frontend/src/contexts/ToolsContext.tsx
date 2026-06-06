@@ -5,7 +5,7 @@ import { useImport } from '../hooks/useImport';
 import { api } from '../services/api';
 import { useJobContext } from './JobContext';
 import { useCVContext } from './CVContext';
-import type { SaveVersionData } from '../features/dashboard/VersionSwitcher';
+import type { SaveVersionData } from '../features/dashboard';
 import type { CVVersion, CVVersionMeta } from '../types';
 
 interface ToolsContextValue {

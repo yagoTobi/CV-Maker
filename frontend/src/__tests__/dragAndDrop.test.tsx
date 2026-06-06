@@ -15,8 +15,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act, render, screen, fireEvent } from '@testing-library/react';
 import { useSectionDrag } from '../features/direct-edit/hooks/useSectionDrag';
 import { useEntryDrag } from '../features/direct-edit/hooks/useEntryDrag';
-import { SectionWrapper } from '../features/direct-edit/components/SectionWrapper';
-import { EntryWrapper } from '../features/direct-edit/components/EntryWrapper';
+import { SectionWrapper } from '../features/direct-edit/components/editor-primitives/SectionWrapper';
+import { EntryWrapper } from '../features/direct-edit/components/editor-primitives/EntryWrapper';
 
 // --- Helpers ---
 

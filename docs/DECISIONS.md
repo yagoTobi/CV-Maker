@@ -537,17 +537,17 @@ The codebase needed to support both local file-based storage (for development) a
 Implement a storage abstraction layer using Python's Protocol (structural typing) with pluggable backends.
 
 **Architecture:**
-1. **StorageBackend Protocol** (`services/storage.py`): 11-method async interface defining all user data operations
+1. **StorageBackend Protocol** (`services/storage/storage.py`): 11-method async interface defining all user data operations
    - CV versions: `list_versions`, `get_version`, `create_version`, `update_version`, `delete_version`, `update_children_of_deleted_parent`
    - User profile: `get_profile`, `save_profile`, `delete_profile`
    - Voice profile: `get_voice_profile`, `save_voice_profile`
-2. **FileStorage** (`services/file_storage.py`): Wraps existing JSON file I/O with zero behavior change
+2. **FileStorage** (`services/storage/file_storage.py`): Wraps existing JSON file I/O with zero behavior change
    - `user_id="local"` maps to flat `user_data/` directory (backward compatible)
    - Other user IDs get namespaced: `user_data/{user_id}/`
-3. **DynamoStorage** (`services/dynamo_storage.py`): DynamoDB single-table implementation
+3. **DynamoStorage** (`services/storage/dynamo_storage.py`): DynamoDB single-table implementation
    - Composite keys: `PK=USER#{user_id}`, `SK=VERSION#{version_id} | PROFILE | VOICE_PROFILE`
    - PAY_PER_REQUEST billing, no GSIs needed
-4. **Storage Factory** (`services/storage_factory.py`): `get_storage()` dependency
+4. **Storage Factory** (`services/storage/storage_factory.py`): `get_storage()` dependency
    - Reads `STORAGE_BACKEND` env var (`file` | `dynamodb`)
    - Singleton via `@lru_cache`
 5. **User ID dependency** (`dependencies.py`): `get_current_user()` reads `X-User-Id` header, defaults to `"local"`

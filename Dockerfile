@@ -31,13 +31,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Layer 3: Application code
 WORKDIR /app
 COPY backend/ /app/backend/
-COPY cv-templates/ /app/cv-templates/
 
 # Non-root user + writable data dirs
 RUN groupadd --gid 1000 appuser \
     && useradd --uid 1000 --gid appuser --shell /bin/bash --create-home appuser \
-    && mkdir -p /app/user_data/versions /app/backend/user_data \
-    && chown -R appuser:appuser /app/user_data /app/backend/user_data \
+    && mkdir -p /app/backend/user_data/versions \
+    && chown -R appuser:appuser /app/backend/user_data \
     && rm -rf /app/backend/venv /app/backend/__pycache__ /app/backend/tests \
               /app/backend/.env /app/backend/.env.example /app/backend/.pytest_cache \
     && find /app -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true

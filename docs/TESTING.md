@@ -240,6 +240,29 @@ def test_compilation(self, compiler):
     ...
 ```
 
+## Known Bug Documentation Pattern (Backend)
+
+When a test intentionally documents a known bug rather than asserting correct behavior, use a `BUG:` prefix in the docstring and use `pytest.raises` to assert the current (broken) behavior. This makes it clear to future readers what should be fixed:
+
+```python
+def test_json_array_instead_of_object_raises_unhandled_error(self):
+    """BUG: A JSON array is valid JSON but not the expected dict shape.
+    The function calls data.pop("_confidence", default) which fails on a
+    list because list.pop() only accepts an index, not a key+default.
+    This raises an unhandled TypeError.
+
+    This is a real bug -- the function should guard against non-dict JSON
+    responses (e.g., with `if not isinstance(data, dict): return failure`).
+    """
+    raw = "[1, 2, 3]"
+    with pytest.raises(TypeError):
+        _parse_extraction_response(raw, source="pdf")
+```
+
+This pattern appears in `backend/tests/test_cv_extractor.py`.
+
+---
+
 ## Coverage Requirements
 
 No coverage threshold is configured for either the frontend or backend test suites. Coverage collection is not set up in the Vitest or pytest configurations.

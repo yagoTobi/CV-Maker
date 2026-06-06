@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import type { CVVersion, CVVersionMeta } from "../../types";
-import styles from "./VersionSwitcher.module.css";
+import styles from "./SaveCVModal.module.css";
 
 export interface SaveVersionData {
   name: string;

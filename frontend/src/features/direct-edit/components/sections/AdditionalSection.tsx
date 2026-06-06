@@ -1,9 +1,9 @@
 import React, { memo } from 'react';
-import { EditableField } from '../EditableField';
-import { EditableBulletList } from '../EditableBulletList';
-import { SectionWrapper } from '../SectionWrapper';
-import { EntryWrapper } from '../EntryWrapper';
-import { DropLine } from '../DropLine';
+import { EditableField } from '../editor-primitives/EditableField';
+import { EditableBulletList } from '../editor-primitives/EditableBulletList';
+import { SectionWrapper } from '../editor-primitives/SectionWrapper';
+import { EntryWrapper } from '../editor-primitives/EntryWrapper';
+import { DropLine } from '../editor-primitives/DropLine';
 import { EntryDragContainer } from './EntryDragContainer';
 import { DropZoneTail } from './DropZoneTail';
 import { DateRange } from './DateRange';

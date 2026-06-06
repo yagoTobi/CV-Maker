@@ -1,0 +1,100 @@
+/* EditableField -- Focus highlight (D-01) and placeholder styling (EDIT-04) */
+
+.editableField {
+  outline: none;
+  border-radius: 2px;
+  transition: background-color 0.15s ease;
+  padding: 1px 2px;
+  margin: -1px -2px;
+  cursor: text;
+  min-height: 1.2em;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.editableField:focus {
+  background-color: rgba(59, 130, 246, 0.08);
+}
+
+.editableField:hover:not(:focus) {
+  background-color: rgba(59, 130, 246, 0.04);
+}
+
+.editableField:empty::before {
+  content: attr(data-placeholder);
+  color: #94A3B8;
+  font-style: italic;
+}
+
+.editableField:focus:empty::before {
+  color: transparent;
+}
+
+/* Rich text formatting styles */
+.editableField strong,
+.editableField b {
+  font-weight: 700;
+}
+
+.editableField em,
+.editableField i {
+  font-style: italic;
+}
+
+.editableField a[data-editor-link] {
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: text;
+}
+
+/* Phase 13: inline highlight spans (D-13/D-14)
+   Wavy underline per RESEARCH §Pattern 3; severity-tier color via UI-SPEC §Color table.
+   Applied to per-span <span> wrappers injected by renderHighlightedDom().
+*/
+.highlight {
+  text-decoration-line: underline;
+  text-decoration-style: wavy;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  text-decoration-skip-ink: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.tierStrong {
+  text-decoration-color: var(--error);
+  color: inherit;
+}
+
+.tierMinor {
+  text-decoration-color: var(--accent);
+  color: inherit;
+}
+
+.tierAdd {
+  text-decoration-color: var(--success);
+  color: var(--success);
+}
+
+.tierDelete {
+  text-decoration: line-through;
+  text-decoration-color: var(--error);
+  color: var(--error);
+}
+
+/* Active highlight (popover open) -- adds tinted background per D-14. */
+.highlight.active.tierStrong {
+  background-color: var(--error-light);
+}
+
+.highlight.active.tierMinor {
+  background-color: var(--accent-light);
+}
+
+.highlight.active.tierAdd {
+  background-color: var(--success-light);
+}
+
+.highlight.active.tierDelete {
+  background-color: var(--error-light);
+}

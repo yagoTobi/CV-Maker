@@ -1,0 +1,58 @@
+/* EditableBulletList -- Bullet layout matching resume.cls list style */
+
+.bulletList {
+  list-style: none;
+  padding-left: 1em;
+}
+
+.bulletItem {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 0;
+  /* LaTeX \itemsep -0.4em compresses inter-item gap, but web line-height
+     already renders tighter than LaTeX. Zero margin avoids text bleed. */
+}
+
+.bulletMarker {
+  margin-right: 0.5em;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.bulletMarker::before {
+  content: "\00B7";
+}
+
+.hint {
+  color: var(--text-muted, #94A3B8);
+  font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+  font-size: 10px;
+  padding: 2px 0 0 1.5em;
+  user-select: none;
+  opacity: 0.7;
+}
+
+/* Phase 13 D-15: ghost bullet preview for `add`-type TailorChange. */
+.ghostBulletItem {
+  font-style: italic;
+  color: var(--text-muted);
+  background-color: var(--success-light);
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  user-select: none;
+}
+
+.ghostBulletItem .bulletMarker::before {
+  content: '';
+}
+
+.ghostBulletMarker {
+  font-weight: 600;
+  color: var(--success);
+  margin-right: 4px;
+  font-style: normal;
+}
+
+.ghostBulletText {
+  font-style: italic;
+}

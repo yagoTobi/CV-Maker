@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppContext } from '../../contexts/AppContext';
+import { useCVContext } from '../../contexts/CVContext';
+import { useToolsContext } from '../../contexts/ToolsContext';
 import styles from './TemplateSelector.module.css';
 
 export interface Template {
@@ -14,7 +15,8 @@ const SUPPORTED_TEMPLATES = new Set(['med-length-proff-cv']);
 
 export function TemplateSelector() {
   const navigate = useNavigate();
-  const { templates, setSelectedTemplateForBuild } = useAppContext();
+  const { setSelectedTemplateForBuild } = useCVContext();
+  const { templates } = useToolsContext();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 

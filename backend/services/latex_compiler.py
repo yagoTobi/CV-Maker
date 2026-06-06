@@ -43,7 +43,7 @@ class LaTeXCompiler:
         self.pdflatex_path = shutil.which("pdflatex") or "/Library/TeX/texbin/pdflatex"
         self.xelatex_path = shutil.which("xelatex") or "/Library/TeX/texbin/xelatex"
         self.templates_dir = os.path.join(
-            os.path.dirname(__file__), "..", "..", "cv-templates"
+            os.path.dirname(__file__), "..", "latex_templates", "_source"
         )
         # Compile dangerous patterns once
         self._dangerous_regex = re.compile(

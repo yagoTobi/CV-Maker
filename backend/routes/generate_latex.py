@@ -5,7 +5,7 @@ import logging
 import os
 import re
 
-from routes.cv_versions import CVFormData
+from models.cv import CVFormData
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

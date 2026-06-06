@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
-import { EditableField } from '../features/direct-edit/components/EditableField';
+import { EditableField } from '../features/direct-edit/components/editor-primitives/EditableField';
 
 describe('EditableField', () => {
   const defaultProps = {
@@ -184,5 +184,174 @@ describe('EditableField', () => {
     const { container } = render(<EditableField {...defaultProps} />);
     const el = container.firstElementChild as HTMLElement;
     expect(el.classList.contains('editableField')).toBe(true);
+  });
+
+  describe('highlightSpans (Phase 13 D-13/D-14/D-16)', () => {
+    it('injects a <span data-change-id data-severity> wrapping the offset range when blurred', () => {
+      const { container } = render(
+        <EditableField
+          {...defaultProps}
+          value="Hello world"
+          highlightSpans={[
+            { changeId: 'c1', severity: 'minor', isActive: false, startOffset: 0, endOffset: 5 },
+          ]}
+        />
+      );
+      const el = container.firstElementChild as HTMLElement;
+      const span = el.querySelector('span[data-change-id="c1"]');
+      expect(span).not.toBeNull();
+      expect(span!.getAttribute('data-severity')).toBe('minor');
+      expect(span!.textContent).toBe('Hello');
+      // Tail text node still present
+      expect(el.textContent).toBe('Hello world');
+    });
+
+    it('focusing the field strips highlight spans (innerHTML becomes plain text)', () => {
+      const { container } = render(
+        <EditableField
+          {...defaultProps}
+          value="Hello world"
+          highlightSpans={[
+            { changeId: 'c1', severity: 'strong', isActive: true, startOffset: 0, endOffset: 5 },
+          ]}
+        />
+      );
+      const el = container.firstElementChild as HTMLElement;
+      // Pre-focus: span exists
+      expect(el.querySelector('span[data-change-id="c1"]')).not.toBeNull();
+
+      fireEvent.focus(el);
+      // Post-focus: spans flattened to plain text
+      expect(el.querySelector('span[data-change-id="c1"]')).toBeNull();
+      expect(el.textContent).toBe('Hello world');
+    });
+
+    it('blurring the field re-injects highlight spans on next render pass', () => {
+      const spans = [
+        { changeId: 'c1', severity: 'minor' as const, isActive: false, startOffset: 6, endOffset: 11 },
+      ];
+      const { container, rerender } = render(
+        <EditableField {...defaultProps} value="Hello world" highlightSpans={spans} />
+      );
+      const el = container.firstElementChild as HTMLElement;
+      fireEvent.focus(el);
+      // After focus, spans are stripped (cursor-safety contract).
+      expect(el.querySelector('span[data-change-id="c1"]')).toBeNull();
+
+      fireEvent.blur(el);
+      // After blur, the next re-render with new highlightSpans reference re-injects the span.
+      rerender(<EditableField {...defaultProps} value="Hello world" highlightSpans={[...spans]} />);
+      expect(el.querySelector('span[data-change-id="c1"]')).not.toBeNull();
+    });
+
+    it('first input event after a highlight render fires onAutoDismiss exactly once (D-16)', () => {
+      const onAutoDismiss = vi.fn();
+      const { container } = render(
+        <EditableField
+          {...defaultProps}
+          value="Hello world"
+          onAutoDismiss={onAutoDismiss}
+          highlightSpans={[
+            { changeId: 'c1', severity: 'strong', isActive: true, startOffset: 0, endOffset: 5 },
+          ]}
+        />
+      );
+      const el = container.firstElementChild as HTMLElement;
+
+      fireEvent.input(el);
+      expect(onAutoDismiss).toHaveBeenCalledTimes(1);
+      expect(onAutoDismiss).toHaveBeenCalledWith('c1');
+
+      // Subsequent inputs do NOT re-fire (armed flag is consumed).
+      fireEvent.input(el);
+      fireEvent.input(el);
+      expect(onAutoDismiss).toHaveBeenCalledTimes(1);
+    });
+
+    it('does NOT fire onAutoDismiss when highlightSpans is empty', () => {
+      const onAutoDismiss = vi.fn();
+      const { container } = render(
+        <EditableField
+          {...defaultProps}
+          value="Hello"
+          onAutoDismiss={onAutoDismiss}
+          highlightSpans={[]}
+        />
+      );
+      const el = container.firstElementChild as HTMLElement;
+      fireEvent.input(el);
+      expect(onAutoDismiss).not.toHaveBeenCalled();
+    });
+
+    it('preserves existing focus contract: highlights NOT injected while focused (cursor safety)', () => {
+      const { container, rerender } = render(
+        <EditableField {...defaultProps} value="Hello" />
+      );
+      const el = container.firstElementChild as HTMLElement;
+      fireEvent.focus(el);
+      // Now provide highlightSpans while focused.
+      rerender(
+        <EditableField
+          {...defaultProps}
+          value="Hello"
+          highlightSpans={[
+            { changeId: 'c1', severity: 'minor', isActive: false, startOffset: 0, endOffset: 3 },
+          ]}
+        />
+      );
+      // While focused, no <span> wrapper must be injected — cursor safety preserved.
+      expect(el.querySelector('span[data-change-id="c1"]')).toBeNull();
+    });
+
+    it('span carries severity-tier CSS class (e.g. tierMinor for severity=minor)', () => {
+      const { container } = render(
+        <EditableField
+          {...defaultProps}
+          value="Hello"
+          highlightSpans={[
+            { changeId: 'c1', severity: 'minor', isActive: false, startOffset: 0, endOffset: 5 },
+          ]}
+        />
+      );
+      const el = container.firstElementChild as HTMLElement;
+      const span = el.querySelector('span[data-change-id="c1"]') as HTMLElement;
+      expect(span).not.toBeNull();
+      expect(span.classList.contains('highlight')).toBe(true);
+      expect(span.classList.contains('tierMinor')).toBe(true);
+    });
+
+    it('isActive=true adds the active class to the span', () => {
+      const { container } = render(
+        <EditableField
+          {...defaultProps}
+          value="Hello"
+          highlightSpans={[
+            { changeId: 'c1', severity: 'strong', isActive: true, startOffset: 0, endOffset: 5 },
+          ]}
+        />
+      );
+      const span = container.querySelector('span[data-change-id="c1"]') as HTMLElement;
+      expect(span.classList.contains('active')).toBe(true);
+      expect(span.classList.contains('tierStrong')).toBe(true);
+    });
+
+    it('does NOT use innerHTML string concat (T-13-02-01: per-span text is escaped via createTextNode)', () => {
+      // Craft a value containing HTML special chars that would be parsed if injected via innerHTML.
+      const value = '<script>alert(1)</script>';
+      const { container } = render(
+        <EditableField
+          {...defaultProps}
+          value={value}
+          highlightSpans={[
+            { changeId: 'c1', severity: 'strong', isActive: false, startOffset: 0, endOffset: value.length },
+          ]}
+        />
+      );
+      const el = container.firstElementChild as HTMLElement;
+      const span = el.querySelector('span[data-change-id="c1"]') as HTMLElement;
+      // The literal text MUST be visible as text — no <script> child.
+      expect(span.textContent).toBe(value);
+      expect(el.querySelector('script')).toBeNull();
+    });
   });
 });

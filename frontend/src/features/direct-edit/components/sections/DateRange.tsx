@@ -1,4 +1,4 @@
-import { EditableField } from '../EditableField';
+import { EditableField } from '../editor-primitives/EditableField';
 import type { SkillItem } from '../../../../types';
 import styles from '../MedLengthTemplate.module.css';
 

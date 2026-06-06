@@ -75,7 +75,7 @@ TEMPLATES: dict[str, TemplateConfig] = {
 
 To add a new template, add an entry to this dictionary with the template's folder name, LaTeX engine (`pdflatex` or `xelatex`), class file, and any extra support files or font directories.
 
-### AI Model Selection (`backend/services/bedrock.py`)
+### AI Model Selection (`backend/services/ai/bedrock.py`)
 
 Model IDs are defined as module-level constants:
 
@@ -87,7 +87,7 @@ Model IDs are defined as module-level constants:
 
 The default instance model (`BedrockClient.model_id`) is Haiku 3.5 (`us.anthropic.claude-3-5-haiku-20241022-v1:0`), used as a fallback when no `model_id` argument is passed to the `chat()` method.
 
-### LLM Response Cache (`backend/services/llm_cache.py`)
+### LLM Response Cache (`backend/services/ai/llm_cache.py`)
 
 An in-memory TTL cache is used to avoid redundant AI calls for match analysis and tailor endpoints:
 
@@ -141,7 +141,7 @@ All other settings have sensible defaults and the application runs without them:
 |---|---|
 | `CORS_ORIGINS` | Allows `localhost:5173` and `127.0.0.1:5173` (Vite dev server). |
 | `AWS_DEFAULT_REGION` | Defaults to `us-east-1`. |
-| `STORAGE_BACKEND` | Defaults to `file` (JSON files in `user_data/versions/`). |
+| `STORAGE_BACKEND` | Defaults to `file` (JSON files in `backend/user_data/versions/`). |
 | `VITE_API_URL` | Defaults to `http://localhost:8000/api`. |
 | `VITE_WS_URL` | Derived from `VITE_API_URL` by replacing the protocol. |
 | `TAILOR_MODEL_ID` | Defaults to Haiku for speed-optimized tailor suggestions. |
@@ -153,10 +153,10 @@ Defaults are defined inline in the source code using `os.getenv("VAR", "default"
 | Variable | Default Value | Defined In |
 |---|---|---|
 | `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | `backend/main.py:11` |
-| `AWS_DEFAULT_REGION` | `us-east-1` | `backend/services/bedrock.py:23`, `backend/services/dynamo_storage.py:19` |
-| `STORAGE_BACKEND` | `file` | `backend/services/storage_factory.py:9` |
-| `DYNAMODB_TABLE_NAME` | `cv-maker` | `backend/services/dynamo_storage.py:14` |
-| `TAILOR_MODEL_ID` | `us.anthropic.claude-haiku-4-5-20251001-v1:0` (value of `MODEL_HAIKU`) | `backend/services/bedrock.py:18` |
+| `AWS_DEFAULT_REGION` | `us-east-1` | `backend/services/ai/bedrock.py:23`, `backend/services/storage/dynamo_storage.py:19` |
+| `STORAGE_BACKEND` | `file` | `backend/services/storage/storage_factory.py:9` |
+| `DYNAMODB_TABLE_NAME` | `cv-maker` | `backend/services/storage/dynamo_storage.py:14` |
+| `TAILOR_MODEL_ID` | `us.anthropic.claude-haiku-4-5-20251001-v1:0` (value of `MODEL_HAIKU`) | `backend/services/ai/bedrock.py:18` |
 | `VITE_API_URL` | `http://localhost:8000/api` | `frontend/src/services/api.ts:5` |
 | `VITE_WS_URL` | *(derived)* | `frontend/src/hooks/useVoiceInterview.ts:14` |
 
@@ -199,7 +199,7 @@ Variables with `${VAR:-default}` syntax are read from the host environment or a 
 
 Docker Compose also provisions:
 
-- **`cv-maker-data` volume**: Persistent storage for `user_data/` (version JSON files, profiles).
+- **`cv-maker-data` volume**: Persistent storage for `backend/user_data/` (version JSON files, profiles).
 - **`dynamodb-data` volume**: Persistent storage for DynamoDB Local data files.
 
 ### Production Deployment
@@ -237,5 +237,5 @@ Several application-level settings are defined as constants in the source code a
 | `ALLOWED_EXTENSIONS` | `.pdf`, `.docx`, `.json` | `backend/routes/cv_import.py:15` | Accepted file types for CV import |
 | Axios timeout | 30,000 ms (30 seconds) | `frontend/src/services/api.ts:9` | Default HTTP request timeout |
 | LaTeX compilation timeout | 90 seconds | `backend/services/latex_compiler.py:113` | Maximum time for a single LaTeX compilation pass |
-| LLM cache maxsize | 256 entries | `backend/services/llm_cache.py:6` | Maximum cached AI responses |
-| LLM cache TTL | 3,600 seconds (1 hour) | `backend/services/llm_cache.py:6` | Time before cached AI responses expire |
+| LLM cache maxsize | 256 entries | `backend/services/ai/llm_cache.py:6` | Maximum cached AI responses |
+| LLM cache TTL | 3,600 seconds (1 hour) | `backend/services/ai/llm_cache.py:6` | Time before cached AI responses expire |

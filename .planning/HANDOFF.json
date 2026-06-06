@@ -1,0 +1,104 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-05-26T11:55:00.000Z",
+  "context": "quick-task-multi-tranche",
+  "phase": null,
+  "phase_name": "Repo hygiene refactor — 5 tranches",
+  "phase_dir": ".planning/quick/",
+  "plan": 5,
+  "task": 5,
+  "total_tasks": 5,
+  "status": "complete",
+  "completed_tasks": [
+    {
+      "id": 1,
+      "name": "Tranche 1 — gitignore audit, ROADMAP dedupe, archive done phases/quicks, fix stale CLAUDE.md hook ref",
+      "status": "done",
+      "commit": "be48607",
+      "summary_path": ".planning/quick/260524-wk2-repo-hygiene-tranche-1-gitignore-runtime/260524-wk2-SUMMARY.md"
+    },
+    {
+      "id": 2,
+      "name": "Tranche 2 — consolidate user_data/ and cv-templates/ into backend/",
+      "status": "done",
+      "commit": "d1f1f59",
+      "summary_path": ".planning/quick/260524-ws1-repo-hygiene-tranche-2-directory-consoli/260524-ws1-SUMMARY.md"
+    },
+    {
+      "id": 3,
+      "name": "Tranche 3 — frontend/src/features/direct-edit/components/ regrouped into change-review/tune-tiers/editor-primitives/dialogs",
+      "status": "done",
+      "commit": "9e2bacb"
+    },
+    {
+      "id": 4,
+      "name": "Tranche 4 — backend/services/ regrouped into storage/voice/ai subpackages",
+      "status": "done",
+      "commit": "45d4416"
+    },
+    {
+      "id": 5,
+      "name": "Tranche 5 — frontend/src/hooks/ feature-coupling (useTailor → direct-edit, useVoiceInterview → voice-widget)",
+      "status": "done",
+      "commit": "29e7ac4"
+    }
+  ],
+  "remaining_tasks": [],
+  "blockers": [
+    {
+      "description": "16 template-rendering tests fail with 'No filter named html_latex' — pre-existing, Phase 13 in-flight work. Carried unchanged across all 5 tranches; never attributed to hygiene refactor.",
+      "type": "external",
+      "workaround": "n/a — refactor complete; this stays open against Phase 13."
+    }
+  ],
+  "human_actions_pending": [
+    {
+      "action": "Docker volume migration on existing deployments",
+      "context": "Tranche 2 moved cv-maker-data mount target from /app/user_data to /app/backend/user_data. Documented in .planning/quick/260524-ws1-*/260524-ws1-SUMMARY.md. Local dev unaffected.",
+      "blocking": false
+    }
+  ],
+  "decisions": [
+    {
+      "decision": "Full move accepting breaking deployment change",
+      "rationale": "User chose 'Full move, accept breaking' over symlink/compat-shim. Single atomic commit per tranche, no half-states.",
+      "phase": "tranche-2"
+    },
+    {
+      "decision": "user_data/ → backend/user_data/ (option 3)",
+      "rationale": "User picked option 3: live alongside the code that owns it. backend/user_data/voice_profile.json was already stranded there.",
+      "phase": "tranche-2"
+    },
+    {
+      "decision": "cv-templates/ → backend/latex_templates/_source/",
+      "rationale": "Co-locate raw LaTeX cls/sty/font assets with the Jinja2 .tex.j2 templates that consume them. Dropped redundant Dockerfile COPY since backend/ already covers it.",
+      "phase": "tranche-2"
+    },
+    {
+      "decision": "Plain mv for untracked content, git mv for tracked",
+      "rationale": "git mv refused on empty/gitignored dirs (user_data/versions/* contents are gitignored runtime data). cv-templates/ tracked → git mv preserved cls/sty/tex/font/png history.",
+      "phase": "tranche-2"
+    },
+    {
+      "decision": "Single atomic commit per tranche",
+      "rationale": "User explicit ask: '/gsd-quick per tranche'. Keep refactor steps reviewable as discrete units.",
+      "phase": "all"
+    },
+    {
+      "decision": "Leave graphify-out/ alone",
+      "rationale": "User chose 'Keep, leave alone' — graph viewer artifacts are useful, gitignored already.",
+      "phase": "tranche-1"
+    },
+    {
+      "decision": "Tranche 5 caller-driven scope reduction — only 2 hooks moved",
+      "rationale": "Original plan called for 4 hook moves (useTailor, useImport, useChat, useVoiceInterview). Caller verification overrode the spec: useChat is consumed by ToolsContext (cross-cutting, not direct-edit) and the rg match against useChangeHighlights was a comment string referencing useTailor.ts. useImport is also consumed by ToolsContext. Both stayed shared. useTailor moved to direct-edit (sole caller TunePanel) and useVoiceInterview moved to voice-widget (sole caller VoiceWidget; spec said cv-import, but cv-import is not a caller).",
+      "phase": "tranche-5"
+    }
+  ],
+  "uncommitted_files": [
+    ".mcp.json (pre-existing dirty, NOT tranche work — left unstaged through all 5 tranches)",
+    ".planning/STATE.md (pre-existing dirty, NOT tranche work — left unstaged through all 5 tranches)"
+  ],
+  "next_action": "Refactor complete. Active project context returns to cloud-readiness work in .planning/tmp/cloud-audit/PUNCH-LIST.md (Phase C / Phase D).",
+  "context_notes": "All 5 tranches landed cleanly with frontend typecheck baseline (145 errors) and vitest baseline (6 fail / 272 pass) preserved end to end. The 19ef955 'wip: repo-hygiene paused at tranche 2 of 5' commit is left in branch history; rewriting would require force-push and is not worth the cost. Pre-existing dirty files (.mcp.json, .planning/STATE.md) remain unstaged."
+}

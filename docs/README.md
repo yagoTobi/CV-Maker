@@ -82,11 +82,11 @@ Each template includes a preview image and all necessary class files. Templates 
 CV-Maker/
 ├── frontend/          # React frontend application
 ├── backend/           # FastAPI backend server
-├── cv-templates/      # LaTeX CV templates
+├── backend/latex_templates/_source/  # LaTeX CV template source files
 │   ├── med-length-proff-cv/   # Professional CV (pdflatex)
 │   ├── deedy-resume/          # Deedy resume (xelatex)
 │   └── mcdowell-cv-master/    # McDowell CV (xelatex)
-├── user_data/         # User profile data
+├── backend/user_data/ # User profile data + saved CV versions (runtime, gitignored)
 └── docs/              # Project documentation
 ```
 
@@ -95,4 +95,4 @@ CV-Maker/
 - [Architecture](./ARCHITECTURE.md) - Technical architecture and design system details
 - [Development Guide](./DEVELOPMENT.md) - Setup and development guidelines
 - [Changelog](./CHANGELOG.md) - Version history and changes
-- [Roadmap](./ROADMAP.md) - Future plans and TODO items
+- [Roadmap](./ROADMAP.md) - Redirects to the canonical phase-tracked roadmap in `.planning/ROADMAP.md`

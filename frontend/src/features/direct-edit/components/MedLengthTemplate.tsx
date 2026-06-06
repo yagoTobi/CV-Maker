@@ -16,12 +16,12 @@
  * via sectionLabels in formData; changes persist through onFieldChange.
  */
 import React, { useCallback, useMemo, useState } from 'react';
-import { EditableField } from './EditableField';
+import { EditableField } from './editor-primitives/EditableField';
 import { LinkHeaderItem } from './LinkHeaderItem';
 import { AddLinkDropdown } from './AddLinkDropdown';
 import type { LinkPreset } from './AddLinkDropdown';
-import { DropLine } from './DropLine';
-import { FloatingFormatToolbar } from './FloatingFormatToolbar';
+import { DropLine } from './editor-primitives/DropLine';
+import { FloatingFormatToolbar } from './editor-primitives/FloatingFormatToolbar';
 import { useSectionDrag } from '../hooks/useSectionDrag';
 import { WorkSection } from './sections/WorkSection';
 import { EducationSection } from './sections/EducationSection';

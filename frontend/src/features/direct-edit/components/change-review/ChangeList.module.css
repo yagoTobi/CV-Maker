@@ -1,0 +1,96 @@
+/* ChangeList -- Change cards grouped by section, accept-all, and gaps */
+
+/* Section groups */
+.sectionGroup {
+  margin-bottom: 16px;
+}
+
+.sectionGroupLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+/* Accept All button */
+.acceptAllBtn {
+  width: 100%;
+  background: var(--accent);
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  padding: 10px 16px;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  margin-top: 16px;
+}
+
+.acceptAllBtn:hover {
+  background: var(--accent-hover);
+}
+
+.acceptAllBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Honest gaps section */
+.gapsSection {
+  margin-top: 20px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 12px;
+  font-size: 13px;
+}
+
+.gapsSummary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  user-select: none;
+  padding: 4px 0;
+}
+
+.gapsSummary::-webkit-details-marker {
+  display: none;
+}
+
+.gapsSection[open] .gapsSummary {
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.gapsList {
+  margin: 0 0 12px 0;
+  padding-left: 18px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.gapsList li {
+  margin-bottom: 4px;
+}
+
+.suggestionsHeading {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.suggestionsList {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.6;
+}
+
+.suggestionsList li {
+  margin-bottom: 4px;
+  color: var(--text-secondary);
+}
