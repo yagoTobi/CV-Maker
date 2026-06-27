@@ -9,6 +9,8 @@
  */
 import type { TailorChange, MatchAnalysis } from '../../../../types';
 import { ChangeList } from '../change-review/ChangeList';
+import { GapPromptChips } from '../change-review/GapPromptChips';
+import type { GapEvidence } from '../change-review/GapPromptChips';
 import styles from './Tier3Review.module.css';
 
 interface Tier3ReviewProps {
@@ -20,12 +22,20 @@ interface Tier3ReviewProps {
   isLoading: boolean;
   error: string | null;
   onAccept: (changeId: string) => Promise<void>;
+  onAcceptMany: (changeIds: string[]) => Promise<void>;
   onSkip: (changeId: string) => void;
   onUndo: (changeId: string) => Promise<void>;
   onAcceptAll: () => Promise<void>;
   onSelectAlternative: (changeId: string, index: number) => void;
   onEditValue: (changeId: string, newValue: string | string[]) => void;
   matchAnalysis: MatchAnalysis | null;
+  onClarificationsChange: (clarifications: string[]) => void;
+  onEvidenceChange: (evidence: GapEvidence[]) => void;
+  onRefreshSuggestions: () => Promise<void>;
+  onSaveEvidence: () => Promise<void>;
+  evidenceCount: number;
+  isSavingEvidence: boolean;
+  evidenceSaved: boolean;
   onSave: () => void;
   isSaving: boolean;
   savedSuccessfully: boolean;
@@ -42,12 +52,20 @@ export function Tier3Review({
   isLoading,
   error,
   onAccept,
+  onAcceptMany,
   onSkip,
   onUndo,
   onAcceptAll,
   onSelectAlternative,
   onEditValue,
   matchAnalysis,
+  onClarificationsChange,
+  onEvidenceChange,
+  onRefreshSuggestions,
+  onSaveEvidence,
+  evidenceCount,
+  isSavingEvidence,
+  evidenceSaved,
   onSave,
   isSaving,
   savedSuccessfully,
@@ -58,6 +76,7 @@ export function Tier3Review({
   const reviewedCount = appliedChanges.size + skippedChanges.size;
   const pendingCount = totalChanges - reviewedCount;
   const allReviewed = totalChanges > 0 && pendingCount === 0;
+  const hasMissingEvidence = (matchAnalysis?.missing.length ?? 0) > 0;
 
   if (isLoading) {
     return (
@@ -76,7 +95,7 @@ export function Tier3Review({
     );
   }
 
-  if (totalChanges === 0) {
+  if (totalChanges === 0 && !hasMissingEvidence) {
     return (
       <div className={styles.emptyState}>
         <h3 className={styles.emptyHeading}>No changes suggested</h3>
@@ -89,6 +108,42 @@ export function Tier3Review({
 
   return (
     <>
+      {hasMissingEvidence && matchAnalysis && (
+        <section className={styles.evidenceSection} aria-label="Add missing evidence">
+          <div className={styles.evidenceHeader}>
+            <div>
+              <h3 className={styles.evidenceTitle}>Add missing evidence</h3>
+              <p className={styles.evidenceBody}>
+                If a gap is actually covered by your experience, add rough notes here. AI can turn them into suggested CV changes.
+              </p>
+            </div>
+          </div>
+          <GapPromptChips
+            missing={matchAnalysis.missing}
+            onClarificationsChange={onClarificationsChange}
+            onEvidenceChange={onEvidenceChange}
+          />
+          <div className={styles.evidenceActions}>
+            <button
+              className={styles.evidenceSecondary}
+              onClick={onSaveEvidence}
+              disabled={evidenceCount === 0 || isSavingEvidence || evidenceSaved}
+              type="button"
+            >
+              {isSavingEvidence ? 'Saving...' : evidenceSaved ? 'Saved for later' : 'Save for later'}
+            </button>
+            <button
+              className={styles.evidencePrimary}
+              onClick={onRefreshSuggestions}
+              disabled={evidenceCount === 0 || isLoading}
+              type="button"
+            >
+              Update suggestions
+            </button>
+          </div>
+        </section>
+      )}
+
       <ChangeList
         changes={changes}
         appliedChanges={appliedChanges}
@@ -97,6 +152,7 @@ export function Tier3Review({
         isApplying={isApplying}
         pendingCount={pendingCount}
         onAccept={onAccept}
+        onAcceptMany={onAcceptMany}
         onSkip={onSkip}
         onUndo={onUndo}
         onAcceptAll={onAcceptAll}

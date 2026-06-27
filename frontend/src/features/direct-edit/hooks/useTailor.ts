@@ -22,11 +22,19 @@ export interface UseTailorReturn {
     userClarifications?: string[],
   ) => Promise<void>;
   acceptChange: (changeId: string) => Promise<void>;
+  acceptChanges: (changeIds: string[]) => Promise<void>;
   skipChange: (changeId: string) => void;
   undoChange: (changeId: string) => Promise<void>;
   acceptAllRemaining: () => Promise<void>;
   selectAlternative: (changeId: string, index: number) => void;
   editChangeValue: (changeId: string, newValue: string | string[]) => void;
+  restoreSuggestions: (
+    formData: CVFormData,
+    response: TailorResponse,
+    appliedChangeIds?: string[],
+    skippedChangeIds?: string[],
+    selectedAlternatives?: [string, number][],
+  ) => void;
   reset: () => void;
   setBaselineScore: (score: number) => void;
 }
@@ -37,7 +45,7 @@ interface UseTailorOpts {
   onApply: (newFormData: CVFormData, newTexContent: string) => Promise<void>;
 }
 
-export function useTailor({ originalFormData, templateId, onApply }: UseTailorOpts): UseTailorReturn {
+export function useTailor({ onApply }: UseTailorOpts): UseTailorReturn {
   const [tailorResponse, setTailorResponse] = useState<TailorResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -149,6 +157,22 @@ export function useTailor({ originalFormData, templateId, onApply }: UseTailorOp
     await queueRef.current;
   }, [appliedChanges, applyCurrentState]);
 
+  const acceptChanges = useCallback(async (changeIds: string[]) => {
+    queueRef.current = queueRef.current.then(async () => {
+      setIsApplying(true);
+      const newApplied = new Set(appliedChanges);
+      for (const changeId of changeIds) {
+        if (!skippedChanges.has(changeId)) {
+          newApplied.add(changeId);
+        }
+      }
+      setAppliedChanges(newApplied);
+      await applyCurrentState(newApplied);
+      setIsApplying(false);
+    });
+    await queueRef.current;
+  }, [appliedChanges, applyCurrentState, skippedChanges]);
+
   const skipChange = useCallback((changeId: string) => {
     setSkippedChanges(prev => {
       const next = new Set(prev);
@@ -223,6 +247,24 @@ export function useTailor({ originalFormData, templateId, onApply }: UseTailorOp
     });
   }, []);
 
+  const restoreSuggestions = useCallback((
+    formData: CVFormData,
+    response: TailorResponse,
+    appliedChangeIds: string[] = [],
+    skippedChangeIds: string[] = [],
+    selectedAlternativeEntries: [string, number][] = [],
+  ) => {
+    abortRef.current?.abort();
+    baseFormDataRef.current = structuredClone(formData);
+    setTailorResponse(response);
+    setAppliedChanges(new Set(appliedChangeIds));
+    setSkippedChanges(new Set(skippedChangeIds));
+    setSelectedAlternatives(new Map(selectedAlternativeEntries));
+    setIsLoading(false);
+    setError(null);
+    setIsApplying(false);
+  }, []);
+
   const reset = useCallback(() => {
     setTailorResponse(null);
     setIsLoading(false);
@@ -248,11 +290,13 @@ export function useTailor({ originalFormData, templateId, onApply }: UseTailorOp
     isApplying,
     fetchSuggestions,
     acceptChange,
+    acceptChanges,
     skipChange,
     undoChange,
     acceptAllRemaining,
     selectAlternative,
     editChangeValue,
+    restoreSuggestions,
     reset,
     setBaselineScore,
   };

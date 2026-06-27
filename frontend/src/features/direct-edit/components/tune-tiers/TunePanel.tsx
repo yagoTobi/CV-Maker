@@ -12,7 +12,7 @@
  *
  * Covers: D-01 through D-07, D-11, D-12.
  */
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../../../services/api';
 import { useCVContext } from '../../../../contexts/CVContext';
@@ -22,7 +22,9 @@ import { ScoreHeader } from '../ScoreHeader';
 import { Tier1SaveBase } from './Tier1SaveBase';
 import { Tier2JobDetails } from './Tier2JobDetails';
 import { Tier3Review } from './Tier3Review';
-import type { CVFormData, CVVersion, MatchAnalysis } from '../../../../types';
+import type { AdditionalExperience, CVFormData, CVVersion, MatchAnalysis, UserProfile } from '../../../../types';
+import type { GapEvidence } from '../change-review/GapPromptChips';
+import { loadTuneSession, saveTuneSession } from '../../utils/tuneSession';
 import styles from './TunePanel.module.css';
 
 interface TunePanelProps {
@@ -47,12 +49,13 @@ export function TunePanel({
   onTuneDetailsChange,
 }: TunePanelProps) {
   const navigate = useNavigate();
-  const { setActiveVersion } = useCVContext();
+  const { userProfile, setUserProfile, setActiveVersion } = useCVContext();
+  const restoredTuneSession = useMemo(() => loadTuneSession(activeVersion?.id), [activeVersion?.id]);
 
   // Tier state
-  const [activeTier, setActiveTier] = useState<1 | 2 | 3>(() => activeVersion ? 2 : 1);
+  const [activeTier, setActiveTier] = useState<1 | 2 | 3>(() => restoredTuneSession?.activeTier ?? (activeVersion ? 2 : 1));
   const [tier1Complete, setTier1Complete] = useState(() => !!activeVersion);
-  const [tier2Complete, setTier2Complete] = useState(false);
+  const [tier2Complete, setTier2Complete] = useState(() => restoredTuneSession?.tier2Complete ?? false);
 
   // Sync tier state when activeVersion appears after mount (e.g. auto-save creates it)
   useEffect(() => {
@@ -67,11 +70,11 @@ export function TunePanel({
   const [savingBase, setSavingBase] = useState(false);
 
   // Tier 2: job details
-  const [companyName, setCompanyName] = useState('');
-  const [roleName, setRoleName] = useState('');
-  const [jobDescription, setJobDescription] = useState('');
-  const [matchAnalysis, setMatchAnalysis] = useState<MatchAnalysis | null>(null);
-  const [baselineScore, setBaselineScore] = useState(0);
+  const [companyName, setCompanyName] = useState(() => restoredTuneSession?.companyName ?? '');
+  const [roleName, setRoleName] = useState(() => restoredTuneSession?.roleName ?? '');
+  const [jobDescription, setJobDescription] = useState(() => restoredTuneSession?.jobDescription ?? '');
+  const [matchAnalysis, setMatchAnalysis] = useState<MatchAnalysis | null>(() => restoredTuneSession?.matchAnalysis ?? null);
+  const [baselineScore, setBaselineScore] = useState(() => restoredTuneSession?.baselineScore ?? 0);
   const [analyzing, setAnalyzing] = useState(false);
 
   // Tier 3: diff review
@@ -80,6 +83,10 @@ export function TunePanel({
   const [viewMode, setViewMode] = useState<'before' | 'after'>('after');
   const [savedSuccessfully, setSavedSuccessfully] = useState(false);
   const [savedBaseId, setSavedBaseId] = useState<string | null>(null);
+  const [userClarifications, setUserClarifications] = useState<string[]>(() => restoredTuneSession?.userClarifications ?? []);
+  const [evidenceEntries, setEvidenceEntries] = useState<GapEvidence[]>(() => restoredTuneSession?.evidenceEntries ?? []);
+  const [savingEvidence, setSavingEvidence] = useState(false);
+  const [evidenceSaved, setEvidenceSaved] = useState(false);
 
   // Ref for scroll sync
   const changePanelRef = useRef<HTMLDivElement>(null);
@@ -88,11 +95,76 @@ export function TunePanel({
   const tailor = useTailor({
     originalFormData: formData,
     templateId: formData.templateId,
-    onApply: async (newFormData: CVFormData, _newTexContent: string) => {
+    onApply: async (newFormData: CVFormData) => {
       setPreviewFormData(newFormData);
       onPreviewUpdate(newFormData);
     },
   });
+  const { restoreSuggestions } = tailor;
+
+  const restoredTailorSessionIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const versionId = activeVersion?.id;
+    if (!versionId || restoredTailorSessionIdRef.current === versionId) return;
+    const restored = loadTuneSession(versionId);
+    if (!restored) return;
+
+    setActiveTier(restored.activeTier);
+    setTier2Complete(restored.tier2Complete);
+    setCompanyName(restored.companyName);
+    setRoleName(restored.roleName);
+    setJobDescription(restored.jobDescription);
+    setMatchAnalysis(restored.matchAnalysis);
+    setBaselineScore(restored.baselineScore);
+    setUserClarifications(restored.userClarifications);
+    setEvidenceEntries(restored.evidenceEntries);
+    if (restored.tailorResponse) {
+      restoreSuggestions(
+        formData,
+        restored.tailorResponse,
+        restored.appliedChangeIds,
+        restored.skippedChangeIds,
+        restored.selectedAlternatives,
+      );
+    }
+    restoredTailorSessionIdRef.current = versionId;
+  }, [activeVersion?.id, formData, restoreSuggestions]);
+
+  useEffect(() => {
+    saveTuneSession(activeVersion?.id, {
+      isOpen,
+      activeTier,
+      tier2Complete,
+      companyName,
+      roleName,
+      jobDescription,
+      matchAnalysis,
+      baselineScore,
+      tailorResponse: tailor.tailorResponse,
+      appliedChangeIds: Array.from(tailor.appliedChanges),
+      skippedChangeIds: Array.from(tailor.skippedChanges),
+      selectedAlternatives: Array.from(tailor.selectedAlternatives.entries()),
+      userClarifications,
+      evidenceEntries,
+    });
+  }, [
+    activeVersion?.id,
+    activeTier,
+    baselineScore,
+    companyName,
+    evidenceEntries,
+    isOpen,
+    jobDescription,
+    matchAnalysis,
+    roleName,
+    tailor.appliedChanges,
+    tailor.selectedAlternatives,
+    tailor.skippedChanges,
+    tailor.tailorResponse,
+    tier2Complete,
+    userClarifications,
+  ]);
 
   // Computed review state
   const totalChanges = tailor.tailorResponse?.changes?.length ?? 0;
@@ -156,6 +228,9 @@ export function TunePanel({
   const handleAnalyze = useCallback(async () => {
     if (!jobDescription.trim()) return;
     setAnalyzing(true);
+    setUserClarifications([]);
+    setEvidenceEntries([]);
+    setEvidenceSaved(false);
     const { texContent } = await api.generateLatex(formData);
     if (!texContent) { setAnalyzing(false); return; }
     const analysis = await api.getMatchAnalysis(texContent, jobDescription, companyName);
@@ -170,6 +245,68 @@ export function TunePanel({
     setPreviewFormData(formData);
     tailor.fetchSuggestions(formData, jobDescription, companyName, roleName);
   }, [formData, jobDescription, companyName, roleName, tailor]);
+
+  const handleEvidenceChange = useCallback((evidence: GapEvidence[]) => {
+    setEvidenceEntries(evidence);
+    setEvidenceSaved(false);
+  }, []);
+
+  const handleRefreshSuggestions = useCallback(async () => {
+    if (userClarifications.length === 0) return;
+    setPreviewFormData(formData);
+    onPreviewUpdate(formData);
+    await tailor.fetchSuggestions(formData, jobDescription, companyName, roleName, userClarifications);
+  }, [companyName, formData, jobDescription, onPreviewUpdate, roleName, tailor, userClarifications]);
+
+  const handleSaveEvidence = useCallback(async () => {
+    if (evidenceEntries.length === 0) return;
+    setSavingEvidence(true);
+
+    const source = [companyName, roleName].filter(Boolean).join(' ') || undefined;
+    const newExperiences: AdditionalExperience[] = evidenceEntries.map((entry) => ({
+      topic: entry.topic,
+      description: entry.description,
+      added_from_job: source,
+    }));
+    const currentProfile: UserProfile = userProfile ?? {
+      additional_experiences: [],
+      skills_mentioned: [],
+      conversation_history: [],
+    };
+    const seen = new Set(
+      currentProfile.additional_experiences.map((entry) => `${entry.topic}\n${entry.description}`),
+    );
+    const uniqueNewExperiences = newExperiences.filter((entry) => {
+      const key = `${entry.topic}\n${entry.description}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    if (uniqueNewExperiences.length === 0) {
+      setEvidenceSaved(true);
+      setSavingEvidence(false);
+      return;
+    }
+
+    const nextProfile: UserProfile = {
+      ...currentProfile,
+      additional_experiences: [
+        ...currentProfile.additional_experiences,
+        ...uniqueNewExperiences,
+      ],
+    };
+
+    try {
+      await api.saveUserData(nextProfile);
+      setUserProfile(nextProfile);
+      setEvidenceSaved(true);
+    } catch (err) {
+      console.error('[TunePanel:saveEvidence]', err);
+    } finally {
+      setSavingEvidence(false);
+    }
+  }, [companyName, evidenceEntries, roleName, setUserProfile, userProfile]);
 
   // Handle Tier 3 save (per D-11)
   const handleSaveTailored = useCallback(async () => {
@@ -252,6 +389,42 @@ export function TunePanel({
       <div className={styles.panelScroll} ref={changePanelRef}>
         {/* Sticky top section — all 3 tier headers + score header freeze here in Tier 3 */}
         <div className={activeTier === 3 ? styles.stickyScoreHeader : undefined}>
+          {activeTier === 3 ? (
+            <div className={styles.progressStrip} aria-label="Application setup progress">
+              <span
+                className={styles.progressStep}
+                onClick={() => setActiveTier(1)}
+                role="button"
+                tabIndex={0}
+                title={activeVersion?.name || baseName || 'Baseline CV'}
+              >
+                <span className={`${styles.progressDot} ${styles.progressDotDone}`}>✓</span>
+                <span className={styles.progressLabel}>Base</span>
+              </span>
+              <span className={styles.progressSep}>/</span>
+              <span
+                className={styles.progressStep}
+                onClick={() => setActiveTier(2)}
+                role="button"
+                tabIndex={0}
+                title={[companyName, roleName].filter(Boolean).join(' ') || 'Target job'}
+              >
+                <span className={`${styles.progressDot} ${styles.progressDotDone}`}>✓</span>
+                <span className={styles.progressLabel}>Job</span>
+              </span>
+              <span className={styles.progressSep}>/</span>
+              <span
+                className={`${styles.progressStep} ${styles.progressStepActive}`}
+                onClick={() => setActiveTier(3)}
+                role="button"
+                tabIndex={0}
+              >
+                <span className={`${styles.progressDot} ${styles.progressDotActive}`}>3</span>
+                <span className={styles.progressLabel}>Review</span>
+              </span>
+            </div>
+          ) : (
+            <>
           {/* Tier 1 header + body */}
           <div className={`${styles.tier}${tier1Complete && activeTier !== 1 ? ` ${styles.tierCompact}` : ''}`}>
             <div
@@ -336,6 +509,8 @@ export function TunePanel({
               <span className={styles.tierTitle}>Pick changes</span>
             </div>
           </div>
+            </>
+          )}
 
           {/* Score header — inside sticky block, only in Tier 3 when data is ready */}
           {showScoreHeader && (
@@ -364,12 +539,20 @@ export function TunePanel({
             isLoading={tailor.isLoading}
             error={tailor.error}
             onAccept={tailor.acceptChange}
+            onAcceptMany={tailor.acceptChanges}
             onSkip={tailor.skipChange}
             onUndo={tailor.undoChange}
             onAcceptAll={tailor.acceptAllRemaining}
             onSelectAlternative={tailor.selectAlternative}
             onEditValue={tailor.editChangeValue}
             matchAnalysis={matchAnalysis}
+            onClarificationsChange={setUserClarifications}
+            onEvidenceChange={handleEvidenceChange}
+            onRefreshSuggestions={handleRefreshSuggestions}
+            onSaveEvidence={handleSaveEvidence}
+            evidenceCount={evidenceEntries.length}
+            isSavingEvidence={savingEvidence}
+            evidenceSaved={evidenceSaved}
             onSave={handleSaveTailored}
             isSaving={saving}
             savedSuccessfully={savedSuccessfully}

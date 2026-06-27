@@ -28,6 +28,7 @@ interface ChangeListProps {
   isApplying: boolean;
   pendingCount: number;
   onAccept: (changeId: string) => Promise<void>;
+  onAcceptMany?: (changeIds: string[]) => Promise<void>;
   onSkip: (changeId: string) => void;
   onUndo: (changeId: string) => Promise<void>;
   onAcceptAll: () => Promise<void>;
@@ -46,6 +47,7 @@ export function ChangeList({
   isApplying,
   pendingCount,
   onAccept,
+  onAcceptMany,
   onSkip,
   onUndo,
   onAcceptAll,
@@ -70,7 +72,29 @@ export function ChangeList({
     <>
       {groups.map((group) => (
         <div key={group.sectionKey} className={styles.sectionGroup}>
-          <div className={styles.sectionGroupLabel}>{group.sectionLabel}</div>
+          <div className={styles.sectionGroupHeader}>
+            <div className={styles.sectionGroupLabel}>
+              {group.sectionLabel}
+              <span className={styles.sectionGroupCount}>{group.changes.length}</span>
+            </div>
+            <button
+              className={styles.acceptSectionBtn}
+              onClick={() => {
+                const changeIds = group.changes
+                  .filter((change) => !appliedChanges.has(change.id) && !skippedChanges.has(change.id))
+                  .map((change) => change.id);
+                if (onAcceptMany) {
+                  onAcceptMany(changeIds);
+                } else {
+                  changeIds.forEach((changeId) => { void onAccept(changeId); });
+                }
+              }}
+              disabled={isApplying || group.changes.every((change) => appliedChanges.has(change.id) || skippedChanges.has(change.id))}
+              type="button"
+            >
+              Accept section
+            </button>
+          </div>
           {group.changes.map((change) => (
             <ChangeCard
               key={change.id}

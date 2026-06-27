@@ -6,6 +6,14 @@
   border-bottom: 1px solid var(--border-color);
 }
 
+.scoreHeaderCompact {
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+}
+
 /* Optional context bar shown in standalone ChangePanel */
 .contextBar {
   font-size: 10px;
@@ -21,6 +29,12 @@
   align-items: center;
   gap: 14px;
   margin-bottom: 10px;
+}
+
+.scoreHeaderCompact .scoreRow {
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 0;
 }
 
 /* Size variants -- TunePanel uses compact (48px), ChangePanel uses default (56px) */
@@ -74,7 +88,7 @@
 }
 
 .scoreLabel.compact {
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .deltaLine {
@@ -84,7 +98,7 @@
 }
 
 .deltaLine.compact {
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .changeCounts {

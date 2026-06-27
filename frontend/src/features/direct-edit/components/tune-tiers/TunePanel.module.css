@@ -13,14 +13,16 @@
   transform: translateX(0);
   transition: transform 200ms ease-out;
   font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  overscroll-behavior-y: none;
 }
 
 .panelScroll {
   height: 100%;
   overflow-y: auto;
   padding: 16px;
-  padding-top: 44px;
   user-select: none;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: auto;
 }
 
 .panelClosed {
@@ -157,15 +159,90 @@
  * Applied conditionally in Tier 3 so the entire top freezes while cards scroll. */
 .stickyScoreHeader {
   position: sticky;
-  top: -44px; /* offset panelScroll padding-top so it sticks flush */
+  top: -16px; /* offset panelScroll padding so it sticks flush */
   z-index: 5;
   background: var(--bg-secondary);
+  padding-top: 8px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border-color);
   margin: 0 -16px;
   padding-left: 16px;
   padding-right: 16px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
+  overscroll-behavior: none;
+}
+
+.progressStrip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 0 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.progressStep {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 2px 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  color: var(--text-muted);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.progressStep:hover .progressLabel {
+  color: var(--text-primary);
+}
+
+.progressStepActive .progressLabel {
+  color: var(--text-primary);
+}
+
+.progressDot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.progressDotDone {
+  background: var(--success);
+  color: white;
+}
+
+.progressDotActive {
+  border: 2px solid var(--accent);
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+.progressLabel {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.progressSep {
+  color: var(--border-strong);
+  font-size: 12px;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 /* Responsive: bottom sheet below 1200px.

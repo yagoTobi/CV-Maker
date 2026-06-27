@@ -49,6 +49,76 @@
   color: var(--text-muted);
 }
 
+/* Missing evidence capture */
+.evidenceSection {
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  padding: 14px 0;
+  margin-bottom: 16px;
+}
+
+.evidenceHeader {
+  padding: 0 12px 4px;
+}
+
+.evidenceTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+}
+
+.evidenceBody {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.evidenceActions {
+  display: flex;
+  gap: 8px;
+  padding: 4px 12px 0;
+}
+
+.evidencePrimary,
+.evidenceSecondary {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.evidencePrimary {
+  background: var(--accent);
+  color: white;
+  border: none;
+}
+
+.evidencePrimary:hover {
+  background: var(--accent-hover);
+}
+
+.evidenceSecondary {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.evidenceSecondary:hover {
+  background: var(--bg-tertiary);
+}
+
+.evidencePrimary:disabled,
+.evidenceSecondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* All-reviewed banner */
 .reviewedBanner {
   display: flex;

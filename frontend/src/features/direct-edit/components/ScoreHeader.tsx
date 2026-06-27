@@ -49,7 +49,7 @@ export function ScoreHeader({
   const totalChanges = appliedCount + rejectedCount + pendingCount;
 
   return (
-    <div className={styles.scoreHeader}>
+    <div className={`${styles.scoreHeader}${isCompact ? ` ${styles.scoreHeaderCompact}` : ''}`}>
       {/* Context bar — company + role label */}
       {(companyName || roleName) && (
         <div className={styles.contextBar}>
@@ -78,33 +78,35 @@ export function ScoreHeader({
       </div>
 
       {/* Collapsible pill summary */}
-      <details className={`${styles.pillDetails}${isCompact ? ` ${styles.compact}` : ''}`}>
-        <summary className={`${styles.pillSummary}${isCompact ? ` ${styles.compact}` : ''}`}>
-          <span className={styles.pillMatched}>{matchAnalysis.matching.length} matched</span>
-          <span className={styles.pillSep}> · </span>
-          <span className={styles.pillMissing}>{matchAnalysis.missing.length} gaps</span>
-        </summary>
-        <div className={styles.pillsExpanded}>
-          {matchAnalysis.matching.length > 0 && (
-            <div className={styles.pills}>
-              {matchAnalysis.matching.map((item, i) => (
-                <span key={`m-${i}`} className={`${styles.pill}${isCompact ? ` ${styles.compact}` : ''} ${styles.pillMatchedBg}`}>
-                  {item}
-                </span>
-              ))}
-            </div>
-          )}
-          {matchAnalysis.missing.length > 0 && (
-            <div className={styles.pills}>
-              {matchAnalysis.missing.map((item, i) => (
-                <span key={`g-${i}`} className={`${styles.pill}${isCompact ? ` ${styles.compact}` : ''} ${styles.pillMissingBg}`}>
-                  {item}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      </details>
+      {!isCompact && (
+        <details className={styles.pillDetails}>
+          <summary className={styles.pillSummary}>
+            <span className={styles.pillMatched}>{matchAnalysis.matching.length} matched</span>
+            <span className={styles.pillSep}> · </span>
+            <span className={styles.pillMissing}>{matchAnalysis.missing.length} gaps</span>
+          </summary>
+          <div className={styles.pillsExpanded}>
+            {matchAnalysis.matching.length > 0 && (
+              <div className={styles.pills}>
+                {matchAnalysis.matching.map((item, i) => (
+                  <span key={`m-${i}`} className={`${styles.pill} ${styles.pillMatchedBg}`}>
+                    {item}
+                  </span>
+                ))}
+              </div>
+            )}
+            {matchAnalysis.missing.length > 0 && (
+              <div className={styles.pills}>
+                {matchAnalysis.missing.map((item, i) => (
+                  <span key={`g-${i}`} className={`${styles.pill} ${styles.pillMissingBg}`}>
+                    {item}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </details>
+      )}
 
       {/* Before / After toggle — only when caller passes viewMode + handler */}
       {onViewModeChange && viewMode && (appliedCount + rejectedCount) > 0 && (

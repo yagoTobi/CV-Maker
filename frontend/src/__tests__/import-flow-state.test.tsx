@@ -47,29 +47,29 @@ describe('Navigation Flow State Management', () => {
   });
 
   describe('Landing screen', () => {
-    it('renders two action cards: "Build my CV" and "Tune for a role" (NAV-01 partial)', async () => {
+    it('renders two action cards: "Build my CV" and "Apply to job" (NAV-01 partial)', async () => {
       renderApp();
 
       await waitFor(() => {
         expect(screen.getByText('Build my CV')).toBeInTheDocument();
-        expect(screen.getByText('Tune for a role')).toBeInTheDocument();
+        expect(screen.getByText('Apply to job')).toBeInTheDocument();
       });
 
       // Both cards start collapsed
       const buildCard = screen.getByText('Build my CV').closest('button');
-      const tuneCard = screen.getByText('Tune for a role').closest('button');
+      const tuneCard = screen.getByText('Apply to job').closest('button');
       expect(buildCard).toHaveAttribute('aria-expanded', 'false');
       expect(tuneCard).toHaveAttribute('aria-expanded', 'false');
     });
 
-    it('does not show "My Saved CVs" link when there are no saved versions', async () => {
+    it('does not show "CV Workspace" link when there are no saved versions', async () => {
       renderApp();
 
       await waitFor(() => {
         expect(screen.getByText('Build my CV')).toBeInTheDocument();
       });
 
-      expect(screen.queryByText('My Saved CVs')).not.toBeInTheDocument();
+      expect(screen.queryByText('CV Workspace')).not.toBeInTheDocument();
     });
   });
 
