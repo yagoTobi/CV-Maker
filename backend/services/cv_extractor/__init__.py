@@ -76,24 +76,54 @@ def _extract_pdf_with_document(file_bytes: bytes) -> CVImportResult:
 
 
 async def extract_from_pdf(file_bytes: bytes) -> CVImportResult:
-    """Extract text from text-based PDFs locally, then structure it with the LLM."""
-    try:
-        try:
-            full_text = _extract_pdf_text(file_bytes)
-        except PDFTextExtractionError as e:
-            logger.info("Local PDF text extraction skipped: %s", e)
-            return _extract_pdf_with_document(file_bytes)
+    """Extract text from a PDF, then structure it with the LLM.
 
+    Two-stage strategy:
+      1. Read the PDF's text layer locally with pypdf. Success here proves the
+         PDF is text-based (not a scan/image).
+      2. If there is no usable local text layer (image-only/scanned PDF, an
+         unreadable file, or pypdf missing), fall back to Claude's document
+         (vision) path.
+
+    The two failure branches return *different* user messages on purpose: once
+    local extraction succeeds we know the file is not image-based, so a later
+    failure is an AI/processing problem rather than a scanned document — telling
+    the user to "try a Word doc instead" would be wrong advice in that case.
+    Both branches log with ``logger.exception`` so the real cause (stack trace +
+    exception type) is captured for diagnosis instead of being masked.
+    """
+    # Stage 1: local text layer.
+    try:
+        full_text = _extract_pdf_text(file_bytes)
+    except PDFTextExtractionError as reason:
+        # No usable local text — try Claude's document/vision path.
+        logger.info("Local PDF text unavailable (%s); using document fallback", reason)
+        try:
+            return _extract_pdf_with_document(file_bytes)
+        except Exception:
+            logger.exception("PDF document-fallback extraction failed")
+            return CVImportResult(
+                success=False,
+                source="pdf",
+                error=(
+                    "Could not extract text from this PDF. "
+                    "The file may be image-based (scanned). "
+                    "Try uploading a Word document or JSON file instead."
+                ),
+            )
+
+    # Stage 2: local extraction worked, so the PDF has a real text layer. Any
+    # failure now is a structuring/AI error — don't blame the file's format.
+    try:
         return _structure_text_with_model(full_text, source="pdf")
-    except Exception as e:
-        logger.error("PDF extraction failed: %s", e)
+    except Exception:
+        logger.exception("PDF text structuring failed after successful local extraction")
         return CVImportResult(
             success=False,
             source="pdf",
             error=(
-                "Could not extract text from this PDF. "
-                "The file may be image-based (scanned). "
-                "Try uploading a Word document or JSON file instead."
+                "We read your PDF but couldn't process it just now. "
+                "Please try again in a moment."
             ),
         )
 

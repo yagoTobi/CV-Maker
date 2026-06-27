@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { api } from '../services/api';
+import { persistActiveVersionId } from '../utils/activeVersionStorage';
 import type { UserProfile, CVFormData, CVVersion, CVVersionMeta } from '../types';
 
 interface CVContextValue {
@@ -32,11 +33,18 @@ export function useCVContext() {
 
 export function CVProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [activeVersion, setActiveVersion] = useState<CVVersion | null>(null);
+  const [activeVersion, setActiveVersionState] = useState<CVVersion | null>(null);
   const [formData, setFormData] = useState<CVFormData | null>(null);
   const [savedVersions, setSavedVersions] = useState<CVVersionMeta[]>([]);
   const [isSavingVersion, setIsSavingVersion] = useState(false);
   const [selectedTemplateForBuild, setSelectedTemplateForBuild] = useState<string | null>(null);
+
+  // Wrap the raw setter so every caller also persists the active version id
+  // for refresh-restore (see ACTIVE_VERSION_STORAGE_KEY note above).
+  const setActiveVersion = useCallback((version: CVVersion | null) => {
+    setActiveVersionState(version);
+    persistActiveVersionId(version?.id ?? null);
+  }, []);
 
   // Load user profile and saved versions on mount
   useEffect(() => {
@@ -63,7 +71,7 @@ export function CVProvider({ children }: { children: ReactNode }) {
     setFormData(null);
     setActiveVersion(null);
     setSelectedTemplateForBuild(null);
-  }, []);
+  }, [setActiveVersion]);
 
   const value = useMemo(() => ({
     userProfile,
@@ -82,6 +90,7 @@ export function CVProvider({ children }: { children: ReactNode }) {
   }), [
     userProfile,
     activeVersion,
+    setActiveVersion,
     formData,
     savedVersions,
     isSavingVersion,

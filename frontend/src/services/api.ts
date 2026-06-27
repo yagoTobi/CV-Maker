@@ -1,12 +1,21 @@
 import axios from 'axios';
 import type { CompileResponse, ChatRequest, UserProfile, MatchAnalysis, CVFormData, CVVersion, CVVersionMeta, CVVersionWithChildren, CVImportResponse, TailorResponse } from '../types';
 import type { Template } from '../features/template-selection';
+import { getUserId } from './userId';
 
 export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 // Create axios instance with default timeout
 const axiosInstance = axios.create({
   timeout: 30000, // 30s default
+});
+
+// Attach the per-browser user id to every request so the backend can partition
+// storage per device (see services/userId.ts). The optional chaining keeps this
+// a no-op when axios.create() is mocked without an interceptors API in tests.
+axiosInstance.interceptors?.request.use((config) => {
+  config.headers?.set('X-User-Id', getUserId());
+  return config;
 });
 
 /**
@@ -106,7 +115,7 @@ export const api = {
   ): Promise<void> {
     const response = await fetch(`${API_BASE}/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-User-Id': getUserId() },
       body: JSON.stringify({ ...request, stream: true }),
       signal,
     });
@@ -128,7 +137,7 @@ export const api = {
   ): Promise<void> {
     const response = await fetch(`${API_BASE}/chat/analyze`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-User-Id': getUserId() },
       body: JSON.stringify({
         messages: [],
         cv_content: cvContent,

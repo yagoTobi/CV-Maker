@@ -5,8 +5,10 @@
  * white-background page. EB Garamond font is loaded here (not globally) so it
  * only applies to the CV editing surface.
  *
- * If formData is not in context (e.g., direct URL navigation), tries to load
- * the most recent saved version. Falls back to an empty template with placeholders.
+ * If formData is not in context (e.g., direct URL navigation / refresh), it
+ * restores the specific version the user was editing (persisted per-tab in
+ * sessionStorage). It does NOT fall back to "most recent saved version" — that
+ * would surface an unrelated CV. Falls back to an empty template otherwise.
  *
  * Editor actions (Download PDF, save status) are lifted into
  * EditorActionsContext so the NavBar can render them.
@@ -15,7 +17,7 @@
  */
 import '@fontsource-variable/eb-garamond';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useDirectEditor } from './hooks/useDirectEditor';
 import { useAutoSave } from './hooks/useAutoSave';
 import { usePageBreak } from './hooks/usePageBreak';
@@ -25,15 +27,18 @@ import { PageBreakIndicator } from './components/PageBreakIndicator';
 import { TunePanel } from './components/tune-tiers/TunePanel';
 import { useCVContext } from '../../contexts/CVContext';
 import { api } from '../../services/api';
+import { getStoredActiveVersionId } from '../../utils/activeVersionStorage';
 import { generateId } from '../../utils/idHelpers';
 import { generateCVFilename } from '../../utils/cvFilename';
 import { downloadPdf } from '../../utils/downloadPdf';
 import { noop, EMPTY_SET } from '../../utils/cvDisplayUtils';
 import type { CVFormData, SkillItem, CVVersion, CVVersionMeta } from '../../types';
 import { NamePromptDialog } from './components/dialogs/NamePromptDialog';
+import { loadTuneSession } from './utils/tuneSession';
 import styles from './DirectEditPage.module.css';
 
 const DEFAULT_TEMPLATE = 'med-length-proff-cv';
+const VALID_TEMPLATES = ['med-length-proff-cv', 'deedy-resume', 'mcdowell-cv'];
 
 function createEmptyFormData(): CVFormData {
   return {
@@ -44,7 +49,7 @@ function createEmptyFormData(): CVFormData {
       summary: '', personalOrder: ['phone', 'email', 'location', 'links'],
     },
     workExperience: [{ id: generateId(), company: '', title: '', startDate: '', endDate: '', location: '', bullets: [{ id: generateId(), text: '' }] }],
-    education: [{ id: generateId(), school: '', degree: '', startDate: '', endDate: '', location: '', gpa: '', details: [] }],
+    education: [{ id: generateId(), school: '', degree: '', startDate: '', endDate: '', location: '', gpa: '', details: [{ id: generateId(), text: '' }] }],
     skills: [{ id: generateId(), category: '', skills: [] }],
     projects: [],
     awards: [],
@@ -107,7 +112,6 @@ export default function DirectEditPage() {
   const [previewFormData, setPreviewFormData] = useState<CVFormData | null>(null);
   const [isTier3Active, setIsTier3Active] = useState(false);
   const setEditorActions = useSetEditorActions();
-  const navigate = useNavigate();
   const location = useLocation();
   const cvContainerRef = useRef<HTMLDivElement>(null);
   const pageBreakY = usePageBreak(cvContainerRef);
@@ -117,7 +121,6 @@ export default function DirectEditPage() {
     if (formData) {
       // If formData exists but has a sentinel templateId (e.g. from CV import),
       // patch it with the selected template before entering the editor
-      const VALID_TEMPLATES = ['med-length-proff-cv', 'deedy-resume', 'mcdowell-cv'];
       if (!VALID_TEMPLATES.includes(formData.templateId) && selectedTemplateForBuild) {
         setFormData({ ...formData, templateId: selectedTemplateForBuild });
       }
@@ -137,23 +140,34 @@ export default function DirectEditPage() {
     let cancelled = false;
 
     async function bootstrap() {
-      // Try loading the most recent saved version
-      if (savedVersions.length > 0) {
-        const mostRecent = savedVersions[0];
-        const full = await api.getVersion(mostRecent.id);
+      // Restore ONLY the version the user was explicitly editing (persisted
+      // per-tab in sessionStorage). We deliberately do NOT fall back to
+      // "most recent saved version" — that surfaced an unrelated CV into what
+      // should be a fresh session (cross-CV data bleed), which is especially
+      // wrong while there is no per-account separation.
+      const activeId = getStoredActiveVersionId();
+      if (activeId) {
+        const full = await api.getVersion(activeId);
         if (!cancelled && full?.formData) {
           const loadedData = full.formData;
           // Sanitize sentinel/invalid templateIds that would cause backend 400
-          if (!loadedData.templateId || !['med-length-proff-cv', 'deedy-resume', 'mcdowell-cv'].includes(loadedData.templateId)) {
+          if (!loadedData.templateId || !VALID_TEMPLATES.includes(loadedData.templateId)) {
             loadedData.templateId = DEFAULT_TEMPLATE;
           }
           setFormData(loadedData);
+          setActiveVersion(full);
+          const tuneSession = loadTuneSession(full.id);
+          if (tuneSession?.isOpen) {
+            setTunePanelOpen(true);
+            setTuneCompanyName(tuneSession.companyName);
+            setTuneRole(tuneSession.roleName);
+          }
           setIsBootstrapping(false);
           return;
         }
       }
 
-      // Fall back to empty template with placeholders
+      // No known in-progress version → start with an empty template.
       if (!cancelled) {
         setFormData(createEmptyFormData());
         setIsBootstrapping(false);
@@ -162,7 +176,7 @@ export default function DirectEditPage() {
 
     bootstrap();
     return () => { cancelled = true; };
-  }, [formData, savedVersions, setFormData, selectedTemplateForBuild]);
+  }, [formData, setActiveVersion, setFormData, selectedTemplateForBuild]);
 
   // Open tune panel from navigation state (e.g., from TuneExpansionPanel or Dashboard)
   useEffect(() => {

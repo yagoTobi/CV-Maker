@@ -201,8 +201,7 @@ CV-Maker/
       main.tsx                App entry point (StrictMode + BrowserRouter + ErrorBoundary)
       contexts/               React context providers (Job, CV, Tools, EditorActions, AppContext shim)
       features/               Feature-scoped components
-        direct-edit/          Inline CV editor (primary feature)
-        apply-to-job/         3-step tune-for-job flow (job details -> match analysis -> review)
+        direct-edit/          Inline CV editor (primary feature); apply-to-job "tune" flow lives under components/tune-tiers/
         dashboard/            Saved version list, download, delete, rename
         landing/              Home screen with build/tune entry panels
         template-selection/   Template picker
