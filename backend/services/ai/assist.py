@@ -7,7 +7,6 @@ Groq is an optional dependency — lazy imported only when needed.
 
 import logging
 import time
-from typing import Optional
 
 from services.ai.bedrock import bedrock_client, MODEL_HAIKU
 from config import assist_settings

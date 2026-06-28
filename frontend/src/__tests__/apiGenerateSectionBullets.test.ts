@@ -149,7 +149,7 @@ describe('api.generateSectionBullets', () => {
       await api.generateSectionBullets(req);
 
       expect(mockPost).toHaveBeenCalledWith(
-        expect.stringContaining('/section-assist'),
+        expect.stringContaining('/assist/bullets'),
         expect.objectContaining({
           section_type: 'work',
           entry_context: { title: 'Engineer', organization: 'Acme', dates: '2020-2023' },
@@ -181,7 +181,7 @@ describe('api.generateSectionBullets', () => {
 
       expect(mockPost).toHaveBeenCalled();
       const callArgs = mockPost.mock.calls[0];
-      expect(callArgs[0]).toContain('/section-assist');
+      expect(callArgs[0]).toContain('/assist/bullets');
       expect(callArgs[1]).not.toHaveProperty('Authorization');
     });
   });

@@ -280,7 +280,7 @@ export const api = {
   ): Promise<SectionAssistResult | null> {
     try {
       const response = await axiosInstance.post<SectionAssistResult>(
-        `${API_BASE}/section-assist/generate-bullets`,
+        `${API_BASE}/assist/bullets`,
         {
           section_type: req.sectionType,
           entry_context: req.entryContext,
