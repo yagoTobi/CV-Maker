@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
+import asyncio
 import base64
 import logging
 
@@ -29,7 +30,9 @@ class CompileResponse(BaseModel):
 async def compile_latex(request: CompileRequest, user_id: str = Depends(get_current_user)):
     """Compile LaTeX content to PDF."""
     try:
-        result = compiler.compile(
+        # Run off the event loop — LaTeX compilation is CPU-bound and can take 5-90s
+        result = await asyncio.to_thread(
+            compiler.compile,
             request.tex_content,
             cls_content=request.cls_content,
             template_id=request.template_id
@@ -52,7 +55,9 @@ async def compile_latex(request: CompileRequest, user_id: str = Depends(get_curr
 async def compile_latex_pdf(request: CompileRequest, user_id: str = Depends(get_current_user)):
     """Compile LaTeX and return PDF directly."""
     try:
-        result = compiler.compile(
+        # Run off the event loop — LaTeX compilation is CPU-bound and can take 5-90s
+        result = await asyncio.to_thread(
+            compiler.compile,
             request.tex_content,
             cls_content=request.cls_content,
             template_id=request.template_id
