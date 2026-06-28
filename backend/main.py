@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
+from config import settings
+
 # Load CORS origins from environment variable, with fallback for local dev
 CORS_ORIGINS = os.getenv(
     "CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
