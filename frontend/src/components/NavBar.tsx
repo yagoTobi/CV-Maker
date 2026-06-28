@@ -14,6 +14,7 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEditorActions } from '../contexts/EditorActionsContext';
 import { SaveIndicator } from '../features/direct-edit/components/SaveIndicator';
+import { PageCountIndicator } from '../features/direct-edit/components/PageCountIndicator';
 import { CVSwitcherDropdown } from '../features/direct-edit/components/CVSwitcherDropdown';
 import styles from './NavBar.module.css';
 
@@ -85,6 +86,10 @@ export function NavBar() {
         {isEditorPage ? (
           <>
             <SaveIndicator status={editorActions.saveStatus} inline />
+            <PageCountIndicator
+              pageCount={editorActions.pageCount ?? null}
+              isChecking={editorActions.isCheckingPageCount ?? false}
+            />
             {!isTunedVersion && (
               <button
                 className={`${styles.ghostBtn}${isTuning ? ` ${styles.ghostBtnActive}` : ''}`}

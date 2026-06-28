@@ -1,16 +1,19 @@
 /**
- * Tests for usePageBreak hook -- detects when CV content exceeds one
- * US Letter page height (11in) and returns the pixel Y offset where
- * page 2 starts.
+ * Tests for usePageBreak -- estimates multi-page boundaries off the rendered
+ * sheet and returns the Y offsets (px, from the sheet top) of every page break
+ * plus a fractional estPages used to gate the real compile.
  *
- * Covers: UX-02 (visual indicator when content exceeds page boundary).
+ * Geometry under test: US Letter, 0.3in top/bottom margins -> 10.4in text band.
+ * We pin 1in = 100px via the probe, so one page = 1040px of content and the
+ * sheet's top padding is 30px.
+ *
+ * Covers: UX-02 (visual indicator when content exceeds the page boundary).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { usePageBreak } from '../features/direct-edit/hooks/usePageBreak';
 
 // --- Mock ResizeObserver ---
-
 let resizeCallback: ResizeObserverCallback | null = null;
 const mockDisconnect = vi.fn();
 const mockObserve = vi.fn();
@@ -24,12 +27,13 @@ class MockResizeObserver {
   disconnect = mockDisconnect;
 }
 
-// Store original and override
 const OriginalResizeObserver = globalThis.ResizeObserver;
-
-// Capture native DOM methods from prototype to avoid spy recursion
 const nativeAppendChild = Node.prototype.appendChild;
 const nativeRemoveChild = Node.prototype.removeChild;
+
+const PX_PER_IN = 100;
+const PAGE_TEXT_PX = 10.4 * PX_PER_IN; // 1040
+const PAD = 30; // 0.3in top/bottom at 100px/in
 
 beforeEach(() => {
   globalThis.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
@@ -37,6 +41,23 @@ beforeEach(() => {
   mockObserve.mockClear();
   resizeCallback = null;
   vi.useFakeTimers();
+
+  // Probe: any element sized in inches reports PX_PER_IN per inch.
+  vi.spyOn(document.body, 'appendChild').mockImplementation(function (this: Node, node: Node) {
+    if (node instanceof HTMLElement && node.style.width === '1in') {
+      Object.defineProperty(node, 'offsetWidth', { value: PX_PER_IN, configurable: true });
+    }
+    return nativeAppendChild.call(this, node);
+  });
+  vi.spyOn(document.body, 'removeChild').mockImplementation(function (this: Node, node: Node) {
+    return nativeRemoveChild.call(this, node);
+  });
+
+  // Sheet padding (top/bottom) for the content-height math.
+  vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+    paddingTop: `${PAD}px`,
+    paddingBottom: `${PAD}px`,
+  } as CSSStyleDeclaration);
 });
 
 afterEach(() => {
@@ -45,110 +66,66 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// Helper: create a mock element with a given scrollHeight
-function makeMockElement(scrollHeight: number): HTMLElement {
+/** Sheet whose *content* height (excluding padding) is `contentHeight`. */
+function makeSheet(contentHeight: number): HTMLElement {
   const el = document.createElement('div');
-  Object.defineProperty(el, 'scrollHeight', { value: scrollHeight, configurable: true });
+  Object.defineProperty(el, 'scrollHeight', { value: contentHeight + 2 * PAD, configurable: true });
   return el;
 }
 
-// Helper: mock the probe div to return a known page height in pixels.
-// At 96 DPI, 11in = 1056px. We intercept appendChild to set offsetWidth
-// on the probe div before it's measured.
-function mockProbeWidth(pxValue: number) {
-  vi.spyOn(document.body, 'appendChild').mockImplementation(function (this: Node, node: Node) {
-    if (node instanceof HTMLElement && node.style.width === '11in') {
-      Object.defineProperty(node, 'offsetWidth', { value: pxValue, configurable: true });
-    }
-    return nativeAppendChild.call(this, node);
-  });
-
-  vi.spyOn(document.body, 'removeChild').mockImplementation(function (this: Node, node: Node) {
-    return nativeRemoveChild.call(this, node);
-  });
-}
-
 describe('usePageBreak', () => {
-  it('returns null when containerRef.current is null', () => {
-    const ref = { current: null };
-    const { result } = renderHook(() => usePageBreak(ref));
-
-    expect(result.current).toBeNull();
+  it('returns empty when ref.current is null', () => {
+    const { result } = renderHook(() => usePageBreak({ current: null }));
+    expect(result.current.offsets).toEqual([]);
+    expect(result.current.estPages).toBe(0);
   });
 
-  it('returns null when content height is less than page height', () => {
-    const el = makeMockElement(500); // 500px < 1056px (11in at 96dpi)
-    const ref = { current: el };
-
-    mockProbeWidth(1056);
-
+  it('returns no offsets when content fits one page', () => {
+    const ref = { current: makeSheet(500) }; // 500 < 1040
     const { result } = renderHook(() => usePageBreak(ref));
-
-    // Initial calculate runs synchronously
-    expect(result.current).toBeNull();
+    expect(result.current.offsets).toEqual([]);
+    expect(result.current.estPages).toBeCloseTo(500 / PAGE_TEXT_PX, 3);
   });
 
-  it('returns pixel offset when content height exceeds page height + threshold', () => {
-    const el = makeMockElement(1200); // 1200px > 1056px + 10 threshold
-    const ref = { current: el };
-
-    mockProbeWidth(1056);
-
+  it('returns one offset (padTop + textHeight) for a two-page CV', () => {
+    const ref = { current: makeSheet(1500) }; // 1040 < 1490
     const { result } = renderHook(() => usePageBreak(ref));
-
-    // Initial calculate runs synchronously
-    expect(result.current).toBe(1056);
+    expect(result.current.offsets).toEqual([1070]); // round(30 + 1040)
+    expect(result.current.estPages).toBeCloseTo(1500 / PAGE_TEXT_PX, 3);
   });
 
-  it('does not return pageBreakY when content exceeds by less than 10px threshold (flicker prevention)', () => {
-    // Content exceeds page height by only 5px (less than 10px threshold)
-    const el = makeMockElement(1061); // 1061 - 1056 = 5px, less than 10px threshold
-    const ref = { current: el };
-
-    mockProbeWidth(1056);
-
+  it('returns two offsets for a three-page CV', () => {
+    const ref = { current: makeSheet(2200) };
     const { result } = renderHook(() => usePageBreak(ref));
-
-    expect(result.current).toBeNull();
+    expect(result.current.offsets).toEqual([1070, 2110]); // round(30 + n*1040)
   });
 
-  it('cleans up observer on unmount (observer.disconnect called)', () => {
-    const el = makeMockElement(500);
-    const ref = { current: el };
+  it('does not break for sub-threshold overflow (flicker prevention)', () => {
+    const ref = { current: makeSheet(PAGE_TEXT_PX + 5) }; // only 5px over -> ignored
+    const { result } = renderHook(() => usePageBreak(ref));
+    expect(result.current.offsets).toEqual([]);
+  });
 
-    mockProbeWidth(1056);
-
+  it('disconnects the observer on unmount', () => {
+    const ref = { current: makeSheet(500) };
     const { unmount } = renderHook(() => usePageBreak(ref));
-
-    expect(mockObserve).toHaveBeenCalledWith(el);
-
+    expect(mockObserve).toHaveBeenCalledWith(ref.current);
     unmount();
-
     expect(mockDisconnect).toHaveBeenCalledTimes(1);
   });
 
-  it('updates when ResizeObserver fires with new content height', () => {
-    const el = makeMockElement(500); // starts under page height
+  it('recomputes when ResizeObserver fires with new content height', () => {
+    const el = makeSheet(500);
     const ref = { current: el };
-
-    mockProbeWidth(1056);
-
     const { result } = renderHook(() => usePageBreak(ref));
+    expect(result.current.offsets).toEqual([]);
 
-    expect(result.current).toBeNull();
-
-    // Simulate content growing past threshold
-    Object.defineProperty(el, 'scrollHeight', { value: 1200, configurable: true });
-
-    // Trigger ResizeObserver callback
+    Object.defineProperty(el, 'scrollHeight', { value: 1500 + 2 * PAD, configurable: true });
     act(() => {
-      if (resizeCallback) {
-        resizeCallback([], {} as ResizeObserver);
-      }
-      // Advance past debounce timer (80ms)
-      vi.advanceTimersByTime(100);
+      resizeCallback?.([], {} as ResizeObserver);
+      vi.advanceTimersByTime(100); // past the 80ms debounce
     });
 
-    expect(result.current).toBe(1056);
+    expect(result.current.offsets).toEqual([1070]);
   });
 });

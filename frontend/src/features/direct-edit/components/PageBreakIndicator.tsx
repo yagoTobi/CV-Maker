@@ -1,26 +1,29 @@
 /**
- * PageBreakIndicator -- Dashed line with "Page 2" label rendered at the
- * computed page break offset (11 inches from the top of the CV container).
+ * PageBreakIndicator -- Dashed line with a "Page N" label rendered at a
+ * computed page-break offset, measured from the top of the CV sheet.
  *
- * Positioned absolutely inside a position:relative wrapper so the line
- * overlays the CV content at the correct Y offset.
+ * Positioned absolutely inside the position:relative sheet (.template) so the
+ * line spans the full page width at the correct Y offset.
  *
  * Covers: UX-02, D-07.
  */
 import styles from './PageBreakIndicator.module.css';
 
 interface PageBreakIndicatorProps {
-  offsetY: number; // Pixel offset from top of container
+  /** Pixel offset from the top of the sheet. */
+  offsetY: number;
+  /** Label shown at the break, e.g. "Page 2". */
+  label: string;
 }
 
-export function PageBreakIndicator({ offsetY }: PageBreakIndicatorProps) {
+export function PageBreakIndicator({ offsetY, label }: PageBreakIndicatorProps) {
   return (
     <div
       className={styles.indicator}
       style={{ top: `${offsetY}px` }}
-      aria-label="Page break - content below this line is on page 2"
+      aria-label={`Page break - content below this line is on ${label}`}
     >
-      <span className={styles.label}>Page 2</span>
+      <span className={styles.label}>{label}</span>
     </div>
   );
 }
