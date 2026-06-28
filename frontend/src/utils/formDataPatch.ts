@@ -2,7 +2,7 @@ import type { CVFormData, TailorChange } from '../types';
 import { generateId } from './idHelpers';
 
 /** Parse a path like "workExperience[0].bullets[2]" into segments */
-export function parsePath(path: string): (string | number)[] {
+function parsePath(path: string): (string | number)[] {
   const segments: (string | number)[] = [];
   const re = /([^.[]+)|\[(\d+)\]/g;
   let m: RegExpExecArray | null;
@@ -86,7 +86,7 @@ export function setAtPathImmutable(
   return rebuild(obj, 0) as Record<string, unknown>;
 }
 
-export function setAtPath(obj: Record<string, unknown>, path: string, value: unknown): void {
+function setAtPath(obj: Record<string, unknown>, path: string, value: unknown): void {
   const segs = parsePath(path);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let cur: any = obj;
@@ -159,6 +159,26 @@ export function applyTailorChanges(
     }
   }
   return patched;
+}
+
+/**
+ * Enforce the "one Suggestion per field" invariant (see CONTEXT.md): keep at most
+ * one TailorChange per fieldPath. First occurrence wins — TAILOR_SUGGEST_PROMPT emits
+ * the highest-impact changes first, so the first change for a field is the one to keep.
+ * The order of kept changes is preserved.
+ *
+ * Without this, two changes on the same fieldPath would silently clobber each other in
+ * applyTailorChanges (last write wins) and stack two highlights on one element.
+ */
+export function dedupeChangesByField(changes: TailorChange[]): TailorChange[] {
+  const seen = new Set<string>();
+  const result: TailorChange[] = [];
+  for (const change of changes) {
+    if (seen.has(change.fieldPath)) continue;
+    seen.add(change.fieldPath);
+    result.push(change);
+  }
+  return result;
 }
 
 /** Map a field path like "workExperience[0].bullets[2]" to its form section */

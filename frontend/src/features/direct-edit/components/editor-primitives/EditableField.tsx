@@ -21,6 +21,7 @@
  */
 import { useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import type { Severity } from '../../utils/severity';
+import { useFieldHighlights } from './HighlightContext';
 import styles from './EditableField.module.css';
 
 export interface HighlightSpan {
@@ -118,6 +119,23 @@ function renderHighlightedDom(
   if (tail.length > 0) el.appendChild(document.createTextNode(tail));
 }
 
+/**
+ * Whole-field highlight for RICH content: wrap the existing HTML in a single severity span.
+ * (Substring offsets aren't supported for rich fields; MVP highlights the whole field.)
+ * `value` here is the field's own rich HTML — same trust level as the normal rich render path.
+ */
+function renderRichHighlight(el: HTMLElement, value: string, span: HighlightSpan): void {
+  while (el.firstChild) el.removeChild(el.firstChild);
+  const wrapper = document.createElement('span');
+  const classes = [styles.highlight, tierClass[span.severity]];
+  if (span.isActive) classes.push(styles.active ?? '');
+  wrapper.className = classes.filter(Boolean).join(' ');
+  wrapper.setAttribute('data-change-id', span.changeId);
+  wrapper.setAttribute('data-severity', span.severity);
+  wrapper.innerHTML = value;
+  el.appendChild(wrapper);
+}
+
 export const EditableField = forwardRef<HTMLElement, EditableFieldProps>(
   function EditableField(
     {
@@ -137,6 +155,12 @@ export const EditableField = forwardRef<HTMLElement, EditableFieldProps>(
     },
     forwardedRef
   ) {
+    // Inline-review highlights: explicit prop wins; otherwise pull from HighlightContext
+    // by fieldPath (no provider -> undefined -> normal editor behavior).
+    const ctxHighlights = useFieldHighlights(fieldPath);
+    const effectiveSpans = highlightSpans ?? ctxHighlights.spans;
+    const effectiveAutoDismiss = onAutoDismiss ?? ctxHighlights.onAutoDismiss;
+
     const ref = useRef<HTMLElement>(null);
     const isFocused = useRef(false);
     const isComposing = useRef(false);
@@ -154,9 +178,15 @@ export const EditableField = forwardRef<HTMLElement, EditableFieldProps>(
     useEffect(() => {
       if (isFocused.current || !ref.current) return;
 
-      const hasHighlights = !!highlightSpans && highlightSpans.length > 0 && !rich;
+      const hasHighlights = !!effectiveSpans && effectiveSpans.length > 0;
       if (hasHighlights && value !== '') {
-        renderHighlightedDom(ref.current, value, highlightSpans!);
+        const first = effectiveSpans![0];
+        if (rich) {
+          // Rich content: wrap the whole field in one severity span (substring N/A for rich).
+          if (first) renderRichHighlight(ref.current, value, first);
+        } else {
+          renderHighlightedDom(ref.current, value, effectiveSpans!);
+        }
         // Re-arm auto-dismiss for the new highlight render pass.
         autoDismissArmed.current = true;
         return;
@@ -177,20 +207,20 @@ export const EditableField = forwardRef<HTMLElement, EditableFieldProps>(
         }
       }
       autoDismissArmed.current = false;
-    }, [value, rich, highlightSpans]);
+    }, [value, rich, effectiveSpans]);
 
     const handleFocus = useCallback(() => {
       isFocused.current = true;
-      // D-13: strip highlight <span> wrappers on focus so the user types into pristine
-      // text. textContent assignment collapses all child element nodes, leaving a single
-      // text node whose content equals the current displayed value (cursor-safe).
-      if (ref.current && highlightSpans && highlightSpans.length > 0 && !rich) {
-        const plain = ref.current.textContent ?? value;
-        // Force re-assignment to flatten span wrappers, even when the textContent value
-        // is already correct (the goal is to remove element children, not to change text).
-        ref.current.textContent = plain;
+      // D-13: strip highlight <span> wrappers on focus so the user types into pristine content.
+      if (ref.current && effectiveSpans && effectiveSpans.length > 0) {
+        if (rich) {
+          ref.current.innerHTML = value;
+        } else {
+          const plain = ref.current.textContent ?? value;
+          ref.current.textContent = plain;
+        }
       }
-    }, [highlightSpans, rich, value]);
+    }, [effectiveSpans, rich, value]);
 
     const handleBlur = useCallback(() => {
       isFocused.current = false;
@@ -212,17 +242,17 @@ export const EditableField = forwardRef<HTMLElement, EditableFieldProps>(
         // active span. We fire ONCE per highlight render pass.
         if (
           autoDismissArmed.current &&
-          highlightSpans &&
-          highlightSpans.length > 0 &&
-          onAutoDismiss
+          effectiveSpans &&
+          effectiveSpans.length > 0 &&
+          effectiveAutoDismiss
         ) {
           autoDismissArmed.current = false;
           // Fire for the first span (active span if marked, else first-by-order).
-          const active = highlightSpans.find((s) => s.isActive) ?? highlightSpans[0];
-          if (active) onAutoDismiss(active.changeId);
+          const active = effectiveSpans.find((s) => s.isActive) ?? effectiveSpans[0];
+          if (active) effectiveAutoDismiss(active.changeId);
         }
       }
-    }, [onInput, highlightSpans, onAutoDismiss]);
+    }, [onInput, effectiveSpans, effectiveAutoDismiss]);
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent) => {

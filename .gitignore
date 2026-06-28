@@ -15,6 +15,7 @@ Icon
 .playwright-mcp/
 .claude/
 .codex/
+.omo/
 AGENTS.md
 graphify-out/
 

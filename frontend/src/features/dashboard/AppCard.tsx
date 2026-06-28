@@ -1,4 +1,5 @@
 import { formatDate, scoreColorClass } from '../../utils/cvDisplayUtils';
+import { scoreToFitBand } from '../../utils/fitBand';
 import { DownloadIcon, TrashIcon, MoveIcon } from './icons';
 import type { CVVersionMeta, CVVersionWithChildren } from '../../types';
 import styles from './AppCard.module.css';
@@ -24,7 +25,7 @@ function ScoreBadge({ score, baselineScore }: { score: number; baselineScore?: n
   return (
     <>
       <span className={`${styles.scoreBadge} ${styles[scoreColorClass(score)]}`}>
-        {Math.round(score)}%
+        {scoreToFitBand(score).name}
       </span>
       {delta != null && delta > 0 && (
         <span className={styles.scoreDelta}>+{delta}</span>

@@ -94,24 +94,32 @@ export function GapPromptChips({
   return (
     <div className={styles.chipArray}>
       {missing.map((gap, i) => {
-        const isExpanded = expandedIndex === i;
-        const chipClass = [styles.chip, isExpanded ? styles.chipExpanded : '']
+        const hasText = (values[i]?.trim() ?? '') !== '';
+        // Stay open while focused OR once the user has typed something, so their evidence
+        // never visually disappears when they click another chip or away.
+        const isOpen = expandedIndex === i || hasText;
+        const chipClass = [styles.chip, isOpen ? styles.chipExpanded : '', hasText ? styles.chipFilled : '']
           .filter(Boolean)
           .join(' ');
         return (
-          <div key={`${gap}-${i}`} className={isExpanded ? styles.chipGroup : styles.chipWrap}>
+          <div key={`${gap}-${i}`} className={isOpen ? styles.chipGroup : styles.chipWrap}>
             <button
               type="button"
               className={chipClass}
               onClick={() => handleChipClick(i)}
-              aria-expanded={isExpanded}
+              aria-expanded={isOpen}
               aria-label={gap}
             >
+              {hasText && (
+                <span className={styles.chipCheck} aria-hidden>
+                  {'\u2713 '}
+                </span>
+              )}
               {gap}
             </button>
-            {isExpanded && (
+            {isOpen && (
               <textarea
-                ref={textareaRef}
+                ref={expandedIndex === i ? textareaRef : undefined}
                 className={styles.textarea}
                 value={values[i] ?? ''}
                 onChange={handleChange(i)}
@@ -127,6 +135,3 @@ export function GapPromptChips({
     </div>
   );
 }
-
-// Exported for downstream tests / consumers that want to align caps.
-export const GAP_PROMPT_MAX_LENGTH = MAX_CLARIFICATION_LENGTH;

@@ -193,7 +193,7 @@ If the CV is written in a non-English language, provide your analysis (requireme
 ## Your Task
 1. Extract the key requirements from the position description (skills, experience, qualifications)
 2. Identify which requirements the candidate already meets based on their CV
-3. Identify gaps — requirements not evidenced in the CV
+3. Identify gaps — requirements not evidenced in the CV. Consolidate them into AT MOST 5 high-level, grouped themes (merge closely-related requirements into a single concise phrase), ordered by importance to the role. Do not return more than 5 entries in "missing".
 4. Provide actionable suggestions to improve the match (including courses/certs/publications if helpful)
 5. Calculate an overall match score (0-100%)
 

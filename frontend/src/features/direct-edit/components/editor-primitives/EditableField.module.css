@@ -47,47 +47,44 @@
   cursor: text;
 }
 
-/* Phase 13: inline highlight spans (D-13/D-14)
-   Wavy underline per RESEARCH §Pattern 3; severity-tier color via UI-SPEC §Color table.
-   Applied to per-span <span> wrappers injected by renderHighlightedDom().
+/* Phase 13 inline highlights -- clean SOLID underline (this is a suggestion, not an error,
+   so no red and no jarring squiggle). Active (popover open) adds a soft Grammarly-style tint.
+   Applied to the <span> wrappers injected by renderHighlightedDom() / renderRichHighlight().
 */
 .highlight {
   text-decoration-line: underline;
-  text-decoration-style: wavy;
+  text-decoration-style: solid;
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
   text-decoration-skip-ink: none;
   cursor: pointer;
+  border-radius: 2px;
   transition: background-color 0.15s ease;
 }
 
-.tierStrong {
-  text-decoration-color: var(--error);
-  color: inherit;
-}
-
+/* Modify suggestions (strong + minor) -- accent underline, never red. */
+.tierStrong,
 .tierMinor {
   text-decoration-color: var(--accent);
   color: inherit;
 }
 
+/* Add -- green underline (new content). */
 .tierAdd {
   text-decoration-color: var(--success);
-  color: var(--success);
+  color: inherit;
 }
 
+/* Delete -- muted strikethrough (removal); deliberately not an alarming red. */
 .tierDelete {
-  text-decoration: line-through;
-  text-decoration-color: var(--error);
-  color: var(--error);
+  text-decoration-line: line-through;
+  text-decoration-style: solid;
+  text-decoration-color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
-/* Active highlight (popover open) -- adds tinted background per D-14. */
-.highlight.active.tierStrong {
-  background-color: var(--error-light);
-}
-
-.highlight.active.tierMinor {
+/* Active highlight (popover open) -- soft background tint. */
+.highlight.active {
   background-color: var(--accent-light);
 }
 
@@ -96,5 +93,5 @@
 }
 
 .highlight.active.tierDelete {
-  background-color: var(--error-light);
+  background-color: var(--bg-hover);
 }
