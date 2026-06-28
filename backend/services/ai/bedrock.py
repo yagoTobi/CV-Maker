@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Any, Dict, Generator, List, Optional
+from typing import Dict, Generator, List, Optional
 
 import boto3
 

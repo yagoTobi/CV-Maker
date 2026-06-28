@@ -3,7 +3,7 @@ import type { CompileResponse, ChatRequest, UserProfile, MatchAnalysis, CVFormDa
 import type { Template } from '../features/template-selection';
 import { getUserId } from './userId';
 
-export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 // Create axios instance with default timeout
 const axiosInstance = axios.create({

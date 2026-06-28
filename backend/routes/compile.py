@@ -42,7 +42,7 @@ async def compile_latex(request: CompileRequest):
             warnings=result.warnings,
         )
 
-    except Exception as e:
+    except Exception:
         logger.exception("LaTeX compilation error")
         raise HTTPException(status_code=500, detail="An internal error occurred")
 
@@ -72,6 +72,6 @@ async def compile_latex_pdf(request: CompileRequest):
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         logger.exception("LaTeX PDF compilation error")
         raise HTTPException(status_code=500, detail="An internal error occurred")

@@ -911,9 +911,6 @@ class TestExtractDocxTextWithMocks:
             numPr_elem = MagicMock()
             pPr.find.return_value = numPr_elem
             if ilvl_val is not None:
-                WML_NS = (
-                    "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
-                )
                 ilvl = MagicMock()
                 ilvl.get.return_value = ilvl_val
                 numPr_elem.find.return_value = ilvl

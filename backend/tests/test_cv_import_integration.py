@@ -18,7 +18,7 @@ import json
 import os
 import sys
 from io import BytesIO
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -1111,15 +1111,8 @@ class TestExtractDocxText:
         doc = Document(BytesIO(data))
         text = self._extract(doc)
 
-        # The sample_cv.docx has bold job titles
-        bold_lines = [
-            line
-            for line in text.split("\n")
-            if line.startswith("**") and line.endswith("**")
-        ]
-        # There may or may not be all-bold paragraphs depending on how the fixture was built;
-        # the fixture has mixed bold/non-bold runs in the same paragraph, which won't trigger
-        # the "all-bold" detection. But verify no crash at least.
+        # The fixture has mixed bold/non-bold runs in the same paragraph, which won't
+        # trigger the "all-bold" detection — so just verify extraction doesn't crash.
         assert isinstance(text, str)
 
 

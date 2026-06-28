@@ -23,7 +23,6 @@ import sys
 import os
 import pytest
 import re
-from typing import List, Optional
 
 # Add backend to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))

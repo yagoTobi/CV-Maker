@@ -3,6 +3,14 @@ import { api } from '../../services/api';
 import { useCVContext } from '../../contexts/CVContext';
 import type { CVVersionMeta, CVVersionWithChildren } from '../../types';
 
+export interface SaveVersionData {
+  name: string;
+  isBaseCV: boolean;
+  parentVersionId?: string | null;
+  role?: string;
+  companyName?: string;
+}
+
 interface DashboardVersionsState {
   baseCvs: CVVersionWithChildren[];
   ungrouped: CVVersionMeta[];

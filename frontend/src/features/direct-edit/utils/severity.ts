@@ -18,7 +18,7 @@ import type { TailorChange, TailorAlternative } from '../../../types';
 export type Severity = 'strong' | 'minor' | 'add' | 'delete';
 
 /** Tunable threshold for modify -> strong vs minor. >0.5 means low overlap. */
-export const SEVERITY_DIFF_THRESHOLD = 0.5;
+const SEVERITY_DIFF_THRESHOLD = 0.5;
 
 /** Coerce TailorAlternative.value (string | string[]) plus other shapes to a comparable string. */
 function toDisplayString(value: unknown): string {

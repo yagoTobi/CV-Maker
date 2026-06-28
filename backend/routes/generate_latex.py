@@ -231,7 +231,7 @@ async def generate_latex(form_data: CVFormData):
 
     try:
         template = _jinja_env.get_template(template_file)
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to load template: %s", form_data.templateId)
         raise HTTPException(status_code=500, detail="An internal error occurred")
 
@@ -257,7 +257,7 @@ async def generate_latex(form_data: CVFormData):
 
     try:
         tex_content = template.render(**context)
-    except Exception as e:
+    except Exception:
         logger.exception("Template rendering failed for: %s", form_data.templateId)
         raise HTTPException(status_code=500, detail="An internal error occurred")
 

@@ -1,5 +1,4 @@
 import type { SkillItem } from '../../../../types';
-import type { useEntryDrag } from '../../hooks/useEntryDrag';
 import type { useSectionDrag } from '../../hooks/useSectionDrag';
 
 export interface SharedSectionProps {
@@ -16,8 +15,4 @@ export interface SharedSectionProps {
   onRemoveSection?: (sectionKey: string) => void;
   sectionDrag: ReturnType<typeof useSectionDrag>;
   sectionIndex: number;
-}
-
-export interface EntryDragRenderProps {
-  entryDrag: ReturnType<typeof useEntryDrag>;
 }

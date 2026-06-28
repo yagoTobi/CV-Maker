@@ -19,7 +19,7 @@ export interface TuneSessionState {
 
 const STORAGE_PREFIX = 'cv-maker:tune-session:';
 
-export function tuneSessionKey(versionId: string): string {
+function tuneSessionKey(versionId: string): string {
   return `${STORAGE_PREFIX}${versionId}`;
 }
 

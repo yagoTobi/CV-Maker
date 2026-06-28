@@ -84,7 +84,7 @@ async def chat(request: ChatRequest):
             response = bedrock_client.chat(messages, system_prompt, stream=False, model_id=MODEL_SONNET, temperature=0.7)
             return ChatResponse(response=response)
 
-    except Exception as e:
+    except Exception:
         logger.exception("AI service error")
         raise HTTPException(status_code=500, detail="AI service temporarily unavailable")
 
@@ -122,7 +122,7 @@ async def analyze_job(request: ChatRequest):
             response = bedrock_client.chat(messages, system_prompt, stream=False, model_id=MODEL_SONNET, temperature=0.5)
             return ChatResponse(response=response)
 
-    except Exception as e:
+    except Exception:
         logger.exception("AI service error")
         raise HTTPException(status_code=500, detail="AI service temporarily unavailable")
 
@@ -198,6 +198,6 @@ Return ONLY a valid JSON object with this exact structure:
                 match_score=0
             )
 
-    except Exception as e:
+    except Exception:
         logger.exception("AI service error")
         raise HTTPException(status_code=500, detail="AI service temporarily unavailable")
