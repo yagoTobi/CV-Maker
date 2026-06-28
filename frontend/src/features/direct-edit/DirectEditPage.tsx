@@ -41,6 +41,12 @@ import { downloadPdf } from '../../utils/downloadPdf';
 import type { CVFormData, CVVersion, CVVersionMeta } from '../../types';
 import { NamePromptDialog } from './components/dialogs/NamePromptDialog';
 import { loadTuneSession } from './utils/tuneSession';
+import { useSectionAssist } from './hooks/useSectionAssist';
+import { SectionAssistContext } from './components/editor-primitives/SectionAssistContext';
+import { SectionAssistPopover } from './components/section-assist/SectionAssistPopover';
+import { resolveSectionContext } from './utils/sectionAssist';
+import { applyAssistBullets } from './utils/assistApply';
+import type { SectionAssistTarget } from './utils/sectionAssist';
 import styles from './DirectEditPage.module.css';
 
 const DEFAULT_TEMPLATE = 'med-length-proff-cv';
@@ -134,6 +140,37 @@ export default function DirectEditPage() {
     }),
     [tuneFlow.inlineReview.highlightSpansByFieldPath, tuneFlow.inlineReview.autoDismiss],
   );
+
+  const assistSuppressed =
+    tunePanelOpen ||
+    tuneFlow.tailor.pendingChanges.length > 0 ||
+    !!tuneFlow.inlineReview.activeChange;
+
+  const handleAssistApply = useCallback(
+    (target: SectionAssistTarget, bullets: string[]) => {
+      setFormData((prev: CVFormData | null) => {
+        if (!prev) return prev;
+        return applyAssistBullets(prev, target, bullets);
+      });
+      setTimeout(() => target.restoreFocusEl?.focus(), 0);
+    },
+    [setFormData],
+  );
+
+  const sectionAssist = useSectionAssist({
+    onApply: handleAssistApply,
+    formData,
+    suppressed: assistSuppressed,
+  });
+
+  const assistResolvedCtx = useMemo(
+    () =>
+      sectionAssist.target && formData
+        ? resolveSectionContext(formData, sectionAssist.target.basePath)
+        : null,
+    [sectionAssist.target, formData],
+  );
+
   const handleCvClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       const el = (e.target as HTMLElement).closest('[data-change-id]');
@@ -292,27 +329,31 @@ export default function DirectEditPage() {
           onClick={handleCvClick}
           onMouseDown={handleCvMouseDown}
         >
-          <HighlightContext.Provider value={highlightCtxValue}>
-            <MedLengthTemplate
-              ref={templateRef}
-              formData={formData}
-              readOnly={false}
-              onFieldChange={updateField}
-              onBulletAdd={addBullet}
-              onBulletRemove={removeBullet}
-              onAddEntry={addEntry}
-              onRemoveEntry={removeEntry}
-              onToggleSection={toggleSection}
-              hiddenSections={hiddenSections}
-              onReorderSections={reorderSections}
-              onReorderEntries={reorderEntries}
-              onInput={handleInput}
-              onRemoveSection={removeSection}
-              onAddLink={addLink}
-              onRemoveLink={removeLink}
-              pageBreakOffsets={pageBreakOffsets}
-            />
-          </HighlightContext.Provider>
+          <SectionAssistContext.Provider
+            value={{ requestAssist: sectionAssist.requestAssist, suppressed: assistSuppressed }}
+          >
+            <HighlightContext.Provider value={highlightCtxValue}>
+              <MedLengthTemplate
+                ref={templateRef}
+                formData={formData}
+                readOnly={false}
+                onFieldChange={updateField}
+                onBulletAdd={addBullet}
+                onBulletRemove={removeBullet}
+                onAddEntry={addEntry}
+                onRemoveEntry={removeEntry}
+                onToggleSection={toggleSection}
+                hiddenSections={hiddenSections}
+                onReorderSections={reorderSections}
+                onReorderEntries={reorderEntries}
+                onInput={handleInput}
+                onRemoveSection={removeSection}
+                onAddLink={addLink}
+                onRemoveLink={removeLink}
+                pageBreakOffsets={pageBreakOffsets}
+              />
+            </HighlightContext.Provider>
+          </SectionAssistContext.Provider>
         </div>
         {tunePanelOpen && (
           <TuneRail
@@ -342,6 +383,20 @@ export default function DirectEditPage() {
           onClose={tuneFlow.inlineReview.close}
           onSelectAlternative={tuneFlow.inlineReview.selectAlternative}
           onEdit={tuneFlow.inlineReview.editChange}
+        />
+      )}
+      {sectionAssist.isOpen && sectionAssist.target && assistResolvedCtx && (
+        <SectionAssistPopover
+          sectionType={assistResolvedCtx.sectionType}
+          getRect={sectionAssist.target.getRect}
+          isLoading={sectionAssist.isLoading}
+          error={sectionAssist.error}
+          onGenerate={sectionAssist.generate}
+          onClose={() => {
+            const restoreEl = sectionAssist.target?.restoreFocusEl;
+            sectionAssist.close();
+            restoreEl?.focus();
+          }}
         />
       )}
       <PostSavePrompt
