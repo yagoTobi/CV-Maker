@@ -31,3 +31,31 @@ class Settings(BaseSettings):
 # Module singleton
 settings = Settings()
 
+
+def validate_production_settings(s: Settings) -> None:
+    """Raise RuntimeError if production invariants are violated.
+
+    Called from the FastAPI lifespan startup — the SERVER fails to start,
+    not the import. This keeps import-time vs startup-time distinct and testable.
+    """
+    if s.env != "production":
+        return
+    if s.auth_mode != "cognito":
+        raise RuntimeError(
+            "Production requires AUTH_MODE=cognito (got: auth_mode='dev'). "
+            "Set AUTH_MODE=cognito in your environment."
+        )
+    if not s.cognito_user_pool_id:
+        raise RuntimeError(
+            "Production requires COGNITO_USER_POOL_ID to be set."
+        )
+    if not s.cognito_app_client_id:
+        raise RuntimeError(
+            "Production requires COGNITO_APP_CLIENT_ID to be set."
+        )
+    if s.storage_backend != "dynamodb":
+        raise RuntimeError(
+            f"Production requires STORAGE_BACKEND=dynamodb (got: '{s.storage_backend}'). "
+            "File storage is not safe for multi-user production."
+        )
+

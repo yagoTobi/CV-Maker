@@ -1,3 +1,3 @@
-from .settings import settings
+from .settings import settings, validate_production_settings
 
-__all__ = ["settings"]
+__all__ = ["settings", "validate_production_settings"]

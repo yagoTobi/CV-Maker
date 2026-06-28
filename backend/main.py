@@ -1,4 +1,5 @@
 import os
+from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
@@ -6,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
-from config import settings
+from config import settings, validate_production_settings
 
 # Load CORS origins from environment variable, with fallback for local dev
 CORS_ORIGINS = os.getenv(
@@ -24,7 +25,15 @@ from routes.user_data import router as user_data_router
 from routes.tailor import router as tailor_router
 from routes.voice_interview import router as voice_interview_router
 
-app = FastAPI(title="CV Maker API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Fail closed in production if invariants are violated
+    validate_production_settings(settings)
+    yield
+
+
+app = FastAPI(title="CV Maker API", lifespan=lifespan)
 
 # CORS middleware for frontend
 app.add_middleware(

@@ -41,7 +41,7 @@ from models.cv import (
 )
 
 # Import the latex_escape function and template setup from generate_latex
-from routes.generate_latex import latex_escape, latex_url_escape, _build_personal_items, _flatten_for_template
+from routes.generate_latex import latex_escape, latex_url_escape, html_latex, _build_personal_items, _flatten_for_template
 
 # Template directory
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "..", "latex_templates")
@@ -59,6 +59,7 @@ jinja_env = Environment(
 )
 jinja_env.filters["latex_escape"] = latex_escape
 jinja_env.filters["latex_url_escape"] = latex_url_escape
+jinja_env.filters["html_latex"] = html_latex
 
 # Templates to test
 TEMPLATE_FILES = {
@@ -571,6 +572,17 @@ class TestTemplateRendering:
         """
         flat = _flatten_for_template(form_data)
         personal_order = form_data.personalInfo.personalOrder or ["phone", "email", "location", "links"]
+        
+        # Default section labels (from generate_latex.py)
+        _DEFAULT_SECTION_LABELS = {
+            "work": "Experience",
+            "education": "Education",
+            "skills": "Skills",
+            "projects": "Projects",
+            "awards": "Awards",
+        }
+        section_labels = {**_DEFAULT_SECTION_LABELS, **(form_data.sectionLabels or {})}
+        
         return {
             "personal": form_data.personalInfo,
             "personal_items": _build_personal_items(form_data.personalInfo, personal_order),
@@ -580,6 +592,7 @@ class TestTemplateRendering:
             "projects": flat.get("projects", []),
             "awards": flat.get("awards", []),
             "section_order": form_data.sectionOrder or ["work", "education", "skills", "projects", "awards"],
+            "section_labels": section_labels,
         }
 
 
