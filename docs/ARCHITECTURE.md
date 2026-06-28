@@ -223,7 +223,7 @@ CV-Maker/
     config/templates.py       Template registry (TEMPLATES dict)
     prompts/                  System prompts for all AI features
     latex_templates/          Jinja2 .tex.j2 templates with custom delimiters (( )) / (% %)
-    dependencies.py           get_current_user (X-User-Id header, defaults to "local")
+    dependencies.py           get_current_user (Cognito JWT in production; X-User-Id dev fallback)
   cv-templates/               Original LaTeX template source directories
     med-length-proff-cv/
     deedy-resume/
@@ -281,7 +281,7 @@ CV-Maker/
 
 ## Security and Cross-Cutting Concerns
 
-**Authentication:** `X-User-Id` header -> `get_current_user()` dependency (`backend/dependencies.py`). Defaults to `"local"` for single-user mode. A comment in the code marks the swap point for JWT/Cognito.
+**Authentication:** Cognito JWT verification via `get_current_user()` dependency (`backend/dependencies.py`). In production (`AUTH_MODE=cognito`), the `Authorization: Bearer <id-token>` header is verified against the Cognito User Pool JWKS; the `sub` claim becomes the user id. In local development (`AUTH_MODE=dev`), the `X-User-Id` header is trusted directly (defaults to `"local"`). Production startup fails closed if `AUTH_MODE=dev` is set.
 
 **LaTeX sanitization:** `LaTeXCompiler._sanitize_content()` (`backend/services/latex_compiler.py:54`) strips dangerous commands (shell escape, file I/O, `\def`, `\let`, `\special`) before compilation. UUID validation on version IDs prevents path traversal.
 

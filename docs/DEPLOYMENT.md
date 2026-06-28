@@ -329,9 +329,19 @@ The backend automatically adds the following security headers to all responses:
 
 ### Authentication
 
-The current authentication mechanism reads an `X-User-Id` header and defaults to `"local"` for single-user mode (`backend/dependencies.py`). This is a placeholder -- the code includes a comment: *"Swap this for JWT/Cognito validation when adding auth."*
+Authentication uses **Cognito JWT verification**. The `Authorization: Bearer <id-token>` header is verified against the Cognito User Pool JWKS; the `sub` claim becomes the user id. All data/AI/PDF endpoints require a valid token; only `/api/health` and the static template catalog remain public.
 
-For production multi-user deployment, replace `get_current_user` with real JWT or OAuth token validation. See `docs/TODO-multi-user-deployment.md` for the full checklist.
+In local development (`AUTH_MODE=dev`), the `X-User-Id` header is trusted directly (defaults to `"local"`). This mode is rejected at startup when `ENV=production`.
+
+Required environment variables for production auth:
+
+| Variable | Description |
+|---|---|
+| `AUTH_MODE` | Must be `cognito` in production |
+| `COGNITO_USER_POOL_ID` | Cognito User Pool ID |
+| `COGNITO_APP_CLIENT_ID` | Cognito App Client ID |
+
+See `docs/DECISIONS.md` ADR-022 for the full auth architecture decision.
 
 ### LaTeX Compilation Security
 

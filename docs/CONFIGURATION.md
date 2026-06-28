@@ -98,13 +98,20 @@ An in-memory TTL cache is used to avoid redundant AI calls for match analysis an
 
 These values are hardcoded constants in `llm_cache.py` and are not configurable via environment variables.
 
-### User Identity (`backend/dependencies.py`)
+### Authentication (`backend/dependencies.py`)
 
-User identification is handled via the `X-User-Id` HTTP header:
+User authentication uses **Cognito JWT verification** in production and a dev-mode header fallback for local development:
 
-- If the header is present, its value is used as the user ID for storage operations.
-- If the header is absent, it defaults to `"local"` (single-user mode).
-- No authentication or token validation is performed. The code includes a comment: *"Swap this for JWT/Cognito validation when adding auth."*
+- **`AUTH_MODE=cognito`** (production): the `Authorization: Bearer <id-token>` header is verified against the configured Cognito User Pool JWKS. The `sub` claim becomes the user id. Returns 401 on missing/invalid/expired tokens.
+- **`AUTH_MODE=dev`** (local development only): the `X-User-Id` header is trusted directly (defaults to `"local"`). This mode is **rejected at startup** when `ENV=production`.
+
+Required settings for Cognito mode:
+
+| Setting | Description |
+|---|---|
+| `AUTH_MODE` | `cognito` for production, `dev` for local development |
+| `COGNITO_USER_POOL_ID` | Cognito User Pool ID (e.g. `us-east-1_XXXXXXXXX`) |
+| `COGNITO_APP_CLIENT_ID` | Cognito App Client ID |
 
 ## Required vs Optional Settings
 
