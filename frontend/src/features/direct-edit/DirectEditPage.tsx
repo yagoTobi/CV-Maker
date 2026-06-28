@@ -5,35 +5,46 @@
  * white-background page. EB Garamond font is loaded here (not globally) so it
  * only applies to the CV editing surface.
  *
- * If formData is not in context (e.g., direct URL navigation), tries to load
- * the most recent saved version. Falls back to an empty template with placeholders.
+ * The "Tune for Job" flow is the TuneRail (switch-column stepper) mounted beside the CV.
+ * During review, AI suggestions render as inline highlights on the (still-editable) CV via
+ * HighlightContext, reviewed through a per-change ChangePopover. Orchestration lives in
+ * useTuneFlow.
  *
- * Editor actions (Download PDF, save status) are lifted into
- * EditorActionsContext so the NavBar can render them.
+ * If formData is not in context (e.g., direct URL navigation / refresh), it restores the
+ * specific version the user was editing (persisted per-tab in sessionStorage).
  *
- * Covers: EDIT-01 through EDIT-06, UX-01, D-05, D-06, D-07, D-13.
+ * Editor actions (Download PDF, save status, page count) are lifted into EditorActionsContext
+ * so the NavBar can render them.
  */
 import '@fontsource-variable/eb-garamond';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type React from 'react';
+import { useLocation } from 'react-router-dom';
 import { useDirectEditor } from './hooks/useDirectEditor';
 import { useAutoSave } from './hooks/useAutoSave';
 import { usePageBreak } from './hooks/usePageBreak';
+import { usePageCount } from './hooks/usePageCount';
 import { MedLengthTemplate } from './components/MedLengthTemplate';
 import { useSetEditorActions } from '../../contexts/EditorActionsContext';
-import { PageBreakIndicator } from './components/PageBreakIndicator';
-import { TunePanel } from './components/tune-tiers/TunePanel';
+import { TuneRail } from './components/TuneRail';
+import { ChangePopover } from './components/change-review/ChangePopover';
+import { PostSavePrompt } from './components/PostSavePrompt';
+import { HighlightContext } from './components/editor-primitives/HighlightContext';
+import type { HighlightContextValue } from './components/editor-primitives/HighlightContext';
+import { useTuneFlow } from './hooks/useTuneFlow';
 import { useCVContext } from '../../contexts/CVContext';
 import { api } from '../../services/api';
+import { getStoredActiveVersionId } from '../../utils/activeVersionStorage';
 import { generateId } from '../../utils/idHelpers';
 import { generateCVFilename } from '../../utils/cvFilename';
 import { downloadPdf } from '../../utils/downloadPdf';
-import { noop, EMPTY_SET } from '../../utils/cvDisplayUtils';
-import type { CVFormData, SkillItem, CVVersion, CVVersionMeta } from '../../types';
+import type { CVFormData, CVVersion, CVVersionMeta } from '../../types';
 import { NamePromptDialog } from './components/dialogs/NamePromptDialog';
+import { loadTuneSession } from './utils/tuneSession';
 import styles from './DirectEditPage.module.css';
 
 const DEFAULT_TEMPLATE = 'med-length-proff-cv';
+const VALID_TEMPLATES = ['med-length-proff-cv', 'deedy-resume', 'mcdowell-cv'];
 
 function createEmptyFormData(): CVFormData {
   return {
@@ -44,7 +55,7 @@ function createEmptyFormData(): CVFormData {
       summary: '', personalOrder: ['phone', 'email', 'location', 'links'],
     },
     workExperience: [{ id: generateId(), company: '', title: '', startDate: '', endDate: '', location: '', bullets: [{ id: generateId(), text: '' }] }],
-    education: [{ id: generateId(), school: '', degree: '', startDate: '', endDate: '', location: '', gpa: '', details: [] }],
+    education: [{ id: generateId(), school: '', degree: '', startDate: '', endDate: '', location: '', gpa: '', details: [{ id: generateId(), text: '' }] }],
     skills: [{ id: generateId(), category: '', skills: [] }],
     projects: [],
     awards: [],
@@ -104,20 +115,44 @@ export default function DirectEditPage() {
   const [isBootstrapping, setIsBootstrapping] = useState(!formData);
   const [isDownloading, setIsDownloading] = useState(false);
   const [tunePanelOpen, setTunePanelOpen] = useState(false);
-  const [previewFormData, setPreviewFormData] = useState<CVFormData | null>(null);
-  const [isTier3Active, setIsTier3Active] = useState(false);
   const setEditorActions = useSetEditorActions();
-  const navigate = useNavigate();
   const location = useLocation();
   const cvContainerRef = useRef<HTMLDivElement>(null);
-  const pageBreakY = usePageBreak(cvContainerRef);
+  const templateRef = useRef<HTMLDivElement>(null);
+  // Fast CSS estimate of page boundaries (instant, approximate).
+  const { offsets: pageBreakEstimateOffsets, estPages } = usePageBreak(templateRef);
+  // Authoritative page count from a real compile. While the tune rail is open we force the
+  // compile (bypass the cost-saving gate) so the count reflects the optimisation live.
+  const { pageCount, isChecking: isCheckingPageCount } = usePageCount(formData, estPages, true, tunePanelOpen);
+
+  // Tune flow: orchestration (useTailor + match analysis + save) + on-CV inline review.
+  const tuneFlow = useTuneFlow({ formData, activeVersion, cvContainerRef });
+  const highlightCtxValue = useMemo<HighlightContextValue>(
+    () => ({
+      getSpansFor: (fieldPath: string) => tuneFlow.inlineReview.highlightSpansByFieldPath.get(fieldPath),
+      onAutoDismiss: tuneFlow.inlineReview.autoDismiss,
+    }),
+    [tuneFlow.inlineReview.highlightSpansByFieldPath, tuneFlow.inlineReview.autoDismiss],
+  );
+  const handleCvClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const el = (e.target as HTMLElement).closest('[data-change-id]');
+      const id = el?.getAttribute('data-change-id');
+      if (id) tuneFlow.inlineReview.setActiveChange(id);
+    },
+    [tuneFlow.inlineReview],
+  );
+  const handleCvMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    // Clicking a highlight should REVIEW it (open the popover), not drop a cursor into the
+    // field. Block the contentEditable focus so the click doesn't enter edit mode.
+    if ((e.target as HTMLElement).closest('[data-change-id]')) e.preventDefault();
+  }, []);
 
   // Bootstrap formData if context is empty (direct URL navigation / page refresh)
   useEffect(() => {
     if (formData) {
       // If formData exists but has a sentinel templateId (e.g. from CV import),
       // patch it with the selected template before entering the editor
-      const VALID_TEMPLATES = ['med-length-proff-cv', 'deedy-resume', 'mcdowell-cv'];
       if (!VALID_TEMPLATES.includes(formData.templateId) && selectedTemplateForBuild) {
         setFormData({ ...formData, templateId: selectedTemplateForBuild });
       }
@@ -137,23 +172,34 @@ export default function DirectEditPage() {
     let cancelled = false;
 
     async function bootstrap() {
-      // Try loading the most recent saved version
-      if (savedVersions.length > 0) {
-        const mostRecent = savedVersions[0];
-        const full = await api.getVersion(mostRecent.id);
+      // Restore ONLY the version the user was explicitly editing (persisted
+      // per-tab in sessionStorage). We deliberately do NOT fall back to
+      // "most recent saved version" — that surfaced an unrelated CV into what
+      // should be a fresh session (cross-CV data bleed), which is especially
+      // wrong while there is no per-account separation.
+      const activeId = getStoredActiveVersionId();
+      if (activeId) {
+        const full = await api.getVersion(activeId);
         if (!cancelled && full?.formData) {
           const loadedData = full.formData;
           // Sanitize sentinel/invalid templateIds that would cause backend 400
-          if (!loadedData.templateId || !['med-length-proff-cv', 'deedy-resume', 'mcdowell-cv'].includes(loadedData.templateId)) {
+          if (!loadedData.templateId || !VALID_TEMPLATES.includes(loadedData.templateId)) {
             loadedData.templateId = DEFAULT_TEMPLATE;
           }
           setFormData(loadedData);
+          setActiveVersion(full);
+          const tuneSession = loadTuneSession(full.id);
+          if (tuneSession?.isOpen) {
+            setTunePanelOpen(true);
+            setTuneCompanyName(tuneSession.companyName);
+            setTuneRole(tuneSession.roleName);
+          }
           setIsBootstrapping(false);
           return;
         }
       }
 
-      // Fall back to empty template with placeholders
+      // No known in-progress version → start with an empty template.
       if (!cancelled) {
         setFormData(createEmptyFormData());
         setIsBootstrapping(false);
@@ -162,9 +208,9 @@ export default function DirectEditPage() {
 
     bootstrap();
     return () => { cancelled = true; };
-  }, [formData, savedVersions, setFormData, selectedTemplateForBuild]);
+  }, [formData, setActiveVersion, setFormData, selectedTemplateForBuild]);
 
-  // Open tune panel from navigation state (e.g., from TuneExpansionPanel or Dashboard)
+  // Open tune rail from navigation state (e.g., from a landing panel or the Dashboard)
   useEffect(() => {
     const locationState = location.state as { tune?: boolean } | null;
     if (locationState?.tune) {
@@ -183,21 +229,18 @@ export default function DirectEditPage() {
     if (!formData) return;
     setIsDownloading(true);
     try {
-      // Step 1: Generate LaTeX from formData
       const { texContent, error: genError } = await api.generateLatex(formData);
       if (!texContent || genError) {
         console.error('LaTeX generation failed:', genError);
         setIsDownloading(false);
         return;
       }
-      // Step 2: Compile LaTeX to PDF
       const result = await api.compileLatex(texContent, formData.templateId);
       if (!result.success || !result.pdf_base64) {
         console.error('PDF compilation failed:', result.error);
         setIsDownloading(false);
         return;
       }
-      // Step 3: Trigger browser download
       downloadPdf(result.pdf_base64, generateCVFilename({ fullName: formData.personalInfo.fullName }));
     } catch (err) {
       console.error('Download failed:', err);
@@ -225,65 +268,88 @@ export default function DirectEditPage() {
       cvName: parentName,
       tuneCompanyName: isTunedVersion ? (tuneCompanyName || activeVersion?.companyName || '') : tuneCompanyName,
       tuneRole: isTunedVersion ? (tuneRole || activeVersion?.role || '') : tuneRole,
+      pageCount,
+      isCheckingPageCount,
     });
     return () => setEditorActions(null);
   }, [setEditorActions, handleDownload, handleTuneForJob, saveStatus, isDownloading,
-      tunePanelOpen, activeVersion, savedVersions, tuneCompanyName, tuneRole]);
-
-  // Callback handlers for TunePanel communication
-  const handlePreviewUpdate = useCallback((fd: CVFormData | null) => {
-    setPreviewFormData(fd);
-  }, []);
-
-  const handleTier3Active = useCallback((active: boolean) => {
-    setIsTier3Active(active);
-  }, []);
-
-  // Compute display values for MedLengthTemplate
-  const displayFormData = isTier3Active && previewFormData ? previewFormData : formData;
-  const isReadOnly = isTier3Active;
-  const noopFieldChange = noop as (path: string, value: string | SkillItem[]) => void;
+      tunePanelOpen, activeVersion, savedVersions, tuneCompanyName, tuneRole,
+      pageCount, isCheckingPageCount]);
 
   if (isBootstrapping || !formData) {
     return <div className={styles.loading}>Loading...</div>;
   }
 
+  // The CV is always editable now (no read-only tune preview); page-break lines hide at 1 page.
+  const pageBreakOffsets = pageCount !== 1 ? pageBreakEstimateOffsets : [];
+
   return (
     <div className={styles.page}>
-      <div className={`${styles.contentArea}${tunePanelOpen ? ` ${styles.contentAreaWithPanel}` : ''}`}>
-        <div ref={cvContainerRef} className={styles.cvContainer}>
-          <MedLengthTemplate
-            formData={displayFormData}
-            readOnly={isReadOnly}
-            onFieldChange={isReadOnly ? noopFieldChange : updateField}
-            onBulletAdd={isReadOnly ? noop as (basePath: string, afterIndex: number) => void : addBullet}
-            onBulletRemove={isReadOnly ? noop as (basePath: string, index: number) => void : removeBullet}
-            onAddEntry={isReadOnly ? noop as (sectionKey: string) => void : addEntry}
-            onRemoveEntry={isReadOnly ? noop as (sectionKey: string, index: number) => void : removeEntry}
-            onToggleSection={isReadOnly ? noop as (sectionKey: string) => void : toggleSection}
-            hiddenSections={isReadOnly ? EMPTY_SET : hiddenSections}
-            onReorderSections={isReadOnly ? noop as (from: number, to: number) => void : reorderSections}
-            onReorderEntries={isReadOnly ? noop as (sectionKey: string, from: number, to: number) => void : reorderEntries}
-            onInput={isReadOnly ? undefined : handleInput}
-            onRemoveSection={isReadOnly ? undefined : removeSection}
-            onAddLink={isReadOnly ? undefined : addLink}
-            onRemoveLink={isReadOnly ? undefined : removeLink}
-          />
-          {pageBreakY !== null && !isReadOnly && <PageBreakIndicator offsetY={pageBreakY} />}
+      <div className={styles.contentArea}>
+        <div
+          ref={cvContainerRef}
+          className={styles.cvContainer}
+          onClick={handleCvClick}
+          onMouseDown={handleCvMouseDown}
+        >
+          <HighlightContext.Provider value={highlightCtxValue}>
+            <MedLengthTemplate
+              ref={templateRef}
+              formData={formData}
+              readOnly={false}
+              onFieldChange={updateField}
+              onBulletAdd={addBullet}
+              onBulletRemove={removeBullet}
+              onAddEntry={addEntry}
+              onRemoveEntry={removeEntry}
+              onToggleSection={toggleSection}
+              hiddenSections={hiddenSections}
+              onReorderSections={reorderSections}
+              onReorderEntries={reorderEntries}
+              onInput={handleInput}
+              onRemoveSection={removeSection}
+              onAddLink={addLink}
+              onRemoveLink={removeLink}
+              pageBreakOffsets={pageBreakOffsets}
+            />
+          </HighlightContext.Provider>
         </div>
+        {tunePanelOpen && (
+          <TuneRail
+            key={tuneFlow.flowKey}
+            activeVersion={activeVersion}
+            formData={formData}
+            matchAnalysis={tuneFlow.matchAnalysis}
+            tailor={tuneFlow.tailor}
+            isAnalyzing={tuneFlow.isAnalyzing}
+            isSaving={tuneFlow.isSaving}
+            onSaveAsBase={tuneFlow.onSaveAsBase}
+            onAnalyze={tuneFlow.onAnalyze}
+            onSaveTailored={tuneFlow.onSaveTailored}
+            onActivateChange={tuneFlow.inlineReview.setActiveChange}
+          />
+        )}
       </div>
-      <TunePanel
-        isOpen={tunePanelOpen}
-        onToggle={() => setTunePanelOpen(prev => !prev)}
-        formData={formData}
-        activeVersion={activeVersion}
-        onPreviewUpdate={handlePreviewUpdate}
-        onTier3Active={handleTier3Active}
-        cvContainerRef={cvContainerRef}
-        onTuneDetailsChange={(company, role) => {
-          setTuneCompanyName(company);
-          setTuneRole(role);
-        }}
+      {tunePanelOpen && (
+        <ChangePopover
+          activeChange={tuneFlow.inlineReview.activeChange}
+          severity={tuneFlow.inlineReview.activeSeverity}
+          getRect={tuneFlow.inlineReview.getRect}
+          selectedAlternativeIndex={tuneFlow.inlineReview.activeSelectedIndex}
+          onAccept={tuneFlow.inlineReview.acceptActive}
+          onSkip={tuneFlow.inlineReview.skipActive}
+          onAdvance={tuneFlow.inlineReview.advance}
+          onClose={tuneFlow.inlineReview.close}
+          onSelectAlternative={tuneFlow.inlineReview.selectAlternative}
+          onEdit={tuneFlow.inlineReview.editChange}
+        />
+      )}
+      <PostSavePrompt
+        isOpen={tuneFlow.savedSuccessfully}
+        onTuneAnotherJob={tuneFlow.onTuneAnotherJob}
+        onBackToOriginal={tuneFlow.onBackToOriginal}
+        onViewInDashboard={tuneFlow.onViewInDashboard}
+        onDismiss={tuneFlow.onDismissPostSave}
       />
       {isNamePromptOpen && (
         <NamePromptDialog

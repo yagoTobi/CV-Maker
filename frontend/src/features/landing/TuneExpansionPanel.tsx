@@ -15,9 +15,9 @@ export function TuneExpansionPanel({ onBuildClick }: TuneExpansionPanelProps) {
   const { savedVersions, setSelectedTemplateForBuild } = useCVContext();
   const { handleVersionLoad } = useToolsContext();
   const [loadingId, setLoadingId] = useState<string | null>(null);
-  const baseCVs = savedVersions.filter(v => !v.parentVersionId);
+  const baselineCVs = savedVersions.filter(v => !v.parentVersionId);
 
-  if (baseCVs.length === 0) {
+  if (baselineCVs.length === 0) {
     return (
       <div className={styles.container}>
         <div className={styles.emptyState}>
@@ -27,8 +27,8 @@ export function TuneExpansionPanel({ onBuildClick }: TuneExpansionPanelProps) {
               <polyline points="14 2 14 8 20 8"/>
             </svg>
           </div>
-          <h2 className={styles.emptyHeading}>No CV to tune yet</h2>
-          <p className={styles.emptyBody}>Build or import a CV first, then come back to tailor it for a specific role.</p>
+          <h2 className={styles.emptyHeading}>No baseline CV yet</h2>
+          <p className={styles.emptyBody}>Build or import a CV first, then use it as your baseline for applications.</p>
           <button className={styles.ctaButton} onClick={onBuildClick}>Build my CV</button>
         </div>
       </div>
@@ -36,10 +36,10 @@ export function TuneExpansionPanel({ onBuildClick }: TuneExpansionPanelProps) {
   }
 
   return (
-    <div className={baseCVs.length > 6 ? `${styles.container} ${styles.containerScrollable}` : styles.container}>
-      <h3 className={styles.heading}>Choose a base CV</h3>
+    <div className={baselineCVs.length > 6 ? `${styles.container} ${styles.containerScrollable}` : styles.container}>
+      <h3 className={styles.heading}>Choose a baseline CV</h3>
       <div className={styles.cvList} role="list">
-        {baseCVs.map(cv => (
+        {baselineCVs.map(cv => (
           <button
             key={cv.id}
             className={styles.cvItem}

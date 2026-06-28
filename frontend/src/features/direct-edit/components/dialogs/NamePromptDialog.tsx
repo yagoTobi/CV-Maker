@@ -63,8 +63,8 @@ export function NamePromptDialog({ isOpen, defaultName, onSubmit, onDismiss }: N
         aria-modal="true"
         aria-labelledby="namePromptHeading"
       >
-        <p id="namePromptHeading" className={styles.heading}>Give this CV a name</p>
-        <p className={styles.subtext}>Name it by role to use as your base CV — e.g. "Software Engineer".</p>
+        <p id="namePromptHeading" className={styles.heading}>Name your baseline CV</p>
+        <p className={styles.subtext}>This becomes the source CV you can adapt for jobs.</p>
         <div className={styles.inputRow}>
           <input
             ref={inputRef}
@@ -72,7 +72,7 @@ export function NamePromptDialog({ isOpen, defaultName, onSubmit, onDismiss }: N
             type="text"
             value={value}
             onChange={e => setValue(e.target.value)}
-            placeholder="e.g. Software Engineer"
+            placeholder="e.g. Software baseline"
             autoFocus
           />
         </div>
@@ -81,7 +81,7 @@ export function NamePromptDialog({ isOpen, defaultName, onSubmit, onDismiss }: N
             Skip for now
           </button>
           <button className={styles.saveBtn} onClick={handleSave} type="button">
-            Save CV
+            Set baseline
           </button>
         </div>
       </div>

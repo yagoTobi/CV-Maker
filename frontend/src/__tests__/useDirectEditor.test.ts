@@ -160,6 +160,22 @@ describe('useDirectEditor', () => {
     expect(returnedId).toBe('test-id-1');
   });
 
+  it('addBullet initializes an optional missing bullet array', () => {
+    mockFormData = {
+      ...makeTestFormData(),
+      projects: [{ id: 'p1', name: 'Project', year: '', description: '' }],
+    };
+    const { result } = renderHook(() => useDirectEditor());
+
+    act(() => {
+      result.current.addBullet('projects[0].bullets', -1);
+    });
+
+    const updater = mockSetFormData.mock.calls[0][0];
+    const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+    expect(newData.projects[0].bullets).toEqual([{ id: 'test-id-1', text: '' }]);
+  });
+
   it('removeBullet("workExperience[0].bullets", 0) removes bullet at index 0, other bullets remain', () => {
     const { result } = renderHook(() => useDirectEditor());
 
@@ -174,7 +190,7 @@ describe('useDirectEditor', () => {
     expect(newData.workExperience[0].bullets[0].text).toBe('Led Y');
   });
 
-  it('removeBullet on last remaining bullet does nothing (minimum 1 bullet)', () => {
+  it('removeBullet on last remaining bullet leaves an empty bullet array', () => {
     // Set up formData with only 1 bullet
     mockFormData = makeTestFormData();
     mockFormData.workExperience[0].bullets = [{ id: 'b1', text: 'Only bullet' }];
@@ -185,8 +201,9 @@ describe('useDirectEditor', () => {
       result.current.removeBullet('workExperience[0].bullets', 0);
     });
 
-    // setFormData should not be called because the single bullet cannot be removed
-    expect(mockSetFormData).not.toHaveBeenCalled();
+    const updater = mockSetFormData.mock.calls[0][0];
+    const newData = typeof updater === 'function' ? updater(mockFormData) : updater;
+    expect(newData.workExperience[0].bullets).toEqual([]);
   });
 
   it('updateField on skills path stores the raw comma-separated string', () => {

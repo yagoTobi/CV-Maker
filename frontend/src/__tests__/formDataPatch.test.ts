@@ -5,7 +5,7 @@
  * Covers DATA-02: tailor path resolution with structured types.
  */
 import { describe, it, expect } from 'vitest';
-import { applyTailorChanges } from '../utils/formDataPatch';
+import { applyTailorChanges, dedupeChangesByField } from '../utils/formDataPatch';
 import type { CVFormData, TailorChange } from '../types';
 
 function makeTestFormData(): CVFormData {
@@ -157,5 +157,52 @@ describe('applyTailorChanges with BulletItem', () => {
       expect(s.id).toBeDefined();
       expect(typeof s.id).toBe('string');
     });
+  });
+});
+
+describe('dedupeChangesByField (one Suggestion per field)', () => {
+  function change(id: string, fieldPath: string): TailorChange {
+    return {
+      id,
+      fieldPath,
+      section: 'Work',
+      description: id,
+      currentValue: 'before',
+      alternatives: [{ label: 'Suggested', value: `after-${id}` }],
+      changeType: 'modify',
+    };
+  }
+
+  it('returns an empty array unchanged', () => {
+    expect(dedupeChangesByField([])).toEqual([]);
+  });
+
+  it('keeps all changes when every fieldPath is unique', () => {
+    const changes = [
+      change('c1', 'workExperience[0].bullets[0]'),
+      change('c2', 'workExperience[0].bullets[1]'),
+      change('c3', 'skills[0].skills'),
+    ];
+    expect(dedupeChangesByField(changes).map((c) => c.id)).toEqual(['c1', 'c2', 'c3']);
+  });
+
+  it('keeps the first change and drops later ones on the same fieldPath', () => {
+    const changes = [
+      change('c1', 'workExperience[0].bullets[0]'),
+      change('c2', 'workExperience[0].bullets[0]'), // dup -> dropped
+      change('c3', 'skills[0].skills'),
+    ];
+    expect(dedupeChangesByField(changes).map((c) => c.id)).toEqual(['c1', 'c3']);
+  });
+
+  it('preserves the original order of the kept changes', () => {
+    const changes = [
+      change('c1', 'a'),
+      change('c2', 'b'),
+      change('c3', 'a'), // dup of c1's field
+      change('c4', 'c'),
+      change('c5', 'b'), // dup of c2's field
+    ];
+    expect(dedupeChangesByField(changes).map((c) => c.id)).toEqual(['c1', 'c2', 'c4']);
   });
 });

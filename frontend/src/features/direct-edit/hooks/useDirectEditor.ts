@@ -5,7 +5,7 @@
  * Wraps useCVContext().formData and setFormData to provide:
  * - updateField(path, value): set a value at a dot-bracket path on CVFormData
  * - addBullet(basePath, afterIndex): insert a new BulletItem and return its ID
- * - removeBullet(basePath, index): remove a bullet at index (guards minimum 1)
+ * - removeBullet(basePath, index): remove a bullet at index
  * - addEntry(sectionKey): append a new empty entry to a section
  * - removeEntry(sectionKey, index): remove an entry from a section by index
  * - toggleSection(sectionKey): toggle a section's visibility in hiddenSections Set
@@ -60,8 +60,7 @@ export function useDirectEditor() {
       setFormData((prev: CVFormData | null) => {
         if (!prev) return prev;
         const arr = getAtPath(prev as Record<string, unknown>, basePath) as BulletItem[] | undefined;
-        if (!Array.isArray(arr)) return prev;
-        const newArr = [...arr];
+        const newArr = Array.isArray(arr) ? [...arr] : [];
         newArr.splice(afterIndex + 1, 0, { id: newId, text: '' });
         return setAtPathImmutable(prev as Record<string, unknown>, basePath, newArr) as CVFormData;
       });
@@ -75,7 +74,7 @@ export function useDirectEditor() {
       setFormData((prev: CVFormData | null) => {
         if (!prev) return prev;
         const arr = getAtPath(prev as Record<string, unknown>, basePath) as BulletItem[] | undefined;
-        if (!Array.isArray(arr) || arr.length <= 1) return prev;
+        if (!Array.isArray(arr)) return prev;
         return setAtPathImmutable(
           prev as Record<string, unknown>,
           basePath,

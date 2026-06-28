@@ -3,7 +3,7 @@ import { api } from '../services/api';
 import type { CVFormData, CVImportResponse, ImportConfidence, ImportSummary } from '../types';
 import { deriveLinkLabel } from '../utils/deriveLinkLabel';
 
-export interface ImportProgress {
+interface ImportProgress {
   message: string;
   step: number;
   totalSteps: number;

@@ -7,7 +7,7 @@ import re
 import logging
 from dataclasses import dataclass
 
-from config.templates import TEMPLATES, get_template
+from config.templates import get_template
 
 logger = logging.getLogger(__name__)
 
@@ -170,7 +170,6 @@ class LaTeXCompiler:
     def _extract_error(self, log_path: str, output: str) -> str:
         """Extract meaningful error messages from LaTeX output."""
         errors = []
-        context_lines = []
 
         if os.path.exists(log_path):
             with open(log_path, "r", errors="ignore") as f:

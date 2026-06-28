@@ -112,7 +112,7 @@ export const AdditionalSection = memo(function AdditionalSection({
                       readOnly={readOnly}
                     />
                   )}
-                  {entry.bullets.length > 0 && (
+                  {(entry.bullets.length > 0 || !readOnly) && (
                     <EditableBulletList
                       bullets={entry.bullets}
                       basePath={`additionalSections[${additionalIdx}].entries[${entryIdx}].bullets`}
@@ -195,6 +195,24 @@ export const AdditionalSection = memo(function AdditionalSection({
                     />
                   )}
                 </div>
+                {!readOnly && (
+                  <EditableBulletList
+                    bullets={entry.bullets}
+                    basePath={`additionalSections[${additionalIdx}].entries[${entryIdx}].bullets`}
+                    onBulletChange={(bi, text) =>
+                      onFieldChange(`additionalSections[${additionalIdx}].entries[${entryIdx}].bullets[${bi}]`, text)
+                    }
+                    onBulletAdd={(afterIdx) =>
+                      onBulletAdd(`additionalSections[${additionalIdx}].entries[${entryIdx}].bullets`, afterIdx)
+                    }
+                    onBulletRemove={(bi) =>
+                      onBulletRemove(`additionalSections[${additionalIdx}].entries[${entryIdx}].bullets`, bi)
+                    }
+                    onInput={onInput}
+                    readOnly={readOnly}
+                    rich={true}
+                  />
+                )}
               </div>
             </EntryWrapper>
           </React.Fragment>

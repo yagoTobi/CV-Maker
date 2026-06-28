@@ -15,8 +15,9 @@
  * Standard section headings (work/education/skills/projects/awards) are editable inline
  * via sectionLabels in formData; changes persist through onFieldChange.
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { forwardRef, useCallback, useMemo, useState } from 'react';
 import { EditableField } from './editor-primitives/EditableField';
+import { PageBreakIndicator } from './PageBreakIndicator';
 import { LinkHeaderItem } from './LinkHeaderItem';
 import { AddLinkDropdown } from './AddLinkDropdown';
 import type { LinkPreset } from './AddLinkDropdown';
@@ -35,20 +36,11 @@ import styles from './MedLengthTemplate.module.css';
 const DEFAULT_SECTION_ORDER = ['work', 'education', 'skills', 'projects', 'awards'];
 const DEFAULT_PERSONAL_ORDER = ['phone', 'email', 'location', 'links'];
 
-/** Default display labels for built-in sections (match the LaTeX template). */
-export const DEFAULT_SECTION_LABELS: Record<string, string> = {
-  work: 'Experience',
-  education: 'Education',
-  skills: 'Skills',
-  projects: 'Projects',
-  awards: 'Awards',
-};
-
 export interface MedLengthTemplateProps {
   formData: CVFormData;
   readOnly?: boolean;
   onFieldChange: (path: string, value: string | SkillItem[]) => void;
-  onBulletAdd: (basePath: string, afterIndex: number) => void;
+  onBulletAdd: (basePath: string, afterIndex: number) => string | void;
   onBulletRemove: (basePath: string, index: number) => void;
   onAddEntry: (sectionKey: string) => void;
   onRemoveEntry: (sectionKey: string, index: number) => void;
@@ -60,9 +52,14 @@ export interface MedLengthTemplateProps {
   onRemoveSection?: (sectionKey: string) => void;
   onAddLink?: (label?: string, url?: string, side?: 'left' | 'right') => void;
   onRemoveLink?: (idx: number) => void;
+  /**
+   * Y offsets (px, from the sheet top) at which to draw page-break lines.
+   * Empty/omitted = no lines (single page, or read-only preview).
+   */
+  pageBreakOffsets?: number[];
 }
 
-export function MedLengthTemplate({
+export const MedLengthTemplate = forwardRef<HTMLDivElement, MedLengthTemplateProps>(function MedLengthTemplate({
   formData,
   readOnly,
   onFieldChange,
@@ -78,7 +75,8 @@ export function MedLengthTemplate({
   onRemoveSection,
   onAddLink,
   onRemoveLink,
-}: MedLengthTemplateProps) {
+  pageBreakOffsets,
+}: MedLengthTemplateProps, ref) {
   const [dropdownSide, setDropdownSide] = useState<'left' | 'right' | null>(null);
   const { personalInfo } = formData;
   const sectionOrder = formData.sectionOrder ?? DEFAULT_SECTION_ORDER;
@@ -308,7 +306,10 @@ export function MedLengthTemplate({
   const isDraggingDown = dragFromIndex !== null && dropIndex !== null && dragFromIndex < dropIndex;
 
   return (
-    <div className={styles.template} onDragOver={readOnly ? undefined : handleContainerDragOver}>
+    <div ref={ref} className={styles.template} onDragOver={readOnly ? undefined : handleContainerDragOver}>
+      {pageBreakOffsets?.map((offsetY, i) => (
+        <PageBreakIndicator key={`page-break-${i}`} offsetY={offsetY} label={`Page ${i + 2}`} />
+      ))}
       {!readOnly && <FloatingFormatToolbar />}
       <EditableField
         value={personalInfo.fullName}
@@ -366,4 +367,4 @@ export function MedLengthTemplate({
       )}
     </div>
   );
-}
+});

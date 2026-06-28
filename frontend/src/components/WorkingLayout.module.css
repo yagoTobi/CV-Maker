@@ -1,4 +1,10 @@
-/* WorkingLayout -- Layout route CSS.
- * No active styles needed; NavBar + Outlet composition handles layout.
- * File exists for convention compliance (every component has a .module.css).
- */
+.shell {
+  min-height: 100dvh;
+  background: var(--bg-primary);
+  overscroll-behavior-y: none;
+}
+
+.main {
+  min-height: 100dvh;
+  padding-top: 48px;
+}

@@ -77,7 +77,7 @@ ApplyToJobScreen (at /apply, redirects to /build/form) ────────�
 
 1. User uploads PDF/DOCX/JSON at `/import` (`CVImportUpload.tsx`).
 2. Frontend calls `api.importCV(file)` → `POST /api/cv-import` (`backend/routes/cv_import.py`).
-3. Backend dispatches to the appropriate extractor (`backend/services/cv_extractor.py`): PDF uses `BedrockClient.chat_with_document` (multimodal); DOCX extracts text then calls Bedrock; JSON parses directly.
+3. Backend dispatches to the appropriate extractor (`backend/services/cv_extractor.py`): text-based PDF and DOCX extract text locally then call Bedrock for structuring; JSON parses directly. PDF falls back to `BedrockClient.chat_with_document` only when local text extraction cannot read useful text.
 4. Returns `CVImportResponse` with `CVFormData`, confidence scores, and a summary. Frontend loads form data into context and navigates to template selection → direct editor.
 
 ### Version save/load flow
@@ -201,8 +201,7 @@ CV-Maker/
       main.tsx                App entry point (StrictMode + BrowserRouter + ErrorBoundary)
       contexts/               React context providers (Job, CV, Tools, EditorActions, AppContext shim)
       features/               Feature-scoped components
-        direct-edit/          Inline CV editor (primary feature)
-        apply-to-job/         3-step tune-for-job flow (job details -> match analysis -> review)
+        direct-edit/          Inline CV editor (primary feature); apply-to-job "tune" flow lives under components/tune-tiers/
         dashboard/            Saved version list, download, delete, rename
         landing/              Home screen with build/tune entry panels
         template-selection/   Template picker
@@ -302,12 +301,12 @@ All AI features route through a single `BedrockClient` singleton (`backend/servi
 
 | Variable | Model ID | Used for |
 |---|---|---|
-| `EXTRACTION_MODEL_ID` | `us.anthropic.claude-haiku-4-5-20251001-v1:0` | CV extraction from PDF/DOCX (fast, cheap) |
+| `EXTRACTION_MODEL_ID` | `CV_IMPORT_MODEL_ID`, `EXTRACTION_MODEL_ID`, or `us.anthropic.claude-haiku-4-5-20251001-v1:0` | CV import structuring from extracted PDF/DOCX text (fast, cheap) |
 | `MODEL_SONNET` | `us.anthropic.claude-sonnet-4-6` | Chat, match analysis, tailor suggestions (quality) |
 | Default init fallback | `us.anthropic.claude-3-5-haiku-20241022-v1:0` | Backward-compatibility default in `BedrockClient.__init__` |
 | `TAILOR_MODEL_ID` (env) | defaults to Haiku | Overridable via env var |
 
-Capabilities: streaming via `invoke_model_with_response_stream` (SSE to frontend), non-streaming via `invoke_model`, multimodal document attachment via `chat_with_document` (PDF import).
+Capabilities: streaming via `invoke_model_with_response_stream` (SSE to frontend), non-streaming via `invoke_model`, multimodal document attachment via `chat_with_document` (PDF fallback when no text layer is available).
 
 ### AWS DynamoDB (Storage)
 

@@ -602,6 +602,54 @@ Existing users on FileStorage (`user_id="local"`) continue working with zero cha
 
 ---
 
+## ADR-020: One Suggestion Per CV Field
+
+**Date:** 2026-06-28
+
+**Status:** Accepted
+
+**Context:**
+The Tune flow produces AI-generated Suggestions for CV fields. Early prototypes allowed multiple Suggestions per field, which created ambiguity: which one to accept first? What happens to the field after the first accept? The review UX became confusing when two Suggestions targeted the same bullet point.
+
+**Decision:**
+Enforce a hard invariant: at most one Suggestion per CV field path. When Tune returns duplicates for the same `fieldPath`, `dedupeChangesByField` (in `formDataPatch.ts`) keeps the highest-priority one and drops the rest before the review session begins.
+
+**Rationale:**
+- Each Suggestion is self-contained (accept / skip / edit) — two Suggestions on the same field would require ordering logic and conflict resolution.
+- The user is not overwhelmed by redundant choices on a single field.
+- Simplifies `useChangeHighlights` (one span per `fieldPath`, no overlap).
+
+**Consequences:**
+- Tune may silently drop lower-priority Suggestions for a field; this is acceptable because the kept Suggestion already covers the field's improvement.
+- If Tune quality improves to the point where multiple distinct Suggestions per field are valuable, this ADR should be revisited.
+
+---
+
+## ADR-021: TuneRail Switch-Column Supersedes Phase-13 D-09/D-10
+
+**Date:** 2026-06-28
+
+**Status:** Accepted (supersedes Phase-13 D-09, D-10, D-21)
+
+**Context:**
+Phase 13 specified a Tune rail that shrinks to a thin sidebar during the Inline Review step (D-09) and re-expands via a chevron (D-10). D-21 floated a score card on the CV canvas because the rail would be too narrow to host it during review.
+
+**Decision:**
+Replace the collapsible rail with a **fixed-width switch-column stepper** (the TuneRail). The rail is always the same width; its content switches step-by-step (Setup → Gap Prompt → Review) beneath a persistent Step Strip. The Match Score / Fit Band is docked in the Review header of the rail, not floated on the CV.
+
+**Rationale:**
+- A constant rail width eliminates the expand/collapse state machine and the associated animation complexity.
+- The Step Strip provides clear progress indication without forking the UI into two visual modes.
+- Docking the score in the rail header keeps the CV canvas uncluttered (supersedes D-21).
+- Accepted trade-off: the CV is slightly narrower during review than the thin-rail ideal, in exchange for a consistent, non-forking interface.
+
+**Consequences:**
+- Phase-13 D-09 (shrink rail during review) and D-10 (chevron re-expand) are superseded and will not be implemented.
+- Phase-13 D-21 (floating score card on CV) is superseded; score lives in the TuneRail Review header.
+- The TuneRail is the canonical Tune entry point; the legacy TunePanel (tier-based accordion) has been deleted.
+
+---
+
 ## Template for New Decisions
 
 ```markdown

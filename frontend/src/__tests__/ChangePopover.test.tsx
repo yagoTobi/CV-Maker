@@ -26,7 +26,7 @@ function defaultProps(overrides = {}) {
   return {
     activeChange: makeChange(),
     severity: 'minor' as const,
-    anchorRect: null,
+    getRect: () => null,
     onAccept: vi.fn(),
     onSkip: vi.fn(),
     onAdvance: vi.fn(),

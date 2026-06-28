@@ -94,9 +94,9 @@ export const ProjectsSection = memo(function ProjectsSection({
                   readOnly={readOnly}
                 />
               )}
-              {proj.bullets && proj.bullets.length > 0 && (
+              {((proj.bullets && proj.bullets.length > 0) || !readOnly) && (
                 <EditableBulletList
-                  bullets={proj.bullets}
+                  bullets={proj.bullets ?? []}
                   basePath={`projects[${i}].bullets`}
                   onBulletChange={(bi, text) => onFieldChange(`projects[${i}].bullets[${bi}]`, text)}
                   onBulletAdd={(afterIdx) => onBulletAdd(`projects[${i}].bullets`, afterIdx)}

@@ -11,16 +11,13 @@ Run with: python3 -m pytest tests/test_id_migration.py -v
 """
 import sys
 import os
-import json
-import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from utils.id_helpers import generate_id, ensure_ids
 from models.cv import (
     CVFormData, PersonalInfo, WorkEntry, EducationEntry,
-    SkillCategory, Project, Award, AdditionalEntry,
-    AdditionalSection, BulletItem, SkillItem,
+    SkillCategory, BulletItem, SkillItem,
 )
 
 

@@ -932,10 +932,10 @@ class TestMixedContent:
         followed by bullet achievements."""
         doc = Document()
         _make_bold_paragraph(doc, "Software Engineer at Company A")
-        p1 = doc.add_paragraph("Built REST API", style="List Bullet")
-        p2 = doc.add_paragraph("Improved test coverage", style="List Bullet")
+        doc.add_paragraph("Built REST API", style="List Bullet")
+        doc.add_paragraph("Improved test coverage", style="List Bullet")
         _make_bold_paragraph(doc, "Junior Dev at Company B")
-        p3 = doc.add_paragraph("Fixed 50 bugs", style="List Bullet")
+        doc.add_paragraph("Fixed 50 bugs", style="List Bullet")
 
         result = _extract_docx_text(doc)
         assert "**Software Engineer at Company A**" in result

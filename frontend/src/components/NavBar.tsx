@@ -1,8 +1,10 @@
 /**
  * NavBar -- Persistent navigation bar for all working pages.
  *
- * Left side: "CV Maker" logo (navigates to /) + "My CVs" link (navigates to /dashboard).
- * Right side (editor pages): Download PDF accent button + SaveIndicator.
+ * Left side: "CV Maker" logo (navigates to /). On editor pages it also shows the
+ * CV name + switcher dropdown (or a tune breadcrumb). Per D-08 there is no
+ * "My CVs" link — the dashboard is reached via the logo -> landing -> CV Workspace.
+ * Right side (editor pages): Tune for Job, Download PDF, and SaveIndicator.
  * Right side (non-editor pages): empty (no actions).
  *
  * Editor detection: pathname === '/build/form' AND editorActions is non-null.
@@ -12,6 +14,7 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEditorActions } from '../contexts/EditorActionsContext';
 import { SaveIndicator } from '../features/direct-edit/components/SaveIndicator';
+import { PageCountIndicator } from '../features/direct-edit/components/PageCountIndicator';
 import { CVSwitcherDropdown } from '../features/direct-edit/components/CVSwitcherDropdown';
 import styles from './NavBar.module.css';
 
@@ -83,6 +86,10 @@ export function NavBar() {
         {isEditorPage ? (
           <>
             <SaveIndicator status={editorActions.saveStatus} inline />
+            <PageCountIndicator
+              pageCount={editorActions.pageCount ?? null}
+              isChecking={editorActions.isCheckingPageCount ?? false}
+            />
             {!isTunedVersion && (
               <button
                 className={`${styles.ghostBtn}${isTuning ? ` ${styles.ghostBtnActive}` : ''}`}

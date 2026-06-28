@@ -1,7 +1,10 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { api } from '../../../services/api';
-import { applyTailorChanges } from '../../../utils/formDataPatch';
+import { applyTailorChanges, dedupeChangesByField } from '../../../utils/formDataPatch';
 import type { CVFormData, TailorResponse, TailorChange } from '../../../types';
+
+/** Label for the alternative created when the user edits a Suggestion's text (CONTEXT.md: edit = user-authored Alternative). */
+export const USER_EDIT_LABEL = 'Your edit';
 
 export interface UseTailorReturn {
   tailorResponse: TailorResponse | null;
@@ -22,11 +25,19 @@ export interface UseTailorReturn {
     userClarifications?: string[],
   ) => Promise<void>;
   acceptChange: (changeId: string) => Promise<void>;
+  acceptChanges: (changeIds: string[]) => Promise<void>;
   skipChange: (changeId: string) => void;
   undoChange: (changeId: string) => Promise<void>;
   acceptAllRemaining: () => Promise<void>;
   selectAlternative: (changeId: string, index: number) => void;
   editChangeValue: (changeId: string, newValue: string | string[]) => void;
+  restoreSuggestions: (
+    formData: CVFormData,
+    response: TailorResponse,
+    appliedChangeIds?: string[],
+    skippedChangeIds?: string[],
+    selectedAlternatives?: [string, number][],
+  ) => void;
   reset: () => void;
   setBaselineScore: (score: number) => void;
 }
@@ -37,7 +48,7 @@ interface UseTailorOpts {
   onApply: (newFormData: CVFormData, newTexContent: string) => Promise<void>;
 }
 
-export function useTailor({ originalFormData, templateId, onApply }: UseTailorOpts): UseTailorReturn {
+export function useTailor({ onApply }: UseTailorOpts): UseTailorReturn {
   const [tailorResponse, setTailorResponse] = useState<TailorResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +91,10 @@ export function useTailor({ originalFormData, templateId, onApply }: UseTailorOp
   // Ref to track selectedAlternatives in queued operations without stale closures
   const selectedAltsRef = useRef<Map<string, number>>(selectedAlternatives);
   selectedAltsRef.current = selectedAlternatives;
+
+  // Ref to read the latest tailorResponse synchronously inside stable callbacks (editChangeValue).
+  const tailorResponseRef = useRef<TailorResponse | null>(tailorResponse);
+  tailorResponseRef.current = tailorResponse;
 
   const applyCurrentState = useCallback(async (
     newApplied: Set<string>,
@@ -126,7 +141,8 @@ export function useTailor({ originalFormData, templateId, onApply }: UseTailorOp
       );
       if (controller.signal.aborted) return;
       if (result) {
-        setTailorResponse(result);
+        // Enforce one-Suggestion-per-field at the single point changes enter the UI.
+        setTailorResponse({ ...result, changes: dedupeChangesByField(result.changes) });
       } else {
         setError('Failed to get tailor suggestions. Please try again.');
       }
@@ -148,6 +164,22 @@ export function useTailor({ originalFormData, templateId, onApply }: UseTailorOp
     });
     await queueRef.current;
   }, [appliedChanges, applyCurrentState]);
+
+  const acceptChanges = useCallback(async (changeIds: string[]) => {
+    queueRef.current = queueRef.current.then(async () => {
+      setIsApplying(true);
+      const newApplied = new Set(appliedChanges);
+      for (const changeId of changeIds) {
+        if (!skippedChanges.has(changeId)) {
+          newApplied.add(changeId);
+        }
+      }
+      setAppliedChanges(newApplied);
+      await applyCurrentState(newApplied);
+      setIsApplying(false);
+    });
+    await queueRef.current;
+  }, [appliedChanges, applyCurrentState, skippedChanges]);
 
   const skipChange = useCallback((changeId: string) => {
     setSkippedChanges(prev => {
@@ -202,25 +234,53 @@ export function useTailor({ originalFormData, templateId, onApply }: UseTailorOp
     });
   }, []);
 
+  // CONTEXT.md: editing a Suggestion adds a user-authored Alternative (labelled USER_EDIT_LABEL)
+  // and selects it -- it never mutates the AI's alternatives. Re-editing updates the same one.
   const editChangeValue = useCallback((changeId: string, newValue: string | string[]) => {
+    const current = tailorResponseRef.current;
+    if (!current) return;
+    const change = current.changes.find(c => c.id === changeId);
+    if (!change) return;
+    const existingIdx = change.alternatives.findIndex(a => a.label === USER_EDIT_LABEL);
+    const editIndex = existingIdx >= 0 ? existingIdx : change.alternatives.length;
+
     setTailorResponse(prev => {
       if (!prev) return prev;
       return {
         ...prev,
         changes: prev.changes.map(c => {
           if (c.id !== changeId) return c;
-          // Replace the selected alternative's value (or add a custom one)
-          const altIndex = selectedAltsRef.current.get(changeId) ?? 0;
           const newAlts = [...c.alternatives];
-          if (newAlts[altIndex]) {
-            newAlts[altIndex] = { ...newAlts[altIndex], value: newValue };
-          } else {
-            newAlts.push({ label: 'Custom', value: newValue });
-          }
+          newAlts[editIndex] = { label: USER_EDIT_LABEL, value: newValue };
           return { ...c, alternatives: newAlts };
         }),
       };
     });
+
+    // Select the user's edit so it's the value applied on accept.
+    setSelectedAlternatives(prev => {
+      const next = new Map(prev);
+      next.set(changeId, editIndex);
+      return next;
+    });
+  }, []);
+
+  const restoreSuggestions = useCallback((
+    formData: CVFormData,
+    response: TailorResponse,
+    appliedChangeIds: string[] = [],
+    skippedChangeIds: string[] = [],
+    selectedAlternativeEntries: [string, number][] = [],
+  ) => {
+    abortRef.current?.abort();
+    baseFormDataRef.current = structuredClone(formData);
+    setTailorResponse({ ...response, changes: dedupeChangesByField(response.changes) });
+    setAppliedChanges(new Set(appliedChangeIds));
+    setSkippedChanges(new Set(skippedChangeIds));
+    setSelectedAlternatives(new Map(selectedAlternativeEntries));
+    setIsLoading(false);
+    setError(null);
+    setIsApplying(false);
   }, []);
 
   const reset = useCallback(() => {
@@ -248,11 +308,13 @@ export function useTailor({ originalFormData, templateId, onApply }: UseTailorOp
     isApplying,
     fetchSuggestions,
     acceptChange,
+    acceptChanges,
     skipChange,
     undoChange,
     acceptAllRemaining,
     selectAlternative,
     editChangeValue,
+    restoreSuggestions,
     reset,
     setBaselineScore,
   };

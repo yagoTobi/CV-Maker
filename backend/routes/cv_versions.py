@@ -26,6 +26,22 @@ from models.cv import (
     WorkEntry,
 )
 
+__all__ = [
+    "AdditionalEntry",
+    "AdditionalSection",
+    "Award",
+    "BulletItem",
+    "CVFormData",
+    "CVVersion",
+    "CVVersionMeta",
+    "EducationEntry",
+    "PersonalInfo",
+    "Project",
+    "SkillCategory",
+    "SkillItem",
+    "WorkEntry",
+]
+
 router = APIRouter()
 logger = logging.getLogger(__name__)
 

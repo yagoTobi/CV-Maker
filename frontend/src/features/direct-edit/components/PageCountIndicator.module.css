@@ -1,0 +1,33 @@
+/**
+ * PageCountIndicator.module.css -- Discrete page-count pill for the NavBar.
+ * Matches the rail chrome (IBM Plex Sans, 13px) and stays visually quiet.
+ */
+
+.indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-muted, #6B7280);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted, #6B7280);
+  flex-shrink: 0;
+}
+
+/* More than one page: nudge attention without alarm. */
+.multi {
+  color: #92400E;
+}
+
+.multi .dot {
+  background: #D97706;
+}

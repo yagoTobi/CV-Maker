@@ -12,11 +12,11 @@
 /* --- Page-level (D-05 full-bleed, D-06 matching resume.cls margins) --- */
 
 .template {
+  position: relative; /* anchors absolutely-positioned page-break indicators */
   max-width: 8.5in;
   margin: 0 auto;
   padding: 0.3in 0.2in;
   background: #FFFFFF;
-  min-height: 100vh;
   font-family: "EB Garamond Variable", "EB Garamond", Georgia, serif;
   font-size: 11pt;
   text-rendering: optimizeLegibility;
@@ -24,6 +24,9 @@
   line-height: 1.2;
   color: #000000;
 }
+/* NOTE: no min-height here on purpose -- it would inflate scrollHeight and
+ * defeat usePageBreak's measurement. The .page wrapper supplies the full-bleed
+ * white background instead. */
 
 /* --- Personal info header (resume.cls printname + printaddress) --- */
 

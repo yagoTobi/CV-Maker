@@ -1,5 +1,5 @@
 /* NavBar -- Persistent navigation bar.
- * Height: 48px, sticky at top. Background: white with bottom border.
+ * Height: 48px, fixed at top. Background: white with bottom border.
  * Font: IBM Plex Sans (inherited from body in variables.css).
  * Per UI-SPEC: Logo left, My CVs link, context-specific actions right.
  */
@@ -12,8 +12,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 50;
   font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 }

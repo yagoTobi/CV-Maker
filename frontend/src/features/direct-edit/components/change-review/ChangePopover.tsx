@@ -10,14 +10,15 @@
  *   • Enter      → onAccept(activeChange.id)
  *   • Escape     → onClose()
  *
- * Anchoring: virtual element via floating-ui (RESEARCH §Pattern 1). When
- * `anchorRect` is null (fallback per RESEARCH §Pitfall 2) the popover renders
- * centered at viewport mid and emits a console.warn.
+ * Anchoring: virtual element via floating-ui (RESEARCH §Pattern 1). `getRect`
+ * is a live callback invoked on every autoUpdate tick; when it returns null
+ * (fallback per RESEARCH §Pitfall 2) the popover renders centered at viewport
+ * mid and emits a console.warn.
  *
  * T-13-03-01: AI-supplied alternative values are rendered as JSX text only —
  * React JSX escapes by default, so no manual HTML-injection escape is needed.
  */
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type React from 'react';
 import {
   useFloating,
@@ -38,14 +39,21 @@ export interface ChangePopoverProps {
   activeChange: TailorChange | null;
   severity: Severity | null;
   /**
-   * Bounding rect of the active highlight in viewport space (null when no
-   * range is available; component falls back to a centered position).
+   * Live callback returning the bounding rect of the active highlight in
+   * viewport space (null when no range is available; component falls back to a
+   * centered position). Invoked on every floating-ui autoUpdate tick.
    */
-  anchorRect: DOMRect | null;
+  getRect: () => DOMRect | null;
   onAccept: (changeId: string) => void;
   onSkip: (changeId: string) => void;
   onAdvance: (direction: 'next' | 'prev') => void;
   onClose: () => void;
+  /** Index of the currently-selected alternative (defaults to 0). */
+  selectedAlternativeIndex?: number;
+  /** Pick a different AI alternative for this change. */
+  onSelectAlternative?: (changeId: string, index: number) => void;
+  /** Edit the suggestion text (becomes a user-authored "Your edit" alternative). */
+  onEdit?: (changeId: string, value: string) => void;
 }
 
 const DEFAULT_RECT_FALLBACK: DOMRect = (() => {
@@ -77,11 +85,14 @@ function toDisplayString(value: unknown): string {
 export function ChangePopover({
   activeChange,
   severity,
-  anchorRect,
+  getRect,
   onAccept,
   onSkip,
   onAdvance,
   onClose,
+  selectedAlternativeIndex,
+  onSelectAlternative,
+  onEdit,
 }: ChangePopoverProps): React.JSX.Element | null {
   // Hooks must be called unconditionally — render is conditional below.
   const open = activeChange !== null;
@@ -95,30 +106,37 @@ export function ChangePopover({
     whileElementsMounted: autoUpdate,
   });
 
-  // Wire the virtual reference element to the active anchorRect. When null,
-  // fall back to a centered rect and warn (RESEARCH §Pitfall 2).
+  // Wire the virtual reference element to a live rect callback. floating-ui's
+  // autoUpdate invokes getBoundingClientRect each tick, so getRect() is called
+  // live (never captured) — this is what keeps the popover tracking on scroll.
+  // When getRect() is null, fall back to a centered rect and warn (RESEARCH §Pitfall 2).
   const fallbackWarnedRef = useRef(false);
   useEffect(() => {
     if (!open) return;
     refs.setPositionReference({
       getBoundingClientRect: () => {
-        if (anchorRect) return anchorRect;
+        const rect = getRect();
+        if (rect) return rect;
         if (!fallbackWarnedRef.current) {
           console.warn(
-            '[ChangePopover] anchorRect is null; falling back to centered position.',
+            '[ChangePopover] getRect() returned null; falling back to centered position.',
           );
           fallbackWarnedRef.current = true;
         }
         return DEFAULT_RECT_FALLBACK;
       },
     });
-  }, [refs, anchorRect, open]);
+  }, [refs, getRect, open]);
 
   const dismiss = useDismiss(context, { escapeKey: true, outsidePress: false });
   const role = useRole(context, { role: 'dialog' });
   const { getFloatingProps } = useInteractions([dismiss, role]);
 
+  const [isEditing, setIsEditing] = useState(false);
+  const editableRef = useRef<HTMLDivElement>(null);
+
   const variant: 'compact' | 'expanded' = severity === 'minor' ? 'compact' : 'expanded';
+  const selectedIdx = selectedAlternativeIndex ?? 0;
 
   const beforeText = useMemo(
     () => (activeChange ? toDisplayString(activeChange.currentValue) : ''),
@@ -126,15 +144,32 @@ export function ChangePopover({
   );
   const afterText = useMemo(() => {
     if (!activeChange) return '';
-    if (severity === 'add') return `Add new ${activeChange.section} item`;
     if (severity === 'delete') return 'Remove this item';
-    const alt = activeChange.alternatives[0];
+    const alt = activeChange.alternatives[selectedIdx] ?? activeChange.alternatives[0];
     return alt ? toDisplayString(alt.value) : '';
-  }, [activeChange, severity]);
+  }, [activeChange, severity, selectedIdx]);
+
+  // Reset edit mode when the active suggestion changes.
+  useEffect(() => {
+    setIsEditing(false);
+  }, [activeChange?.id]);
+
+  // Auto-focus the contentEditable div when edit mode is entered.
+  useEffect(() => {
+    if (isEditing) {
+      editableRef.current?.focus();
+    }
+  }, [isEditing]);
 
   if (!activeChange) return null;
 
   const handleKeyDown: React.KeyboardEventHandler<HTMLDivElement> = (e) => {
+    // While editing in contentEditable (or textarea), let it own the keys.
+    if (
+      (e.target as HTMLElement).tagName === 'TEXTAREA' ||
+      (e.target as HTMLElement).isContentEditable
+    )
+      return;
     switch (e.key) {
       case 'ArrowRight':
         e.preventDefault();
@@ -214,17 +249,46 @@ export function ChangePopover({
             </div>
           )}
 
-          {variant === 'expanded' && (
-            <div className={styles.afterBlock}>
-              <div className={styles.blockLabel}>AFTER</div>
-              <div className={styles.blockContent}>{afterText}</div>
-            </div>
-          )}
+          <div className={styles.afterBlock}>
+            <div className={styles.blockLabel}>{severity === 'delete' ? 'SUGGESTION' : 'AFTER'}</div>
+            {severity === 'delete' ? (
+              <div className={styles.blockContent}>Remove this item</div>
+            ) : isEditing ? (
+              <div
+                className={`${styles.blockContent} ${styles.afterBlockEditable}`}
+                contentEditable
+                suppressContentEditableWarning
+                onBlur={(e) => {
+                  setIsEditing(false);
+                  onEdit?.(activeChange.id, e.currentTarget.textContent ?? '');
+                }}
+                ref={editableRef}
+              >
+                {afterText}
+              </div>
+            ) : (
+              <div
+                className={`${styles.blockContent} ${styles.blockContentClickable}`}
+                title="Click to edit"
+                onClick={() => setIsEditing(true)}
+              >
+                {afterText}
+              </div>
+            )}
+          </div>
 
-          {variant === 'compact' && (
-            <div className={styles.compactAfter}>
-              <span className={styles.blockLabel}>AFTER</span>
-              <span className={styles.blockContent}>{afterText}</span>
+          {severity !== 'delete' && activeChange.alternatives.length > 1 && (
+            <div className={styles.alternatives}>
+              {activeChange.alternatives.map((alt, i) => (
+                <button
+                  key={`${alt.label}-${i}`}
+                  type="button"
+                  className={`${styles.altChip}${i === selectedIdx ? ` ${styles.altChipSelected}` : ''}`}
+                  onClick={() => onSelectAlternative?.(activeChange.id, i)}
+                >
+                  {alt.label}
+                </button>
+              ))}
             </div>
           )}
 

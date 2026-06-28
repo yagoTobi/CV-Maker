@@ -82,6 +82,7 @@ Model IDs are defined as module-level constants:
 | Constant | Value | Used For |
 |---|---|---|
 | `MODEL_HAIKU` | `us.anthropic.claude-haiku-4-5-20251001-v1:0` | CV import extraction, tailor suggestions (default) |
+| `EXTRACTION_MODEL_ID` | Value of `CV_IMPORT_MODEL_ID`, `EXTRACTION_MODEL_ID`, or `MODEL_HAIKU` equivalent | CV import structuring for text-based PDF/DOCX |
 | `MODEL_SONNET` | `us.anthropic.claude-sonnet-4-6` | Match analysis, chat conversations |
 | `MODEL_TAILOR` | Value of `TAILOR_MODEL_ID` env var, or `MODEL_HAIKU` | Tailor suggestions (overridable) |
 
@@ -156,6 +157,8 @@ Defaults are defined inline in the source code using `os.getenv("VAR", "default"
 | `AWS_DEFAULT_REGION` | `us-east-1` | `backend/services/ai/bedrock.py:23`, `backend/services/storage/dynamo_storage.py:19` |
 | `STORAGE_BACKEND` | `file` | `backend/services/storage/storage_factory.py:9` |
 | `DYNAMODB_TABLE_NAME` | `cv-maker` | `backend/services/storage/dynamo_storage.py:14` |
+| `CV_IMPORT_MODEL_ID` | `us.anthropic.claude-haiku-4-5-20251001-v1:0` | `backend/services/cv_extractor/models.py:11` |
+| `EXTRACTION_MODEL_ID` | `us.anthropic.claude-haiku-4-5-20251001-v1:0` | Legacy import-model override in `backend/services/cv_extractor/models.py:12` |
 | `TAILOR_MODEL_ID` | `us.anthropic.claude-haiku-4-5-20251001-v1:0` (value of `MODEL_HAIKU`) | `backend/services/ai/bedrock.py:18` |
 | `VITE_API_URL` | `http://localhost:8000/api` | `frontend/src/services/api.ts:5` |
 | `VITE_WS_URL` | *(derived)* | `frontend/src/hooks/useVoiceInterview.ts:14` |

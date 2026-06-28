@@ -1,4 +1,3 @@
-<!-- GSD:project-start -->
 ## Project
 
 **CV-Maker — Direct-Edit Web CV.** Users edit a web-rendered CV that looks identical to the final PDF, then download a LaTeX-compiled PDF. AI handles import, job tailoring, and match analysis.
@@ -12,9 +11,7 @@
 - Import / Tune / Apply-to-Job all operate on `CVFormData` — any new editor surface must read/write the same structure.
 - AI latency budget: import, tailor suggestions, per-field assist target **sub-2s**. Match analysis can take longer.
 - Modern browsers only (CSS grid, contenteditable, modern APIs are fair game).
-<!-- GSD:project-end -->
 
-<!-- GSD:stack-start -->
 ## Stack
 
 - **Frontend:** React 19 + TypeScript (strict, `verbatimModuleSyntax: true`) + Vite. CSS Modules. Vitest + Testing Library. React Router v6.
@@ -23,9 +20,7 @@
 - **LaTeX:** Jinja2 with custom delimiters `(( ))` / `(% %)` to avoid brace conflicts. `pdflatex` and `xelatex` engines per template.
 - **Storage:** `StorageBackend` Protocol with `FileStorage` (local JSON) and `DynamoStorage` (single-table). Selected via `STORAGE_BACKEND` env var.
 - **Auth shim:** `X-User-Id` header → `get_current_user()` dep, defaults to `"local"`. **Not real auth** — slated for replacement.
-<!-- GSD:stack-end -->
 
-<!-- GSD:conventions-start -->
 ## Conventions (the non-obvious bits)
 
 Most rules are enforced by ESLint / TypeScript / Pydantic. The things you'd actually get wrong:
@@ -39,15 +34,13 @@ Most rules are enforced by ESLint / TypeScript / Pydantic. The things you'd actu
 - **No `\begin{list}` without an `\item`** — empty lists are invalid LaTeX. Templates must guard.
 - **Backend errors:** routes return generic 500s with `logger.exception()`. Don't leak internals.
 - **Tests live in `frontend/src/__tests__/`** (camelCase `.test.tsx`) and `backend/tests/` (snake_case `test_*.py`). Wrap context-using components in `<MemoryRouter><AppProvider>...`.
-<!-- GSD:conventions-end -->
 
-<!-- GSD:architecture-start -->
 ## Architecture (orientation only - full map in `docs/ARCHITECTURE.md`, graph at `.planning/graphs/graph.html`)
 
 **Layers:**
-- `frontend/src/features/*` — feature folders (landing, build-choice, form-builder, cv-import, apply-to-job, dashboard).
+- `frontend/src/features/*` — feature folders: `landing` (build/tune entry panels), `template-selection` (template picker), `direct-edit` (inline CV editor — primary feature; also hosts the apply-to-job "tune" flow under `components/tune-tiers/`), `dashboard` (saved versions), `voice-widget` (gated, "coming soon"), `shared` (global ErrorBoundary).
 - `frontend/src/contexts/` — three-context split + `AppProvider` composition.
-- `frontend/src/hooks/` — `useFormBuilder`, `useCompiler`, `useChat`, `useImport`, `useTailor`, `useTemplates`, `useVoiceInterview`.
+- `frontend/src/hooks/` — shared hooks: `useCompiler`, `useChat`, `useImport`, `useTemplates`. (`useDirectEditor` + `useTailor` live in `features/direct-edit/hooks/`; `useVoiceInterview` in `features/voice-widget/hooks/`.)
 - `frontend/src/services/api.ts` — sole HTTP boundary. Axios + native `fetch` for SSE.
 - `backend/routes/` — thin FastAPI handlers. Validation via Pydantic.
 - `backend/services/` — business logic. `bedrock.py`, `latex_compiler.py`, `cv_extractor.py`, `storage.py` (Protocol) + `file_storage.py` / `dynamo_storage.py`, `llm_cache.py` (in-memory, 1h TTL — **not horizontally scalable**).
@@ -64,19 +57,3 @@ Most rules are enforced by ESLint / TypeScript / Pydantic. The things you'd actu
 - `FileStorage` is local-disk — single-instance only.
 - `latex_compiler.py` runs `subprocess` on the API thread — long compiles block the request.
 - CORS allowlist comes from `CORS_ORIGINS` env var.
-<!-- GSD:architecture-end -->
-
-<!-- GSD:workflow-start -->
-## GSD Workflow Enforcement
-
-Before using Edit, Write, or other file-changing tools, start work through a GSD command so planning artifacts and execution context stay in sync.
-
-- `/gsd-quick` — small fixes, doc updates, ad-hoc tasks
-- `/gsd-debug` — investigation and bug fixing
-- `/gsd-execute-phase` — planned phase work
-
-Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
-
-**Note on this file:** the GSD section markers intentionally have no `source:` attributes. This file is hand-curated. Running `gsd-tools generate-claude-md` will replace these blocks with full dumps from `.planning/codebase/*.md` — don't run it without trimming the result back, or restore from git.
-<!-- GSD:workflow-end -->
-

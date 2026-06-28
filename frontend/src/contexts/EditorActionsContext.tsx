@@ -20,6 +20,8 @@ interface EditorActions {
   cvName: string;           // parent name when tuned, else activeVersion.name (set by DirectEditPage)
   tuneCompanyName: string;  // TunePanel Tier 2 companyName (set by DirectEditPage)
   tuneRole: string;         // TunePanel Tier 2 roleName (set by DirectEditPage)
+  pageCount: number | null;     // true page count from the last compile (null = unknown)
+  isCheckingPageCount: boolean; // a page-count compile is in flight
 }
 
 interface EditorActionsContextValue {

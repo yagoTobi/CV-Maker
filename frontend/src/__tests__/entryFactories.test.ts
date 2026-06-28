@@ -95,7 +95,7 @@ describe('entryFactories', () => {
   });
 
   describe('emptyEducationEntry', () => {
-    it('returns EducationEntry with empty strings and empty details array', () => {
+    it('returns EducationEntry with empty strings and one empty detail bullet', () => {
       const ee = emptyEducationEntry();
       expect(ee.id).toBeDefined();
       expect(ee.school).toBe('');
@@ -104,7 +104,9 @@ describe('entryFactories', () => {
       expect(ee.endDate).toBe('');
       expect(ee.location).toBe('');
       expect(ee.gpa).toBe('');
-      expect(ee.details).toEqual([]);
+      expect(ee.details).toHaveLength(1);
+      expect(ee.details[0].text).toBe('');
+      expect(ee.details[0].id).toBeDefined();
     });
 
     it('produces unique IDs on consecutive calls', () => {

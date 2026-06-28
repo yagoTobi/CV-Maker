@@ -3,7 +3,7 @@
  *
  * Updated for Phase 7 inline expansion architecture:
  * - "Build my CV" click expands inline BuildExpansionPanel (no route navigation)
- * - "Tune for a role" click behavior depends on base CV count
+ * - "Apply to job" click behavior depends on baseline CV count
  * - /build/start route removed entirely
  * - TemplateSelector back button navigates to / (landing)
  */
@@ -47,29 +47,29 @@ describe('Navigation Flow State Management', () => {
   });
 
   describe('Landing screen', () => {
-    it('renders two action cards: "Build my CV" and "Tune for a role" (NAV-01 partial)', async () => {
+    it('renders two action cards: "Build my CV" and "Apply to job" (NAV-01 partial)', async () => {
       renderApp();
 
       await waitFor(() => {
         expect(screen.getByText('Build my CV')).toBeInTheDocument();
-        expect(screen.getByText('Tune for a role')).toBeInTheDocument();
+        expect(screen.getByText('Apply to job')).toBeInTheDocument();
       });
 
       // Both cards start collapsed
       const buildCard = screen.getByText('Build my CV').closest('button');
-      const tuneCard = screen.getByText('Tune for a role').closest('button');
+      const tuneCard = screen.getByText('Apply to job').closest('button');
       expect(buildCard).toHaveAttribute('aria-expanded', 'false');
       expect(tuneCard).toHaveAttribute('aria-expanded', 'false');
     });
 
-    it('does not show "My Saved CVs" link when there are no saved versions', async () => {
+    it('does not show "CV Workspace" link when there are no saved versions', async () => {
       renderApp();
 
       await waitFor(() => {
         expect(screen.getByText('Build my CV')).toBeInTheDocument();
       });
 
-      expect(screen.queryByText('My Saved CVs')).not.toBeInTheDocument();
+      expect(screen.queryByText('CV Workspace')).not.toBeInTheDocument();
     });
   });
 
@@ -140,20 +140,20 @@ describe('Navigation Flow State Management', () => {
     });
   });
 
-  describe('Tune flow: branching by base CV count', () => {
-    it('Tune with 0 base CVs shows empty state panel (NAV-04)', async () => {
+  describe('Tune flow: branching by baseline CV count', () => {
+    it('Tune with 0 baseline CVs shows empty state panel (NAV-04)', async () => {
       // Default mock returns empty versions
       renderApp();
 
       await waitFor(() => {
-        expect(screen.getByText('Tune for a role')).toBeInTheDocument();
+        expect(screen.getByText('Apply to job')).toBeInTheDocument();
       });
 
-      const tuneCard = screen.getByText('Tune for a role').closest('button')!;
+      const tuneCard = screen.getByText('Apply to job').closest('button')!;
       fireEvent.click(tuneCard);
 
       await waitFor(() => {
-        expect(screen.getByText('No CV to tune yet')).toBeInTheDocument();
+        expect(screen.getByText('No baseline CV yet')).toBeInTheDocument();
       });
 
       // The CTA button inside the panel also says "Build my CV"
@@ -162,7 +162,7 @@ describe('Navigation Flow State Management', () => {
       expect(ctaButtons.length).toBeGreaterThanOrEqual(2);
     });
 
-    it('Tune with exactly 1 base CV loads version and navigates to /build/form with tune state (NAV-03)', async () => {
+    it('Tune with exactly 1 baseline CV loads version and navigates to /build/form with tune state (NAV-03)', async () => {
       const { api } = await import('../services/api');
       vi.mocked(api.listVersions).mockResolvedValue({
         versions: [
@@ -182,22 +182,22 @@ describe('Navigation Flow State Management', () => {
       renderApp();
 
       await waitFor(() => {
-        expect(screen.getByText('Tune for a role')).toBeInTheDocument();
+        expect(screen.getByText('Apply to job')).toBeInTheDocument();
       });
 
-      const tuneCard = screen.getByText('Tune for a role').closest('button')!;
+      const tuneCard = screen.getByText('Apply to job').closest('button')!;
       fireEvent.click(tuneCard);
 
-      // Should navigate away from landing — Tune for a role card should disappear
+      // Should navigate away from landing — Apply to job card should disappear
       await waitFor(() => {
-        expect(screen.queryByText('Tune for a role')).not.toBeInTheDocument();
+        expect(screen.queryByText('Apply to job')).not.toBeInTheDocument();
       });
 
-      // Verify api.getVersion was called with the base CV id
+      // Verify api.getVersion was called with the baseline CV id
       expect(api.getVersion).toHaveBeenCalledWith('base-1');
     });
 
-    it('Tune with 2+ base CVs shows CV picker panel (NAV-05)', async () => {
+    it('Tune with 2+ baseline CVs shows CV picker panel (NAV-05)', async () => {
       const { api } = await import('../services/api');
       vi.mocked(api.listVersions).mockResolvedValue({
         versions: [
@@ -210,14 +210,14 @@ describe('Navigation Flow State Management', () => {
       renderApp();
 
       await waitFor(() => {
-        expect(screen.getByText('Tune for a role')).toBeInTheDocument();
+        expect(screen.getByText('Apply to job')).toBeInTheDocument();
       });
 
-      const tuneCard = screen.getByText('Tune for a role').closest('button')!;
+      const tuneCard = screen.getByText('Apply to job').closest('button')!;
       fireEvent.click(tuneCard);
 
       await waitFor(() => {
-        expect(screen.getByText('Choose a base CV')).toBeInTheDocument();
+        expect(screen.getByText('Choose a baseline CV')).toBeInTheDocument();
       });
 
       expect(screen.getByText('My Professional CV')).toBeInTheDocument();

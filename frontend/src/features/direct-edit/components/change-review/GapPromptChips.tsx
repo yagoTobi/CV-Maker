@@ -10,11 +10,18 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type React from 'react';
 import styles from './GapPromptChips.module.css';
 
+export interface GapEvidence {
+  topic: string;
+  description: string;
+}
+
 export interface GapPromptChipsProps {
   /** Missing-from-CV requirements returned by /chat/match-analysis. */
   missing: string[];
   /** Called on textarea blur with the array of typed clarifications (touched chips only). */
   onClarificationsChange: (clarifications: string[]) => void;
+  /** Called on textarea blur with the missing requirement paired to the typed evidence. */
+  onEvidenceChange?: (evidence: GapEvidence[]) => void;
 }
 
 const MAX_CLARIFICATION_LENGTH = 500;
@@ -22,6 +29,7 @@ const MAX_CLARIFICATION_LENGTH = 500;
 export function GapPromptChips({
   missing,
   onClarificationsChange,
+  onEvidenceChange,
 }: GapPromptChipsProps): React.JSX.Element {
   // NOTE: `missing` reference changes (e.g. fresh match-analysis arriving
   // with a new chip set) are handled by remounting via React `key=` from the
@@ -43,8 +51,16 @@ export function GapPromptChips({
     (latestValues: string[]) => {
       const trimmed = latestValues.map((v) => v.trim()).filter(Boolean);
       onClarificationsChange(trimmed);
+      onEvidenceChange?.(
+        latestValues
+          .map((description, i) => ({
+            topic: missing[i] ?? 'Relevant experience',
+            description: description.trim(),
+          }))
+          .filter((item) => item.description.length > 0),
+      );
     },
-    [onClarificationsChange],
+    [missing, onClarificationsChange, onEvidenceChange],
   );
 
   const handleChipClick = useCallback((i: number) => {
@@ -54,9 +70,11 @@ export function GapPromptChips({
   const handleChange = useCallback(
     (i: number) => (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const next = e.target.value;
-      setValues((vs) => vs.map((x, idx) => (idx === i ? next : x)));
+      const nextValues = values.map((x, idx) => (idx === i ? next : x));
+      setValues(nextValues);
+      emitClarifications(nextValues);
     },
-    [],
+    [emitClarifications, values],
   );
 
   const handleBlur = useCallback(() => {
@@ -76,29 +94,37 @@ export function GapPromptChips({
   return (
     <div className={styles.chipArray}>
       {missing.map((gap, i) => {
-        const isExpanded = expandedIndex === i;
-        const chipClass = [styles.chip, isExpanded ? styles.chipExpanded : '']
+        const hasText = (values[i]?.trim() ?? '') !== '';
+        // Stay open while focused OR once the user has typed something, so their evidence
+        // never visually disappears when they click another chip or away.
+        const isOpen = expandedIndex === i || hasText;
+        const chipClass = [styles.chip, isOpen ? styles.chipExpanded : '', hasText ? styles.chipFilled : '']
           .filter(Boolean)
           .join(' ');
         return (
-          <div key={`${gap}-${i}`} className={isExpanded ? styles.chipGroup : styles.chipWrap}>
+          <div key={`${gap}-${i}`} className={isOpen ? styles.chipGroup : styles.chipWrap}>
             <button
               type="button"
               className={chipClass}
               onClick={() => handleChipClick(i)}
-              aria-expanded={isExpanded}
+              aria-expanded={isOpen}
               aria-label={gap}
             >
+              {hasText && (
+                <span className={styles.chipCheck} aria-hidden>
+                  {'\u2713 '}
+                </span>
+              )}
               {gap}
             </button>
-            {isExpanded && (
+            {isOpen && (
               <textarea
-                ref={textareaRef}
+                ref={expandedIndex === i ? textareaRef : undefined}
                 className={styles.textarea}
                 value={values[i] ?? ''}
                 onChange={handleChange(i)}
                 onBlur={handleBlur}
-                placeholder="Click to add details"
+                placeholder="Add rough evidence from your experience"
                 aria-label={`Add details for ${gap}`}
                 maxLength={500}
               />
@@ -109,6 +135,3 @@ export function GapPromptChips({
     </div>
   );
 }
-
-// Exported for downstream tests / consumers that want to align caps.
-export const GAP_PROMPT_MAX_LENGTH = MAX_CLARIFICATION_LENGTH;

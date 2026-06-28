@@ -96,16 +96,16 @@ export default function BaseGroup({
           <button
             className={styles.newAppBtn}
             onClick={(e) => onApplyToJob(base.id, e)}
-            title="Tailor this CV for a job application"
+            title="Create an application CV from this baseline"
           >
             <TuneIcon />
-            Tune for a Job
+            Apply to job
           </button>
           <button
             className={styles.groupOpenBtn}
             onClick={() => onOpen(base.id)}
             disabled={loadingId === base.id}
-            title="Edit base CV"
+            title="Edit baseline CV"
           >
             {loadingId === base.id ? (
               <span className={styles.spinnerSm} />
@@ -130,7 +130,7 @@ export default function BaseGroup({
             className={styles.downloadBtn}
             onClick={(e) => onDuplicate(base.id, e)}
             disabled={duplicatingId === base.id}
-            title="Duplicate base CV"
+            title="Duplicate baseline CV"
           >
             {duplicatingId === base.id ? (
               <span className={styles.spinnerSmDark} />
@@ -142,7 +142,7 @@ export default function BaseGroup({
             className={styles.groupDeleteBtn}
             onClick={() => onDelete(base.id)}
             disabled={deletingId === base.id}
-            title="Delete base CV"
+            title="Delete baseline CV"
           >
             {deletingId === base.id ? (
               <span className={styles.spinnerSm} />
@@ -157,7 +157,7 @@ export default function BaseGroup({
         <div className={styles.childrenList}>
           {children.length === 0 ? (
             <div className={styles.emptyChildren}>
-              No applications yet. Click "Tune for a Job" to create one.
+              No applications yet. Use "Apply to job" when you have a role to target.
             </div>
           ) : (
             children.map(app => (

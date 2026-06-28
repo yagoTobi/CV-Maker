@@ -18,7 +18,7 @@ import json
 import os
 import sys
 from io import BytesIO
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -27,6 +27,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from fastapi.testclient import TestClient
 from main import app
+from services.cv_extractor import EXTRACTION_MODEL_ID
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
 
@@ -580,9 +581,32 @@ class TestDOCXImport:
 class TestPDFImport:
     """Test importing CV data from PDF files.
 
-    PDF extraction sends the raw bytes to Bedrock as a document content block.
-    We mock bedrock_client.chat_with_document() for all tests.
+    Text-based PDF extraction reads local text first, then sends text to Bedrock
+    for structuring. If local extraction cannot read text, it falls back to the
+    Bedrock document content block path.
     """
+
+    @patch("services.cv_extractor._extract_pdf_text")
+    @patch("services.cv_extractor.bedrock_client")
+    def test_text_pdf_import_uses_fast_text_structuring(
+        self, mock_bedrock, mock_extract_pdf_text, client
+    ):
+        """Importing a text PDF structures extracted text via the fast chat path."""
+        mock_extract_pdf_text.return_value = "Jane Smith\nSenior Software Engineer"
+        mock_bedrock.chat.return_value = MOCK_BEDROCK_EXTRACTION
+
+        fake_pdf = b"%PDF-1.4 text pdf content" + b"\x00" * 100
+        resp = _upload(client, fake_pdf, "resume.pdf", "application/pdf")
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["success"] is True
+        assert body["source"] == "pdf"
+        mock_bedrock.chat.assert_called_once()
+        mock_bedrock.chat_with_document.assert_not_called()
+        assert mock_bedrock.chat.call_args.kwargs["model_id"] == EXTRACTION_MODEL_ID
+        messages = mock_bedrock.chat.call_args.kwargs["messages"]
+        assert "Jane Smith" in messages[0]["content"]
 
     @patch("services.cv_extractor.bedrock_client")
     def test_valid_pdf_import(self, mock_bedrock, client):
@@ -608,6 +632,7 @@ class TestPDFImport:
         call_kwargs = mock_bedrock.chat_with_document.call_args.kwargs
         assert call_kwargs["document_media_type"] == "application/pdf"
         assert call_kwargs["max_tokens"] == 8192
+        assert call_kwargs["model_id"] == EXTRACTION_MODEL_ID
 
     @patch("services.cv_extractor.bedrock_client")
     def test_pdf_bedrock_failure_returns_descriptive_error(self, mock_bedrock, client):
@@ -1086,15 +1111,8 @@ class TestExtractDocxText:
         doc = Document(BytesIO(data))
         text = self._extract(doc)
 
-        # The sample_cv.docx has bold job titles
-        bold_lines = [
-            line
-            for line in text.split("\n")
-            if line.startswith("**") and line.endswith("**")
-        ]
-        # There may or may not be all-bold paragraphs depending on how the fixture was built;
-        # the fixture has mixed bold/non-bold runs in the same paragraph, which won't trigger
-        # the "all-bold" detection. But verify no crash at least.
+        # The fixture has mixed bold/non-bold runs in the same paragraph, which won't
+        # trigger the "all-bold" detection — so just verify extraction doesn't crash.
         assert isinstance(text, str)
 
 

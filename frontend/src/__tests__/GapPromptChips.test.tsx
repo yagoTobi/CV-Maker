@@ -52,6 +52,25 @@ describe('GapPromptChips', () => {
     expect(lastArg).toEqual(expect.arrayContaining(['Native Spanish, lived in Madrid 3 years']));
   });
 
+  it('emits typed evidence paired with the missing requirement topic', () => {
+    const onEvidenceChange = vi.fn();
+    render(<GapPromptChips {...defaultProps({ onEvidenceChange })} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /AWS Lambda/i }));
+    const input = screen.getByRole('textbox') as HTMLTextAreaElement;
+
+    fireEvent.change(input, { target: { value: 'Built Lambda ingestion jobs for billing events' } });
+
+    expect(onEvidenceChange).toHaveBeenCalled();
+    const lastArg = onEvidenceChange.mock.calls[onEvidenceChange.mock.calls.length - 1][0];
+    expect(lastArg).toEqual([
+      {
+        topic: 'AWS Lambda',
+        description: 'Built Lambda ingestion jobs for billing events',
+      },
+    ]);
+  });
+
   it('untouched chips are NOT in the resulting clarifications array', () => {
     const onChange = vi.fn();
     render(<GapPromptChips {...defaultProps({ onClarificationsChange: onChange })} />);

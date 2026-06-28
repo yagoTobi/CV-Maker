@@ -130,9 +130,9 @@ export default function Dashboard() {
             Home
           </button>
           <div>
-            <h1 className={styles.title}>My CVs & Applications</h1>
+            <h1 className={styles.title}>CV Workspace</h1>
             <p className={styles.subtitle}>
-              {totalBases} base CV{totalBases !== 1 ? 's' : ''}
+              {totalBases} baseline CV{totalBases !== 1 ? 's' : ''}
               {totalApps > 0 && <> &middot; {totalApps} application{totalApps !== 1 ? 's' : ''}</>}
             </p>
           </div>
@@ -149,7 +149,7 @@ export default function Dashboard() {
               <DocumentIcon />
             </div>
             <h2>No saved CVs yet</h2>
-            <p>Build or import your first CV. Saved versions will appear here, organized by base CV.</p>
+            <p>Build or import your first CV, then use it as a baseline for job applications.</p>
             <button className={styles.emptyAction} onClick={() => navigate('/')}>
               Get started
             </button>
