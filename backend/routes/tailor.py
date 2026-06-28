@@ -8,10 +8,11 @@ import logging
 import time
 import uuid
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional, Union
 
+from dependencies import get_current_user
 from models.cv import CVFormData
 from services.ai import bedrock_client, MODEL_TAILOR, llm_cache
 from services.json_utils import strip_markdown_json, parse_json_with_retry
@@ -131,7 +132,7 @@ def _resolve_path(data: dict, path: str, change_type: str = "modify") -> bool:
 
 
 @router.post("/tailor/suggest-changes", response_model=TailorResponse)
-async def suggest_changes(payload: TailorRequest):
+async def suggest_changes(payload: TailorRequest, user_id: str = Depends(get_current_user)):
     """Analyze CV form data against a job description and suggest field-level changes."""
     form_text = _serialize_form_data(payload.form_data)
     form_dict = payload.form_data.model_dump(exclude_none=True)

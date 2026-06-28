@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from jinja2 import Environment, FileSystemLoader
 import html.parser
 import logging
 import os
 import re
 
+from dependencies import get_current_user
 from models.cv import CVFormData
 
 router = APIRouter()
@@ -220,7 +221,7 @@ _TEMPLATE_FILE_MAP = {
 
 
 @router.post("/generate-latex")
-async def generate_latex(form_data: CVFormData):
+async def generate_latex(form_data: CVFormData, user_id: str = Depends(get_current_user)):
     """Generate LaTeX source from structured CV form data."""
     template_file = _TEMPLATE_FILE_MAP.get(form_data.templateId)
     if not template_file:

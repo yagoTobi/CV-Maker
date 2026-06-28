@@ -3,9 +3,10 @@ CV import route — accepts PDF, DOCX, or JSON uploads
 and returns structured CVFormData via AI extraction.
 """
 
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 import logging
 
+from dependencies import get_current_user
 from services.cv_extractor import extract_from_pdf, extract_from_docx, extract_from_json
 
 router = APIRouter()
@@ -38,7 +39,7 @@ def _detect_extension(filename: str, content_type: str | None) -> str | None:
 
 
 @router.post("/cv-import")
-async def import_cv(file: UploadFile = File(...)):
+async def import_cv(file: UploadFile = File(...), user_id: str = Depends(get_current_user)):
     """Import a CV from PDF, DOCX, or JSON and return extracted CVFormData."""
     ext = _detect_extension(file.filename or "", file.content_type)
     if not ext:

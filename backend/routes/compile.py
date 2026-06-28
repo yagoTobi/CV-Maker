@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 import base64
 import logging
 
+from dependencies import get_current_user
 from services.latex_compiler import compiler
 
 router = APIRouter()
@@ -25,7 +26,7 @@ class CompileResponse(BaseModel):
 
 
 @router.post("/compile", response_model=CompileResponse)
-async def compile_latex(request: CompileRequest):
+async def compile_latex(request: CompileRequest, user_id: str = Depends(get_current_user)):
     """Compile LaTeX content to PDF."""
     try:
         result = compiler.compile(
@@ -48,7 +49,7 @@ async def compile_latex(request: CompileRequest):
 
 
 @router.post("/compile/pdf")
-async def compile_latex_pdf(request: CompileRequest):
+async def compile_latex_pdf(request: CompileRequest, user_id: str = Depends(get_current_user)):
     """Compile LaTeX and return PDF directly."""
     try:
         result = compiler.compile(

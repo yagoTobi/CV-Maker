@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Dict, Optional, Literal
 import json
 import logging
 
+from dependencies import get_current_user
 from services.ai import bedrock_client, MODEL_SONNET, llm_cache
 from services.json_utils import strip_markdown_json, parse_json_with_retry
 
@@ -54,7 +55,7 @@ class MatchAnalysisResponse(BaseModel):
 
 
 @router.post("/chat")
-async def chat(request: ChatRequest):
+async def chat(request: ChatRequest, user_id: str = Depends(get_current_user)):
     """Send a message to the AI agent."""
     try:
         # Build the system prompt with context
@@ -90,7 +91,7 @@ async def chat(request: ChatRequest):
 
 
 @router.post("/chat/analyze")
-async def analyze_job(request: ChatRequest):
+async def analyze_job(request: ChatRequest, user_id: str = Depends(get_current_user)):
     """Initial analysis of job description against CV."""
     try:
         job_context = request.job_description
@@ -128,7 +129,7 @@ async def analyze_job(request: ChatRequest):
 
 
 @router.post("/chat/match-analysis", response_model=MatchAnalysisResponse)
-async def match_analysis(request: MatchAnalysisRequest):
+async def match_analysis(request: MatchAnalysisRequest, user_id: str = Depends(get_current_user)):
     """Analyze job requirements and calculate match score."""
     try:
         job_context = request.job_description
