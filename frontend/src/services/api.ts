@@ -1,22 +1,53 @@
 import axios from 'axios';
+import { fetchAuthSession, signOut } from 'aws-amplify/auth';
 import type { CompileResponse, ChatRequest, UserProfile, MatchAnalysis, CVFormData, CVVersion, CVVersionMeta, CVVersionWithChildren, CVImportResponse, TailorResponse } from '../types';
 import type { Template } from '../features/template-selection';
-import { getUserId } from './userId';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+
+async function getIdToken(): Promise<string | null> {
+  try {
+    const session = await fetchAuthSession();
+    return session.tokens?.idToken?.toString() ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function handleUnauthorized(): Promise<void> {
+  try {
+    await signOut();
+  } catch {
+    // signOut already failed; nothing actionable left to do here
+  }
+  // api.ts is outside the React Router tree, so useNavigate is unavailable.
+  window.location.assign('/dashboard');
+}
 
 // Create axios instance with default timeout
 const axiosInstance = axios.create({
   timeout: 30000, // 30s default
 });
 
-// Attach the per-browser user id to every request so the backend can partition
-// storage per device (see services/userId.ts). The optional chaining keeps this
-// a no-op when axios.create() is mocked without an interceptors API in tests.
-axiosInstance.interceptors?.request.use((config) => {
-  config.headers?.set('X-User-Id', getUserId());
+// The optional chaining keeps interceptors a no-op when axios.create() is
+// mocked without an interceptors API in tests.
+axiosInstance.interceptors?.request.use(async (config) => {
+  const token = await getIdToken();
+  if (token) {
+    config.headers?.set('Authorization', `Bearer ${token}`);
+  }
   return config;
 });
+
+axiosInstance.interceptors?.response.use(
+  (response) => response,
+  async (error) => {
+    if (error?.response?.status === 401) {
+      await handleUnauthorized();
+    }
+    return Promise.reject(error);
+  }
+);
 
 /**
  * Process Server-Sent Events stream and extract text chunks.
@@ -113,14 +144,22 @@ export const api = {
     onComplete: () => void,
     signal?: AbortSignal
   ): Promise<void> {
+    const token = await getIdToken();
     const response = await fetch(`${API_BASE}/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-User-Id': getUserId() },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify({ ...request, stream: true }),
       signal,
     });
 
     if (!response.ok) {
+      if (response.status === 401) {
+        await handleUnauthorized();
+        return;
+      }
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
@@ -135,9 +174,13 @@ export const api = {
     onComplete: () => void,
     signal?: AbortSignal
   ): Promise<void> {
+    const token = await getIdToken();
     const response = await fetch(`${API_BASE}/chat/analyze`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-User-Id': getUserId() },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify({
         messages: [],
         cv_content: cvContent,
@@ -149,6 +192,10 @@ export const api = {
     });
 
     if (!response.ok) {
+      if (response.status === 401) {
+        await handleUnauthorized();
+        return;
+      }
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
