@@ -134,15 +134,25 @@ export default function LandingScreen() {
             </div>
           </div>
 
-          {savedVersions.length > 0 && (
-            <button className={styles.savedLink} onClick={handleMyCV}>
+          <div className={styles.footerActions}>
+            {savedVersions.length > 0 && (
+              <button className={styles.savedLink} onClick={handleMyCV}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                </svg>
+                CV Workspace
+              </button>
+            )}
+            <button className={styles.signInLink} onClick={() => navigate('/dashboard')}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
-                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                <polyline points="10 17 15 12 10 7"/>
+                <line x1="15" y1="12" x2="3" y2="12"/>
               </svg>
-              CV Workspace
+              Sign in
             </button>
-          )}
+          </div>
         </div>
       </div>
     </div>

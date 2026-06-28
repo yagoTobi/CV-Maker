@@ -1,0 +1,11 @@
+/* Override Amplify UI CSS variables to match CV-Maker design system */
+[data-amplify-authenticator] {
+  --amplify-fonts-default-variable: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --amplify-fonts-default-static: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --amplify-colors-brand-primary-60: #3B82F6;
+  --amplify-colors-brand-primary-80: #2563EB;
+  --amplify-colors-brand-primary-100: #1E40AF;
+  --amplify-components-button-primary-background-color: #3B82F6;
+  --amplify-components-button-primary-hover-background-color: #2563EB;
+  --amplify-components-authenticator-container-width-max: 420px;
+}

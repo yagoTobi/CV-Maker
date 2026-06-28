@@ -8,9 +8,11 @@ vi.mock('aws-amplify');
 vi.mock('aws-amplify/auth');
 
 vi.mock('@aws-amplify/ui-react', () => {
-  const Passthrough = ({ children }: { children?: unknown }) => children;
+  const Passthrough = ({ children }: { children?: unknown }) =>
+    typeof children === 'function' ? (children as () => unknown)() : children;
   return {
     Authenticator: Object.assign(Passthrough, { Provider: Passthrough }),
+    ThemeProvider: Passthrough,
     useAuthenticator: () => ({ user: undefined, signOut: vi.fn() }),
   };
 });

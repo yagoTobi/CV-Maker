@@ -153,6 +153,13 @@
   color: var(--accent);
 }
 
+.footerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 /* Saved CVs link */
 .savedLink {
   display: flex;
@@ -173,6 +180,26 @@
   background: var(--bg-secondary);
   color: var(--text-primary);
   border-color: var(--border-strong);
+}
+
+.signInLink {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.125rem;
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.signInLink:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 
 /* Expansion panel animation — grid-rows trick for smooth height transition */
