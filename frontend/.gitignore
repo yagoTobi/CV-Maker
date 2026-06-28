@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Amplify (generated at runtime — do not commit)
+amplify_outputs.json
+amplify_outputs*
+.amplify/

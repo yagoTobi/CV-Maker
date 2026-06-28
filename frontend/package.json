@@ -12,8 +12,10 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@aws-amplify/ui-react": "^6.15.4",
     "@floating-ui/react": "^0.27.19",
     "@fontsource-variable/eb-garamond": "^5.2.7",
+    "aws-amplify": "^6.18.0",
     "axios": "^1.13.5",
     "nanoid": "^5.1.7",
     "react": "^19.2.0",
@@ -21,6 +23,8 @@
     "react-router-dom": "^7.13.1"
   },
   "devDependencies": {
+    "@aws-amplify/backend": "^1.23.0",
+    "@aws-amplify/backend-cli": "^1.8.3",
     "@eslint/js": "^9.39.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
