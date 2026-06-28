@@ -155,6 +155,16 @@
   }
 }
 
+/* Signed-in identity (right group) */
+.userEmail {
+  font-size: 13px;
+  color: var(--text-muted);
+  max-width: 180px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 /* CV Name Button (editor pages, not tuning) */
 .cvNameBtn {
   display: inline-flex;

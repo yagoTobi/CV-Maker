@@ -1,5 +1,7 @@
-import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type { ReactNode } from 'react';
+import { useAuthenticator } from '@aws-amplify/ui-react';
+import { fetchAuthSession } from 'aws-amplify/auth';
 import { api } from '../services/api';
 import { persistActiveVersionId } from '../utils/activeVersionStorage';
 import type { UserProfile, CVFormData, CVVersion, CVVersionMeta } from '../types';
@@ -46,26 +48,67 @@ export function CVProvider({ children }: { children: ReactNode }) {
     persistActiveVersionId(version?.id ?? null);
   }, []);
 
-  // Load user profile and saved versions on mount
-  useEffect(() => {
-    let mounted = true;
+  // Security: this provider also mounts on the public landing page (signed
+  // out), so loading is gated on a real session and `loadedSubRef` pins state
+  // to one Cognito sub — a different user on the same browser must not inherit
+  // the previous user's CVs.
+  const { authStatus } = useAuthenticator((ctx) => [ctx.authStatus]);
+  const loadedSubRef = useRef<string | null>(null);
 
-    Promise.all([
-      api.loadUserData(),
-      api.listVersions(),
-    ]).then(([profile, { versions, ungrouped }]) => {
-      if (!mounted) return;
-      if (profile) setUserProfile(profile);
-      const allVersions = [
-        ...versions,
-        ...versions.flatMap(v => v.children || []),
-        ...ungrouped
-      ];
-      setSavedVersions(allVersions);
-    });
-
-    return () => { mounted = false; };
+  const resetUserState = useCallback(() => {
+    setUserProfile(null);
+    setSavedVersions([]);
+    setActiveVersionState(null);
+    setFormData(null);
+    persistActiveVersionId(null);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (authStatus !== 'authenticated') {
+      loadedSubRef.current = null;
+      resetUserState();
+      return;
+    }
+
+    (async () => {
+      let sub: string | null = null;
+      try {
+        const session = await fetchAuthSession();
+        sub = (session?.tokens?.idToken?.payload?.sub as string | undefined) ?? null;
+      } catch {
+        sub = null;
+      }
+      if (cancelled) return;
+
+      if (loadedSubRef.current !== null && loadedSubRef.current !== sub) {
+        resetUserState();
+      }
+      loadedSubRef.current = sub;
+
+      try {
+        const [profile, { versions, ungrouped }] = await Promise.all([
+          api.loadUserData(),
+          api.listVersions(),
+        ]);
+        if (cancelled) return;
+        if (profile) setUserProfile(profile);
+        setSavedVersions([
+          ...versions,
+          ...versions.flatMap((v) => v.children || []),
+          ...ungrouped,
+        ]);
+      } catch {
+        // api.ts swallows expected failures; a 401 is handled by the axios
+        // interceptor (signOut -> authStatus flips -> this effect resets).
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authStatus, resetUserState]);
 
   const resetForNewBuild = useCallback(() => {
     setFormData(null);

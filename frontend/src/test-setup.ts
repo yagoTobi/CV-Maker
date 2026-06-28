@@ -13,7 +13,7 @@ vi.mock('@aws-amplify/ui-react', () => {
   return {
     Authenticator: Object.assign(Passthrough, { Provider: Passthrough }),
     ThemeProvider: Passthrough,
-    useAuthenticator: () => ({ user: undefined, signOut: vi.fn() }),
+    useAuthenticator: () => ({ authStatus: 'authenticated', user: undefined, signOut: vi.fn() }),
   };
 });
 

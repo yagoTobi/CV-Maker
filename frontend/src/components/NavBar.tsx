@@ -12,6 +12,7 @@
  */
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useEditorActions } from '../contexts/EditorActionsContext';
 import { SaveIndicator } from '../features/direct-edit/components/SaveIndicator';
 import { PageCountIndicator } from '../features/direct-edit/components/PageCountIndicator';
@@ -22,6 +23,7 @@ export function NavBar() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const editorActions = useEditorActions();
+  const { user, signOut } = useAuthenticator((ctx) => [ctx.user, ctx.signOut]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const isEditorPage = pathname === '/build/form' && editorActions !== null;
@@ -116,6 +118,14 @@ export function NavBar() {
             </button>
           </>
         ) : null}
+        {(user?.signInDetails?.loginId ?? user?.username) && (
+          <span className={styles.userEmail}>
+            {user?.signInDetails?.loginId ?? user?.username}
+          </span>
+        )}
+        <button className={styles.ghostBtn} onClick={() => signOut()} type="button">
+          Sign Out
+        </button>
       </div>
     </nav>
   );
