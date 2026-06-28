@@ -13,7 +13,8 @@ from loguru import logger
 from prompts.voice_interview import get_voice_system_prompt
 from pydantic import BaseModel
 
-from dependencies import get_current_user
+from config import settings
+from dependencies import get_current_user, verify_cognito_token
 from services.storage import StorageBackend, get_storage
 from services.voice import (
     LLMRunFrame,
@@ -50,6 +51,22 @@ class ExtractCVRequest(BaseModel):
 
 @router.websocket("/ws/voice-interview")
 async def voice_interview_ws(websocket: WebSocket):
+    # --- AUTH FIRST: validate before accept() and before the PIPECAT check, so
+    # an unauthenticated client is rejected at the handshake (never accepted). ---
+    if settings.auth_mode == "cognito":
+        token = websocket.query_params.get("token")
+        if not token:
+            await websocket.close(code=1008)
+            return
+        try:
+            user_id = verify_cognito_token(token)
+        except HTTPException:
+            await websocket.close(code=1008)
+            return
+    else:
+        # dev mode: single-user shim — never trust a client-supplied user_id/token.
+        user_id = "local"
+
     if not PIPECAT_AVAILABLE:
         await websocket.accept()
         await websocket.send_text(json.dumps({
@@ -64,8 +81,7 @@ async def voice_interview_ws(websocket: WebSocket):
     store.cleanup_stale()
 
     session_id = websocket.query_params.get("session_id") or str(uuid.uuid4())
-    user_id = websocket.query_params.get("user_id") or "local"
-    logger.info("[voice] session {} — WebSocket accepted", session_id)
+    logger.info("[voice] session {} — WebSocket accepted (user={})", session_id, user_id)
 
     try:
         storage = get_storage()
@@ -75,6 +91,7 @@ async def voice_interview_ws(websocket: WebSocket):
             session_id=session_id,
             system_prompt=get_voice_system_prompt(profile),
             store=store,
+            user_id=user_id,
         )
 
         @pipeline.transport.event_handler("on_client_disconnected")
@@ -113,7 +130,7 @@ async def extract_cv(
     storage: StorageBackend = Depends(get_storage),
     store: VoiceSessionStore = Depends(get_voice_session_store),
 ):
-    session_data = store.get(request.session_id)
+    session_data = store.get(user_id, request.session_id)
     transcript_lines = session_data["transcript"] if session_data else []
     if not transcript_lines:
         raise HTTPException(status_code=404, detail="Session not found or empty transcript")
@@ -131,7 +148,7 @@ async def extract_cv(
         except Exception:
             logger.exception("[voice] session %s — failed to persist profile summary", request.session_id)
 
-    store.delete(request.session_id)
+    store.delete(user_id, request.session_id)
     return {"formData": form_data}
 
 
