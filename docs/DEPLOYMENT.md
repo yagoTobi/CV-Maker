@@ -91,6 +91,94 @@ You can verify the backend is running with:
 curl http://localhost:8000/api/health
 ```
 
+## One-Box Production Deployment (Lightsail/EC2)
+
+The supported single-instance production topology: one Docker container running the FastAPI backend on a Lightsail instance or EC2 box, with the React SPA hosted separately on AWS Amplify Hosting. State lives in DynamoDB and authentication is delegated to Amazon Cognito, so the box itself is stateless and replaceable.
+
+> **Single-instance only.** The in-memory LLM cache (`backend/services/ai/llm_cache.py`) and per-process state are not shared across instances. Do **not** run more than one backend container behind a load balancer until the cache is externalized.
+
+### 1. Build and Run the Image
+
+```bash
+docker build -t cv-maker-backend .
+
+docker run -d \
+  --name cv-maker-backend \
+  -p 8000:8000 \
+  --env-file backend.prod.env \
+  cv-maker-backend
+```
+
+### 2. Required Production Environment Variables
+
+Provide these via `--env-file`, the instance's user-data, or your secrets manager. `ENV=production` makes the backend **fail closed at startup** unless the Cognito + DynamoDB invariants below are satisfied (enforced by `validate_production_settings` in `backend/config/settings.py`).
+
+| Variable | Required | Example | Description |
+|----------|----------|---------|-------------|
+| `ENV` | Yes | `production` | Enables production invariant checks at startup. |
+| `AUTH_MODE` | Yes | `cognito` | Switches `get_current_user` to Cognito JWT validation; also drops `X-User-Id` from the CORS allowlist. |
+| `COGNITO_USER_POOL_ID` | Yes | `us-east-1_xxxxxxxxx` | Cognito user pool that issues ID tokens. |
+| `COGNITO_APP_CLIENT_ID` | Yes | `xxxxxxxxxxxxxxxxxxxxxx` | App client ID the token audience is verified against. |
+| `STORAGE_BACKEND` | Yes | `dynamodb` | File storage is rejected in production. |
+| `DYNAMODB_TABLE_NAME` | No | `cv-maker` | Single-table name (default `cv-maker`). |
+| `AWS_DEFAULT_REGION` | Yes | `us-east-1` | Region for Bedrock + DynamoDB. |
+| `CORS_ORIGINS` | Yes | `https://app.your-domain.com` | Comma-separated Amplify origin(s). Surrounding whitespace and blank entries are stripped, so a trailing comma is harmless. |
+
+**Credentials:** prefer an **instance IAM role** (EC2 instance profile or Lightsail role) over static keys. If you must use static keys, set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`; the AWS SDK uses the instance role automatically when these are absent.
+
+### 3. IAM Permissions
+
+Attach a policy granting exactly these actions. Scope `Resource` to your Bedrock inference-profile ARNs and DynamoDB table ARN in real deployments:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "Bedrock",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "DynamoDB",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:Query"
+      ],
+      "Resource": "arn:aws:dynamodb:us-east-1:<account-id>:table/cv-maker"
+    }
+  ]
+}
+```
+
+### 4. TLS Is Mandatory
+
+The backend container serves plain HTTP on port 8000 and must **never** be exposed directly. Amplify Hosting serves the frontend over HTTPS, and browsers block mixed content, so an HTTPS frontend calling an HTTP API will fail. Put the backend behind TLS termination:
+
+- **Caddy** (automatic Let's Encrypt) or **Nginx + Certbot** on the same box, reverse-proxying `https://api.your-domain.com` → `http://127.0.0.1:8000`, or
+- **Cloudflare proxy** in front of the instance.
+
+Then build the frontend with `VITE_API_URL=https://api.your-domain.com/api` so the SPA calls the HTTPS endpoint.
+
+### 5. Rollback to Single-User / Local Mode
+
+The same image runs in the original local-disk, no-auth mode — flip three variables and restart the container (no rebuild required):
+
+| Variable | Production | Rollback |
+|----------|------------|----------|
+| `ENV` | `production` | `development` |
+| `STORAGE_BACKEND` | `dynamodb` | `file` |
+| `AUTH_MODE` | `cognito` | `dev` |
+
+In rollback mode the startup invariant checks are skipped, data is read/written under `/app/backend/user_data` (mount a volume to persist it), and the auth shim falls back to the `X-User-Id` header. Use this to restore service quickly if Cognito or DynamoDB is misconfigured, then re-enable production mode once the root cause is fixed.
+
 ## Frontend: Static Build
 
 The frontend is a Vite-powered React SPA. Build it with:
@@ -229,7 +317,7 @@ Ensure your AWS credentials have `bedrock:InvokeModel` and `bedrock:InvokeModelW
 
 ### CORS
 
-Set `CORS_ORIGINS` to match your production frontend URL(s). The backend allows the following HTTP methods: `GET`, `POST`, `DELETE`, `PATCH`, `OPTIONS`. The custom header `X-User-Id` is permitted through CORS.
+Set `CORS_ORIGINS` to match your production frontend URL(s) (comma-separated; surrounding whitespace and blank entries are dropped, so a trailing comma is harmless). The backend allows the following HTTP methods: `GET`, `POST`, `DELETE`, `PATCH`, `OPTIONS`, and caches preflight responses for 600 seconds (`Access-Control-Max-Age`). `allow_credentials` stays enabled because the SPA runs on a different origin from the API. The custom `X-User-Id` header is advertised in the CORS allowlist **only when `AUTH_MODE=dev`**; in `cognito` mode the browser authenticates with a Bearer token and `X-User-Id` is deliberately omitted.
 
 ### Security Headers
 

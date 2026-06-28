@@ -9,10 +9,15 @@ load_dotenv()
 
 from config import settings, validate_production_settings
 
-# Load CORS origins from environment variable, with fallback for local dev
-CORS_ORIGINS = os.getenv(
-    "CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
-).split(",")
+# Build allow_origins: split on comma, strip whitespace, drop empty entries
+# (a trailing comma or blank entry must never become a "" allowlist member).
+CORS_ORIGINS = [
+    o.strip()
+    for o in os.getenv(
+        "CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
+    ).split(",")
+    if o.strip()
+]
 
 
 from routes.chat import router as chat_router
@@ -35,13 +40,20 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="CV Maker API", lifespan=lifespan)
 
-# CORS middleware for frontend
+# CORS middleware for frontend.
+# X-User-Id is only needed in dev mode (the auth shim reads it); in production
+# (cognito mode) the browser sends a Bearer token, so we must not advertise it.
+_allow_headers = ["Content-Type", "Authorization"]
+if settings.auth_mode == "dev":
+    _allow_headers.append("X-User-Id")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
-    allow_credentials=True,
+    allow_credentials=True,  # KEEP: frontend is on a different origin from the API
     allow_methods=["GET", "POST", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-User-Id"],
+    allow_headers=_allow_headers,
+    max_age=600,
 )
 
 
