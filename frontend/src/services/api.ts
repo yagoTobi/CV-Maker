@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { fetchAuthSession, signOut } from 'aws-amplify/auth';
-import type { CompileResponse, ChatRequest, UserProfile, MatchAnalysis, CVFormData, CVVersion, CVVersionMeta, CVVersionWithChildren, CVImportResponse, TailorResponse } from '../types';
+import type { CompileResponse, ChatRequest, UserProfile, MatchAnalysis, CVFormData, CVVersion, CVVersionMeta, CVVersionWithChildren, CVImportResponse, TailorResponse, SectionAssistRequest, SectionAssistResult } from '../types';
 import type { Template } from '../features/template-selection';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
@@ -270,6 +270,43 @@ export const api = {
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') throw err;
       console.error('[api:suggestTailorChanges]', err);
+      return null;
+    }
+  },
+
+  async generateSectionBullets(
+    req: SectionAssistRequest,
+    signal?: AbortSignal
+  ): Promise<SectionAssistResult | null> {
+    try {
+      const response = await axiosInstance.post<SectionAssistResult>(
+        `${API_BASE}/section-assist/generate-bullets`,
+        {
+          section_type: req.sectionType,
+          entry_context: req.entryContext,
+          user_answer: req.userAnswer,
+          focus: req.focus,
+          existing_bullets: req.existingBullets,
+        },
+        {
+          timeout: 20000,
+          signal,
+        }
+      );
+      return response.data;
+    } catch (err) {
+      // Rethrow axios cancellation errors (AbortSignal)
+      if (axios.isCancel(err)) throw err;
+      // Handle 429 rate-limit specially
+      if (err instanceof Error && 'response' in err && (err as Error & { response?: { status: number } }).response?.status === 429) {
+        return {
+          bullets: [],
+          blocked: true,
+          reason: 'rate-limited',
+        };
+      }
+      // All other errors: log and return null (never throw)
+      console.error('[api:generateSectionBullets]', err);
       return null;
     }
   },

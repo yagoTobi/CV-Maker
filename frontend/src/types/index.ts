@@ -163,6 +163,27 @@ export interface TailorResponse {
   summary: string;
 }
 
+export interface SectionAssistEntryContext {
+  title?: string;
+  organization?: string;
+  dates?: string;
+  extra?: string;
+}
+
+export interface SectionAssistRequest {
+  sectionType: 'work' | 'education' | 'project' | 'additional';
+  entryContext: SectionAssistEntryContext;
+  userAnswer?: string;
+  focus?: string;
+  existingBullets?: string[];
+}
+
+export interface SectionAssistResult {
+  bullets: string[];
+  blocked: boolean;
+  reason?: string;
+}
+
 export interface CVVersion {
   id: string;
   name: string;
