@@ -21,10 +21,10 @@ SESSION_TTL_SECONDS = 3600  # 1 hour
 class VoiceSessionStore(Protocol):
     """Abstract store for in-flight voice interview transcripts."""
 
-    def get(self, session_id: str) -> Optional[dict]: ...
-    def create(self, session_id: str) -> dict: ...
-    def append_line(self, session_id: str, line: str) -> None: ...
-    def delete(self, session_id: str) -> None: ...
+    def get(self, user_id: str, session_id: str) -> Optional[dict]: ...
+    def create(self, user_id: str, session_id: str) -> dict: ...
+    def append_line(self, user_id: str, session_id: str, line: str) -> None: ...
+    def delete(self, user_id: str, session_id: str) -> None: ...
     def cleanup_stale(self, ttl_seconds: int = SESSION_TTL_SECONDS) -> None: ...
 
 
@@ -37,35 +37,35 @@ class InMemoryVoiceSessionStore:
     """
 
     def __init__(self) -> None:
-        self._sessions: dict[str, dict] = {}
+        self._sessions: dict[tuple[str, str], dict] = {}
 
-    def get(self, session_id: str) -> Optional[dict]:
-        return self._sessions.get(session_id)
+    def get(self, user_id: str, session_id: str) -> Optional[dict]:
+        return self._sessions.get((user_id, session_id))
 
-    def create(self, session_id: str) -> dict:
+    def create(self, user_id: str, session_id: str) -> dict:
         entry = {"transcript": [], "created_at": time.time()}
-        self._sessions[session_id] = entry
+        self._sessions[(user_id, session_id)] = entry
         return entry
 
-    def append_line(self, session_id: str, line: str) -> None:
-        entry = self._sessions.get(session_id)
+    def append_line(self, user_id: str, session_id: str, line: str) -> None:
+        entry = self._sessions.get((user_id, session_id))
         if entry is None:
             return
         entry["transcript"].append(line)
 
-    def delete(self, session_id: str) -> None:
-        self._sessions.pop(session_id, None)
+    def delete(self, user_id: str, session_id: str) -> None:
+        self._sessions.pop((user_id, session_id), None)
 
     def cleanup_stale(self, ttl_seconds: int = SESSION_TTL_SECONDS) -> None:
         now = time.time()
-        stale_ids = [
-            sid
-            for sid, data in self._sessions.items()
+        stale_keys = [
+            key
+            for key, data in self._sessions.items()
             if now - data.get("created_at", 0) > ttl_seconds
         ]
-        for sid in stale_ids:
-            logger.info("[voice] Cleaning up stale session %s", sid)
-            del self._sessions[sid]
+        for key in stale_keys:
+            logger.info("[voice] Cleaning up stale session %s", key)
+            del self._sessions[key]
 
 
 @lru_cache(maxsize=1)

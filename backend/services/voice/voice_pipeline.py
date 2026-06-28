@@ -70,11 +70,12 @@ if PIPECAT_AVAILABLE:
         This processor only needs to store the transcript for later extraction.
         """
 
-        def __init__(self, session_id: str, store: VoiceSessionStore):
+        def __init__(self, session_id: str, store: VoiceSessionStore, user_id: str):
             super().__init__()
             self._session_id = session_id
             self._store = store
-            self._store.create(session_id)
+            self._user_id = user_id
+            self._store.create(user_id, session_id)
 
         async def process_frame(self, frame: Frame, direction: FrameDirection):
             await super().process_frame(frame, direction)
@@ -85,13 +86,13 @@ if PIPECAT_AVAILABLE:
                     logger.info(
                         "[voice] session {} — USER: {}", self._session_id, text
                     )
-                    self._store.append_line(self._session_id, f"User: {text}")
+                    self._store.append_line(self._user_id, self._session_id, f"User: {text}")
 
             elif isinstance(frame, TextFrame) and frame.text:
                 logger.info(
                     "[voice] session {} — AI: {}", self._session_id, frame.text
                 )
-                self._store.append_line(self._session_id, f"AI: {frame.text}")
+                self._store.append_line(self._user_id, self._session_id, f"AI: {frame.text}")
 
             await self.push_frame(frame, direction)
 
@@ -115,6 +116,7 @@ def build_voice_pipeline(
     session_id: str,
     system_prompt: str,
     store: VoiceSessionStore,
+    user_id: str,
 ) -> "VoicePipeline":
     """Construct the Nova Sonic S2S pipeline for a single voice session.
 
@@ -173,7 +175,7 @@ def build_voice_pipeline(
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(context)
 
     # --- Transcript collector ---
-    collector = TranscriptCollector(session_id, store)
+    collector = TranscriptCollector(session_id, store, user_id)
 
     # --- Pipeline (S2S pattern: no separate STT or TTS) ---
     pipeline = Pipeline(

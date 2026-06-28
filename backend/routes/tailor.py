@@ -172,6 +172,7 @@ Analyze this CV against the job description and suggest specific field-level cha
         # cache key so two distinct clarification sets do NOT share a cached response.
         clarifications_fingerprint = "|".join(cleaned_clarifications)
         cache_key = llm_cache.cache_key(
+            user_id,
             serialized_form_data,
             payload.job_description,
             payload.company_name or "",

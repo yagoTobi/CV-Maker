@@ -159,7 +159,7 @@ Return ONLY a valid JSON object with this exact structure:
         }]
 
         # Check cache first
-        cache_key = llm_cache.cache_key(request.cv_content, request.job_description, request.company_name or "")
+        cache_key = llm_cache.cache_key(user_id, request.cv_content, request.job_description, request.company_name or "")
         cached = llm_cache.get(cache_key)
         if cached:
             try:
