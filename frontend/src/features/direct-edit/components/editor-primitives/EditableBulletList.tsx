@@ -14,6 +14,7 @@
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { EditableField } from './EditableField';
+import { useSectionAssistTrigger } from './SectionAssistContext';
 import type { HighlightSpan } from './EditableField';
 import type { BulletItem, TailorChange, TailorAlternative } from '../../../../types';
 import styles from './EditableBulletList.module.css';
@@ -67,6 +68,8 @@ export function EditableBulletList({
   const bulletRefs = useRef<Map<string, HTMLElement>>(new Map());
   const pendingFocusId = useRef<string | null>(null);
 
+  const { requestAssist, suppressed } = useSectionAssistTrigger();
+
   const addFirstBullet = useCallback(
     (text: string) => {
       const newId = onBulletAdd(-1);
@@ -102,22 +105,29 @@ export function EditableBulletList({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent, index: number) => {
+      const el = e.currentTarget as HTMLElement; // capture FIRST — stale after async
+
+      if (
+        e.key === ' ' &&
+        !e.nativeEvent.isComposing &&
+        !suppressed &&
+        (el.textContent ?? '').trim() === ''
+      ) {
+        e.preventDefault();
+        requestAssist({ basePath, index, getRect: () => el.getBoundingClientRect(), restoreFocusEl: el });
+        return;
+      }
+
       if (e.key === 'Enter') {
         e.preventDefault();
-        // Commit current text before adding (innerHTML for rich, textContent for plain)
-        const el = e.currentTarget as HTMLElement;
         onBulletChange(index, rich ? (el.innerHTML ?? '') : (el.textContent ?? ''));
         const newId = onBulletAdd(index);
         if (newId) {
           pendingFocusId.current = newId;
         }
       }
-      if (
-        e.key === 'Backspace' &&
-        (e.currentTarget as HTMLElement).textContent === ''
-      ) {
+      if (e.key === 'Backspace' && el.textContent === '') {
         e.preventDefault();
-        // Focus previous bullet after removal when another bullet remains.
         const prevIndex = Math.max(0, index - 1);
         const prevBullet = bullets[prevIndex === index ? index + 1 : prevIndex];
         if (prevBullet) {
@@ -126,20 +136,32 @@ export function EditableBulletList({
         onBulletRemove(index);
       }
     },
-    [bullets, onBulletChange, onBulletAdd, onBulletRemove, rich]
+    [bullets, onBulletChange, onBulletAdd, onBulletRemove, rich, requestAssist, suppressed, basePath]
   );
 
   const handleEmptyStarterKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
+      const el = e.currentTarget; // capture FIRST — stale after async
+
+      if (
+        e.key === ' ' &&
+        !e.nativeEvent.isComposing &&
+        !suppressed &&
+        (el.textContent ?? '').trim() === ''
+      ) {
+        e.preventDefault();
+        requestAssist({ basePath, index: 0, getRect: () => el.getBoundingClientRect(), restoreFocusEl: el });
+        return;
+      }
+
       if (e.key !== 'Enter') return;
       e.preventDefault();
-      const el = e.currentTarget;
       const text = rich ? (el.innerHTML ?? '') : (el.textContent ?? '');
       addFirstBullet((el.textContent ?? '').trim() === '' ? '' : text);
       el.textContent = '';
       setEmptyStarterHasText(false);
     },
-    [addFirstBullet, rich]
+    [addFirstBullet, rich, requestAssist, suppressed, basePath]
   );
 
   const handleEmptyStarterBlur = useCallback(
