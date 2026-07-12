@@ -27,3 +27,10 @@ dist-ssr
 amplify_outputs.json
 amplify_outputs*
 .amplify/
+
+# Local env files (contain secrets / local overrides — do not commit)
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
