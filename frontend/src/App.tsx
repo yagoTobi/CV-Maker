@@ -44,6 +44,12 @@ function AuthHeader() {
 }
 
 function AuthGate({ children }: { children: React.ReactNode }) {
+  const isAuthDisabled = import.meta.env.VITE_DISABLE_AUTH === 'true';
+
+  if (isAuthDisabled) {
+    return <>{children}</>;
+  }
+
   return (
     <ThemeProvider theme={authTheme}>
       <Authenticator

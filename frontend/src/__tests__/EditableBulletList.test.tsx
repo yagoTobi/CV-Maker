@@ -7,7 +7,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import { EditableBulletList } from '../features/direct-edit/components/editor-primitives/EditableBulletList';
+import { SectionAssistContext } from '../features/direct-edit/components/editor-primitives/SectionAssistContext';
 import type { BulletItem, TailorChange } from '../types';
+import type { SectionAssistContextValue } from '../features/direct-edit/components/editor-primitives/SectionAssistContext';
 
 describe('EditableBulletList', () => {
   const defaultBullets: BulletItem[] = [
@@ -261,6 +263,141 @@ describe('EditableBulletList', () => {
       // No delete span on bullets b1 or b3
       const allDeleteSpans = container.querySelectorAll('span[data-severity="delete"]');
       expect(allDeleteSpans.length).toBe(1);
+    });
+  });
+
+  // ── Space-on-empty-bullet assist trigger (T11) ──────────────────────────
+  describe('Space-on-empty-bullet assist trigger', () => {
+    function renderWithAssist(
+      props: Partial<typeof defaultProps> & { bullets?: BulletItem[] } = {},
+      requestAssist: SectionAssistContextValue['requestAssist'] = vi.fn(),
+      suppressed = false,
+    ) {
+      return render(
+        <SectionAssistContext.Provider value={{ requestAssist, suppressed }}>
+          <EditableBulletList {...defaultProps} {...props} />
+        </SectionAssistContext.Provider>,
+      );
+    }
+
+    it('Space on an empty bullet calls requestAssist once', () => {
+      const requestAssist = vi.fn();
+      const { container } = renderWithAssist(
+        { bullets: [{ id: 'b1', text: '' }] },
+        requestAssist,
+      );
+      const el = container.querySelector('[contenteditable]') as HTMLElement;
+      el.textContent = '';
+
+      fireEvent.keyDown(el, { key: ' ' });
+
+      expect(requestAssist).toHaveBeenCalledOnce();
+      expect(requestAssist).toHaveBeenCalledWith(
+        expect.objectContaining({
+          basePath: 'workExperience[0].bullets',
+          index: 0,
+        }),
+      );
+    });
+
+    it('Space on a non-empty bullet does NOT call requestAssist', () => {
+      const requestAssist = vi.fn();
+      const { container } = renderWithAssist(
+        { bullets: [{ id: 'b1', text: 'some content' }] },
+        requestAssist,
+      );
+      const el = container.querySelector('[contenteditable]') as HTMLElement;
+      el.textContent = 'some content';
+
+      fireEvent.keyDown(el, { key: ' ' });
+
+      expect(requestAssist).not.toHaveBeenCalled();
+    });
+
+    it('Space during IME composition does NOT call requestAssist', () => {
+      const requestAssist = vi.fn();
+      const { container } = renderWithAssist(
+        { bullets: [{ id: 'b1', text: '' }] },
+        requestAssist,
+      );
+      const el = container.querySelector('[contenteditable]') as HTMLElement;
+      el.textContent = '';
+
+      fireEvent.keyDown(el, { key: ' ', isComposing: true });
+
+      expect(requestAssist).not.toHaveBeenCalled();
+    });
+
+    it('Space while suppressed=true does NOT call requestAssist', () => {
+      const requestAssist = vi.fn();
+      const { container } = renderWithAssist(
+        { bullets: [{ id: 'b1', text: '' }] },
+        requestAssist,
+        true, // suppressed
+      );
+      const el = container.querySelector('[contenteditable]') as HTMLElement;
+      el.textContent = '';
+
+      fireEvent.keyDown(el, { key: ' ' });
+
+      expect(requestAssist).not.toHaveBeenCalled();
+    });
+
+    it('whitespace-only bullet is treated as empty → calls requestAssist', () => {
+      const requestAssist = vi.fn();
+      const { container } = renderWithAssist(
+        { bullets: [{ id: 'b1', text: '' }] },
+        requestAssist,
+      );
+      const el = container.querySelector('[contenteditable]') as HTMLElement;
+      el.textContent = '   ';
+
+      fireEvent.keyDown(el, { key: ' ' });
+
+      expect(requestAssist).toHaveBeenCalledOnce();
+    });
+
+    it('Space on the empty-starter row (bullets.length===0) calls requestAssist with index 0', () => {
+      const requestAssist = vi.fn();
+      const { container } = renderWithAssist({ bullets: [] }, requestAssist);
+      const el = container.querySelector('[contenteditable]') as HTMLElement;
+      el.textContent = '';
+
+      fireEvent.keyDown(el, { key: ' ' });
+
+      expect(requestAssist).toHaveBeenCalledOnce();
+      expect(requestAssist).toHaveBeenCalledWith(
+        expect.objectContaining({ index: 0 }),
+      );
+    });
+
+    it('Enter still creates a bullet after Space trigger is added', () => {
+      const onBulletAdd = vi.fn();
+      const { container } = renderWithAssist(
+        { bullets: [{ id: 'b1', text: 'hello' }], onBulletAdd },
+      );
+      const el = container.querySelector('[contenteditable]') as HTMLElement;
+
+      fireEvent.keyDown(el, { key: 'Enter' });
+
+      expect(onBulletAdd).toHaveBeenCalledWith(0);
+    });
+
+    it('Backspace on empty still removes the bullet after Space trigger is added', () => {
+      const onBulletRemove = vi.fn();
+      const { container } = renderWithAssist(
+        {
+          bullets: [{ id: 'b1', text: '' }, { id: 'b2', text: 'ok' }],
+          onBulletRemove,
+        },
+      );
+      const els = container.querySelectorAll('[contenteditable]');
+      const first = els[0] as HTMLElement;
+      first.textContent = '';
+
+      fireEvent.keyDown(first, { key: 'Backspace' });
+
+      expect(onBulletRemove).toHaveBeenCalledWith(0);
     });
   });
 });
