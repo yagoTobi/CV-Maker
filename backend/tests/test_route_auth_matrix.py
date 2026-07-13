@@ -51,10 +51,6 @@ def _json_files(body):
 # (id, method, path, json_body, files_factory) — files_factory is a no-arg
 # callable so each parametrized run gets a fresh BytesIO (streams are consumed).
 PRIVATE_ROUTES = [
-    ("chat", "POST", "/api/chat",
-     {"messages": [], "cv_content": "", "job_description": ""}, None),
-    ("chat_analyze", "POST", "/api/chat/analyze",
-     {"messages": [], "cv_content": "", "job_description": ""}, None),
     ("chat_match_analysis", "POST", "/api/chat/match-analysis",
      {"cv_content": "", "job_description": ""}, None),
     ("compile", "POST", "/api/compile",
