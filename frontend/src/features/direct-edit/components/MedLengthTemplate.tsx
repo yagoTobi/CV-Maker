@@ -31,10 +31,10 @@ import { ProjectsSection } from './sections/ProjectsSection';
 import { AwardsSection } from './sections/AwardsSection';
 import { AdditionalSection } from './sections/AdditionalSection';
 import type { CVFormData, SkillItem } from '../../../types';
+import { DEFAULT_PERSONAL_ORDER } from '../../../utils/entryFactories';
 import styles from './MedLengthTemplate.module.css';
 
 const DEFAULT_SECTION_ORDER = ['work', 'education', 'skills', 'projects', 'awards'];
-const DEFAULT_PERSONAL_ORDER = ['phone', 'email', 'location', 'links'];
 
 export interface MedLengthTemplateProps {
   formData: CVFormData;
