@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { fetchAuthSession, signOut } from 'aws-amplify/auth';
-import type { CompileResponse, ChatRequest, UserProfile, MatchAnalysis, CVFormData, CVVersion, CVVersionMeta, CVVersionWithChildren, CVImportResponse, TailorResponse, SectionAssistRequest, SectionAssistResult } from '../types';
+import type { CompileResponse, UserProfile, MatchAnalysis, CVFormData, CVVersion, CVVersionMeta, CVVersionWithChildren, CVImportResponse, TailorResponse, SectionAssistRequest, SectionAssistResult } from '../types';
 import type { Template } from '../features/template-selection';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
@@ -49,59 +49,6 @@ axiosInstance.interceptors?.response.use(
   }
 );
 
-/**
- * Process Server-Sent Events stream and extract text chunks.
- */
-async function processSSEStream(
-  response: Response,
-  onChunk: (text: string) => void,
-  onComplete: () => void,
-  signal?: AbortSignal
-): Promise<void> {
-  const reader = response.body?.getReader();
-  if (!reader) throw new Error('No response body');
-
-  const decoder = new TextDecoder();
-  let buffer = '';
-  let completed = false;
-
-  while (true) {
-    if (signal?.aborted) {
-      reader.cancel();
-      return;
-    }
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
-
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        const data = line.slice(6);
-        if (data === '[DONE]') {
-          completed = true;
-          onComplete();
-          return;
-        }
-        try {
-          const parsed = JSON.parse(data);
-          if (parsed.text) {
-            onChunk(parsed.text);
-          }
-        } catch {
-          // Skip invalid JSON
-        }
-      }
-    }
-  }
-
-  if (!completed) {
-    onComplete();
-  }
-}
-
 export const api = {
   async compileLatex(texContent: string, templateId?: string, signal?: AbortSignal): Promise<CompileResponse> {
     try {
@@ -136,70 +83,6 @@ export const api = {
       content: response.data.content,
       clsContent: response.data.cls_content,
     };
-  },
-
-  async streamChat(
-    request: ChatRequest,
-    onChunk: (text: string) => void,
-    onComplete: () => void,
-    signal?: AbortSignal
-  ): Promise<void> {
-    const token = await getIdToken();
-    const response = await fetch(`${API_BASE}/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({ ...request, stream: true }),
-      signal,
-    });
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        await handleUnauthorized();
-        return;
-      }
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    await processSSEStream(response, onChunk, onComplete, signal);
-  },
-
-  async analyzeJob(
-    cvContent: string,
-    jobDescription: string,
-    companyName: string,
-    onChunk: (text: string) => void,
-    onComplete: () => void,
-    signal?: AbortSignal
-  ): Promise<void> {
-    const token = await getIdToken();
-    const response = await fetch(`${API_BASE}/chat/analyze`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({
-        messages: [],
-        cv_content: cvContent,
-        job_description: jobDescription,
-        company_name: companyName,
-        stream: true,
-      }),
-      signal,
-    });
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        await handleUnauthorized();
-        return;
-      }
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    await processSSEStream(response, onChunk, onComplete, signal);
   },
 
   async getMatchAnalysis(
