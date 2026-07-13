@@ -1,11 +1,126 @@
-/* Override Amplify UI CSS variables to match CV-Maker design system */
+/* ============================================================
+   CV Maker — Amplify Authenticator Global Style Overrides
+   Imported as a side-effect in App.tsx (not a CSS Module).
+   All selectors target Amplify's documented attribute hooks.
+   ============================================================ */
+
+/* ─── Token overrides — set on the outer wrapper so all Amplify
+       components inside inherit via CSS custom-property cascade ─── */
 [data-amplify-authenticator] {
+  /* Typography — IBM Plex Sans to match the rest of the app */
   --amplify-fonts-default-variable: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  --amplify-fonts-default-static: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  --amplify-colors-brand-primary-60: #3B82F6;
-  --amplify-colors-brand-primary-80: #2563EB;
-  --amplify-colors-brand-primary-100: #1E40AF;
-  --amplify-components-button-primary-background-color: #3B82F6;
-  --amplify-components-button-primary-hover-background-color: #2563EB;
+  --amplify-fonts-default-static:   'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Brand palette — blue accent, replacing Amplify's default orange/teal */
+  --amplify-colors-brand-primary-10:  var(--accent-light);
+  --amplify-colors-brand-primary-20:  var(--accent-light);
+  --amplify-colors-brand-primary-40:  #93C5FD;             /* no token for this mid-blue */
+  --amplify-colors-brand-primary-60:  var(--accent);
+  --amplify-colors-brand-primary-80:  var(--accent-hover);
+  --amplify-colors-brand-primary-100: #1E40AF;             /* no token for this dark-blue */
+
+  /* Background / border colour palette */
+  --amplify-colors-background-primary:   var(--bg-primary);
+  --amplify-colors-background-secondary: var(--bg-secondary);
+  --amplify-colors-border-primary:       var(--border-color);
+  --amplify-colors-border-secondary:     var(--border-strong);
+
+  /* Primary submit button */
+  --amplify-components-button-primary-background-color:        var(--accent);
+  --amplify-components-button-primary-hover-background-color:  var(--accent-hover);
+  --amplify-components-button-primary-focus-background-color:  var(--accent-hover);
+  --amplify-components-button-primary-active-background-color: #1D4ED8; /* no token */
+  --amplify-components-button-primary-border-color:            var(--accent);
+  --amplify-components-button-primary-hover-border-color:      var(--accent-hover);
+  --amplify-components-button-primary-focus-border-color:      var(--accent-hover);
+
+  /* Tabs (Sign In / Create Account) */
+  --amplify-components-tabs-item-color:               var(--text-secondary);
+  --amplify-components-tabs-item-hover-color:         var(--text-primary);
+  --amplify-components-tabs-item-active-color:        var(--accent);
+  --amplify-components-tabs-item-active-border-color: var(--accent);
+
+  /* Input / field focus ring */
+  --amplify-components-fieldcontrol-focus-box-shadow:
+    0 0 0 2px var(--accent-light), 0 0 0 1px var(--accent);
+
+  /* Link / text buttons (Forgot password, etc.) */
+  --amplify-components-button-link-color:        var(--accent);
+  --amplify-components-button-link-hover-color:  var(--accent-hover);
+  --amplify-components-button-link-active-color: var(--accent-hover);
+  --amplify-components-button-link-focus-color:  var(--accent);
+
+  /* Router card shadow + border — Amplify consumes these internally */
+  --amplify-components-authenticator-router-box-shadow:   var(--shadow-lg);
+  --amplify-components-authenticator-router-border-width: 1px;
+
+  /* Container max width */
   --amplify-components-authenticator-container-width-max: 420px;
+
+  /* Form inner padding */
+  --amplify-components-authenticator-form-padding: 1.5rem 2rem;
+
+  /* ─── Layout: fill viewport + center content (mirrors .pageContainer) ─── */
+  min-height:      100vh;
+  width:           100%;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  background:      var(--bg-primary);
+  position:        relative;
+  padding:         2rem;
+}
+
+/* ─── Grid overlay — identical 40px crosshatch used by TemplateSelector
+       (via ::before pseudo-element so no extra DOM node is needed) ─── */
+[data-amplify-authenticator]::before {
+  content:        '';
+  position:       absolute;
+  inset:          0;
+  background-image:
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity:        0.5;
+  pointer-events: none;
+  z-index:        0;
+}
+
+/* ─── Router card: white card matching intro-screen card style ─────────────
+   Descendant selector gives higher specificity than Amplify's own
+   [data-amplify-router] rule — no !important needed. ─── */
+[data-amplify-authenticator] [data-amplify-router] {
+  position:      relative;
+  z-index:       1;
+  background:    var(--bg-secondary);
+  border:        1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow:    var(--shadow-lg);
+  overflow:      hidden;
+  animation:     authFadeInUp 0.4s ease-out;
+}
+
+/* ─── Entrance animation — matches LandingScreen + TemplateSelector ─── */
+@keyframes authFadeInUp {
+  from {
+    opacity:   0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity:   1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Mobile: shift to top-aligned, full-width card ─── */
+@media (max-width: 480px) {
+  [data-amplify-authenticator] {
+    padding:     1rem;
+    align-items: flex-start;
+    padding-top: 3rem;
+  }
+
+  [data-amplify-authenticator] [data-amplify-router] {
+    width: 100%;
+  }
 }

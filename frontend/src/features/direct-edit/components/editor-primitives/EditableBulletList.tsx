@@ -271,7 +271,7 @@ export function EditableBulletList({
               tag="div"
               onKeyDown={(e) => handleKeyDown(e, i)}
               onInput={onInput}
-              placeholder="Describe an achievement..."
+              placeholder="Describe an achievement or press space for AI"
               rich={rich}
               highlightSpans={spansProp}
               onAutoDismiss={onAutoDismiss}
