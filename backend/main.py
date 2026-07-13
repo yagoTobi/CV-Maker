@@ -29,7 +29,6 @@ from routes.templates import router as templates_router
 from routes.user_data import router as user_data_router
 from routes.tailor import router as tailor_router
 from routes.assist import router as assist_router
-from routes.voice_interview import router as voice_interview_router
 
 
 @asynccontextmanager
@@ -78,7 +77,6 @@ app.include_router(generate_latex_router, prefix="/api", tags=["generate-latex"]
 app.include_router(cv_import_router, prefix="/api", tags=["cv-import"])
 app.include_router(tailor_router, prefix="/api", tags=["tailor"])
 app.include_router(assist_router, prefix="/api", tags=["assist"])
-app.include_router(voice_interview_router, prefix="/api", tags=["voice"])
 
 
 @app.get("/api/health")

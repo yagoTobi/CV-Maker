@@ -75,12 +75,6 @@ PRIVATE_ROUTES = [
     ("cv_versions_get", "GET", f"/api/cv-versions/{VERSION_ID}", None, None),
     ("cv_versions_delete", "DELETE", f"/api/cv-versions/{VERSION_ID}", None, None),
     ("cv_versions_patch", "PATCH", f"/api/cv-versions/{VERSION_ID}", {}, None),
-    ("voice_profile_get", "GET", "/api/voice/profile", None, None),
-    ("voice_profile_post", "POST", "/api/voice/profile",
-     {"fullName": "", "summary": "", "skills_mentioned": [], "career_history": [],
-      "projects_mentioned": [], "last_updated": ""}, None),
-    ("voice_extract_cv", "POST", "/api/voice/extract-cv",
-     {"session_id": "x"}, None),
 ]
 
 PUBLIC_ROUTES = [
