@@ -318,11 +318,11 @@ All AI features route through a single `BedrockClient` singleton (`backend/servi
 | Variable | Model ID | Used for |
 |---|---|---|
 | `EXTRACTION_MODEL_ID` | `CV_IMPORT_MODEL_ID`, `EXTRACTION_MODEL_ID`, or `us.anthropic.claude-haiku-4-5-20251001-v1:0` | CV import structuring from extracted PDF/DOCX text (fast, cheap) |
-| `MODEL_SONNET` | `us.anthropic.claude-sonnet-4-6` | Chat, match analysis, tailor suggestions (quality) |
+| `MODEL_SONNET` | `us.anthropic.claude-sonnet-4-6` | Match analysis, tailor suggestions (quality) |
 | Default init fallback | `us.anthropic.claude-3-5-haiku-20241022-v1:0` | Backward-compatibility default in `BedrockClient.__init__` |
 | `TAILOR_MODEL_ID` (env) | defaults to Haiku | Overridable via env var |
 
-Capabilities: streaming via `invoke_model_with_response_stream` (SSE to frontend), non-streaming via `invoke_model`, multimodal document attachment via `chat_with_document` (PDF fallback when no text layer is available).
+Capabilities: streaming via `invoke_model_with_response_stream` (used server-side, e.g. for internal chunked processing), non-streaming via `invoke_model` (used by match analysis, tailor, and section-assist — no SSE to the frontend currently), multimodal document attachment via `chat_with_document` (PDF fallback when no text layer is available).
 
 ### AWS DynamoDB (Storage)
 
