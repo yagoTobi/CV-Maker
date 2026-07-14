@@ -23,15 +23,6 @@ export interface CompileResponse {
   warnings?: string[];
 }
 
-export interface ChatRequest {
-  messages: Message[];
-  cv_content: string;
-  job_description: string;
-  company_name?: string;
-  user_profile?: UserProfile;
-  stream?: boolean;
-}
-
 export interface MatchAnalysis {
   requirements: string[];
   matching: string[];

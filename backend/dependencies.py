@@ -9,9 +9,8 @@ Two modes, selected by ``settings.auth_mode``:
   issuer, required claims, ``token_use == "id"``) and the ``sub`` claim is
   returned as the user id.
 
-``verify_cognito_token`` is exposed separately so non-HTTP entry points (e.g.
-the voice WebSocket handler, which cannot use header dependency injection) can
-reuse the exact same verification.
+``verify_cognito_token`` is exposed separately so non-HTTP entry points that
+cannot use header dependency injection can reuse the exact same verification.
 """
 
 from fastapi import Header, HTTPException

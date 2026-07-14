@@ -1,6 +1,6 @@
 import { createContext, useContext, useCallback, useMemo } from 'react';
 import type { ReactNode } from 'react';
-import { useTemplates, useCompiler, useChat } from '../hooks';
+import { useTemplates, useCompiler } from '../hooks';
 import { useImport } from '../hooks/useImport';
 import { api } from '../services/api';
 import { useJobContext } from './JobContext';
@@ -11,7 +11,6 @@ import type { CVVersion, CVVersionMeta } from '../types';
 interface ToolsContextValue {
   templates: ReturnType<typeof useTemplates>;
   compiler: ReturnType<typeof useCompiler>;
-  chat: ReturnType<typeof useChat>;
   cvImport: ReturnType<typeof useImport>;
   handleVersionLoad: (version: CVVersion) => void;
   handleSaveVersion: (data: SaveVersionData) => Promise<CVVersion | null>;
@@ -30,13 +29,12 @@ export function useToolsContext() {
 
 export function ToolsProvider({ children }: { children: ReactNode }) {
   const {
-    companyName, setCompanyName,
-    roleName, setRoleName,
+    setCompanyName,
+    setRoleName,
     jobDescription, setJobDescription,
   } = useJobContext();
 
   const {
-    userProfile,
     formData, setFormData,
     setActiveVersion,
     setSavedVersions,
@@ -46,21 +44,6 @@ export function ToolsProvider({ children }: { children: ReactNode }) {
   const templates = useTemplates();
   const cvImport = useImport();
   const compiler = useCompiler();
-
-  const chatOptions = useMemo(() => ({
-    onContentChanged: (newContent: string) => {
-      templates.updateContent(newContent);
-      compiler.clearPdf();
-    },
-  }), [templates.updateContent, compiler.clearPdf]);
-
-  const chat = useChat(
-    templates.content,
-    jobDescription,
-    companyName,
-    userProfile,
-    chatOptions
-  );
 
   const handleVersionLoad = useCallback((version: CVVersion) => {
     templates.updateContent(version.texContent);
@@ -82,7 +65,6 @@ export function ToolsProvider({ children }: { children: ReactNode }) {
       jobDescription: data.isBaseCV ? undefined : (jobDescription || undefined),
       companyName: data.companyName || undefined,
       role: data.role || undefined,
-      matchScore: data.isBaseCV ? undefined : chat.matchAnalysis?.match_score,
       parentVersionId: data.parentVersionId,
     });
     if (saved) {
@@ -102,7 +84,7 @@ export function ToolsProvider({ children }: { children: ReactNode }) {
     }
     setIsSavingVersion(false);
     return saved;
-  }, [templates.selectedId, templates.content, formData, jobDescription, chat.matchAnalysis, setActiveVersion, setSavedVersions, setIsSavingVersion]);
+  }, [templates.selectedId, templates.content, formData, jobDescription, setActiveVersion, setSavedVersions, setIsSavingVersion]);
 
   const handleSwitchVersion = useCallback(async (id: string) => {
     const version = await api.getVersion(id);
@@ -112,7 +94,6 @@ export function ToolsProvider({ children }: { children: ReactNode }) {
   const value = useMemo(() => ({
     templates,
     compiler,
-    chat,
     cvImport,
     handleVersionLoad,
     handleSaveVersion,
@@ -120,7 +101,6 @@ export function ToolsProvider({ children }: { children: ReactNode }) {
   }), [
     templates,
     compiler,
-    chat,
     cvImport,
     handleVersionLoad,
     handleSaveVersion,

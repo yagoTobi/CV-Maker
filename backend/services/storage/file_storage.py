@@ -22,11 +22,6 @@ class FileStorage:
             return os.path.join(self._base_dir, "profile.json")
         return os.path.join(self._base_dir, user_id, "profile.json")
 
-    def _voice_profile_path(self, user_id: str) -> str:
-        if user_id == "local":
-            return os.path.join(self._base_dir, "voice_profile.json")
-        return os.path.join(self._base_dir, user_id, "voice_profile.json")
-
     # --- CV Versions ---
 
     async def list_versions(self, user_id: str) -> list[dict]:
@@ -128,21 +123,3 @@ class FileStorage:
             return False
         os.remove(path)
         return True
-
-    # --- Voice Profile ---
-
-    async def get_voice_profile(self, user_id: str) -> Optional[dict]:
-        path = self._voice_profile_path(user_id)
-        if not os.path.exists(path):
-            return None
-        try:
-            with open(path, "r") as f:
-                return json.load(f)
-        except Exception:
-            return None
-
-    async def save_voice_profile(self, user_id: str, profile: dict) -> None:
-        path = self._voice_profile_path(user_id)
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w") as f:
-            json.dump(profile, f, indent=2)

@@ -1,7 +1,7 @@
 """Per-user isolation tests against DynamoDB Local.
 
 Proves that user A's data is invisible to user B for ALL entity types:
-CV versions, USER_PROFILE, and VOICE_PROFILE. Isolation is structural —
+CV versions and USER_PROFILE. Isolation is structural —
 every entity lives under PK=USER#{user_id}, so distinct users never share keys.
 
 Run against DynamoDB Local (docker compose up -d dynamodb-local), with the
@@ -129,28 +129,3 @@ def test_profile_isolation(storage):
             assert "A's data" not in str(b_profile), "User B can see User A's profile data!"
     finally:
         asyncio.run(storage.delete_profile(USER_A))
-
-
-# --- Voice Profile isolation ---
-
-def test_voice_profile_isolation(storage):
-    """User B cannot read user A's voice profile."""
-    voice_profile = {
-        "fullName": "User A",
-        "summary": "A's voice data",
-        "skills_mentioned": [],
-        "career_history": [],
-        "projects_mentioned": [],
-        "last_updated": "2026-01-01",
-    }
-    asyncio.run(storage.save_voice_profile(USER_A, voice_profile))
-    try:
-        b_voice = asyncio.run(storage.get_voice_profile(USER_B))
-        if b_voice is not None:
-            assert "A's voice data" not in str(b_voice), "User B can see User A's voice profile!"
-    finally:
-        # VOICE_PROFILE lives under the same PK; delete it directly so the row
-        # does not leak across test runs (no delete_voice_profile method exists).
-        storage._table.delete_item(
-            Key={"PK": DynamoStorage._pk(USER_A), "SK": "VOICE_PROFILE"}
-        )

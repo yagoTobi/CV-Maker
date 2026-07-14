@@ -11,8 +11,3 @@ export function scoreColorClass(score: number): string {
   if (score >= 60) return 'medium';
   return 'low';
 }
-
-export const EMPTY_SET = new Set<string>();
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const noop = (..._args: unknown[]) => {};

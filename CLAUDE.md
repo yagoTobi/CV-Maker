@@ -38,9 +38,9 @@ Most rules are enforced by ESLint / TypeScript / Pydantic. The things you'd actu
 ## Architecture (orientation only - full map in `docs/ARCHITECTURE.md`, graph at `.planning/graphs/graph.html`)
 
 **Layers:**
-- `frontend/src/features/*` — feature folders: `landing` (build/tune entry panels), `template-selection` (template picker), `direct-edit` (inline CV editor — primary feature; also hosts the apply-to-job "tune" flow under `components/tune-tiers/`), `dashboard` (saved versions), `voice-widget` (gated, "coming soon"), `shared` (global ErrorBoundary).
+- `frontend/src/features/*` — feature folders: `landing` (build/tune entry panels), `template-selection` (template picker), `direct-edit` (inline CV editor — primary feature; also hosts the apply-to-job "tune" flow under `components/change-review/` + `TuneRail.tsx`), `dashboard` (saved versions), `shared` (global ErrorBoundary).
 - `frontend/src/contexts/` — three-context split + `AppProvider` composition.
-- `frontend/src/hooks/` — shared hooks: `useCompiler`, `useChat`, `useImport`, `useTemplates`. (`useDirectEditor` + `useTailor` live in `features/direct-edit/hooks/`; `useVoiceInterview` in `features/voice-widget/hooks/`.)
+- `frontend/src/hooks/` — shared hooks: `useCompiler`, `useImport`, `useTemplates`. (`useDirectEditor` + `useTailor` live in `features/direct-edit/hooks/`.)
 - `frontend/src/services/api.ts` — sole HTTP boundary. Axios + native `fetch` for SSE.
 - `backend/routes/` — thin FastAPI handlers. Validation via Pydantic.
 - `backend/services/` — business logic. `bedrock.py`, `latex_compiler.py`, `cv_extractor.py`, `storage.py` (Protocol) + `file_storage.py` / `dynamo_storage.py`, `llm_cache.py` (in-memory, 1h TTL — **not horizontally scalable**).

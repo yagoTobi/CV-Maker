@@ -147,21 +147,3 @@ class DynamoStorage:
             Key={"PK": self._pk(user_id), "SK": "PROFILE"}
         )
         return True
-
-    # --- Voice Profile ---
-
-    async def get_voice_profile(self, user_id: str) -> Optional[dict]:
-        resp = self._table.get_item(
-            Key={"PK": self._pk(user_id), "SK": "VOICE_PROFILE"}
-        )
-        item = resp.get("Item")
-        if item is None:
-            return None
-        return self._convert_decimals(self._strip_keys(item))
-
-    async def save_voice_profile(self, user_id: str, profile: dict) -> None:
-        item = self._sanitize_for_dynamo(profile)
-        item["PK"] = self._pk(user_id)
-        item["SK"] = "VOICE_PROFILE"
-        item["entityType"] = "VOICE_PROFILE"
-        self._table.put_item(Item=item)

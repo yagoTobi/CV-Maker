@@ -1,40 +1,35 @@
 # CV Maker
 
-An AI-powered CV editor that helps tailor your resume to specific job postings.
+An AI-powered web CV editor. The CV itself is the editor — click any field and type directly on a web-rendered page that matches the final PDF.
 
 ## Overview
 
-CV Maker is a web application that combines a LaTeX-based CV editor with AI assistance to help job seekers optimize their resumes for specific positions. The application analyzes job descriptions and provides intelligent suggestions for improving CV content.
+CV Maker renders your CV as a styled web page and lets you edit it inline. There's no form-builder or split-screen preview: what you see on screen is what compiles to PDF. AI features handle import, job tailoring, and match analysis. The backend generates LaTeX from your structured CV data and compiles it server-side.
 
 ## Features
 
-- **Form Builder**: Structured form with drag-and-drop section ordering and inline PDF preview
-- **Voice Interview (Alpha)**: Natural conversation-based CV creation using Amazon Nova Sonic speech-to-speech AI
-- **Template Selection**: Choose from 3 professionally-designed CV templates (Professional CV, Deedy Resume, McDowell CV)
-- **LaTeX CV Editor**: Full-featured code editor with syntax highlighting for fine-tuning
-- **Live PDF Preview**: Real-time compilation and preview of your CV as a PDF
-- **AI Chat Assistant**: Interactive AI that analyzes your CV against job postings and suggests improvements
-- **Match Analysis**: Quantitative analysis showing how well your CV matches a job description
-- **Edit Suggestions**: AI-generated inline edits that can be applied with one click
-- **Version Management**: Save and switch between multiple CV versions with hierarchical job application tracking
-- **JSON Export/Import**: Export your CV data as JSON and re-import to restore
-- **CV Import**: Upload existing CVs from PDF, DOCX, or JSON with AI-powered extraction
-- **Clean UI**: Zed-inspired light theme with professional, minimal aesthetics
-- **React Router Navigation**: URL-based routing with browser back/forward support
+- **Direct-edit CV**: click any field — name, job title, bullet point, date — and type directly on the rendered CV. Drag sections and entries to reorder. Changes auto-save every 2.5 seconds.
+- **Template selection**: three professionally designed LaTeX templates. Professional CV (`med-length-proff-cv`) is fully live in the web editor. Deedy Resume and McDowell CV are selectable but marked "Coming soon" — PDF compilation works, web editing is not yet wired up.
+- **CV import**: upload a PDF, DOCX, or JSON file (up to 10 MB). AI extraction structures the content into the web editor automatically.
+- **Tune for a role**: paste a job description to get a quantitative match score, then review AI-generated inline suggestions one card at a time — accept or skip each change. Accepted changes update a live read-only preview before you save.
+- **Per-section AI bullet assist**: AI-generated bullet point suggestions per CV section.
+- **Version dashboard**: base CVs with nested job-application versions. Download any version as a PDF, open it in the editor, or start a new tailoring flow from it.
+- **PDF download**: server-side LaTeX compilation via pdflatex or xelatex depending on the template.
+- **Auth**: AWS Cognito (email login) in production. Local dev can bypass auth with `VITE_DISABLE_AUTH=true`.
 
 ## Tech Stack
 
 ### Frontend
-- React 19 with TypeScript
+- React 19 with TypeScript (strict, `verbatimModuleSyntax: true`)
 - Vite for build tooling
-- CodeMirror for LaTeX editing
 - CSS Modules for styling
+- React Router v6
 
 ### Backend
-- Python 3.10+ with FastAPI
-- AWS Bedrock for AI (Claude 3.5 Sonnet v2)
+- Python 3.12 with FastAPI
+- AWS Bedrock for AI (Claude models via AWS Bedrock)
 - LaTeX compilation service (pdflatex + xelatex)
-- Jinja2 for LaTeX template generation
+- Jinja2 for LaTeX template generation with custom delimiters `(( ))` / `(% %)`
 
 ## Quick Start
 
@@ -51,17 +46,6 @@ If using a minimal TeX installation (e.g., BasicTeX), install required packages:
 ```bash
 sudo tlmgr install changepage ifplatform enumitem textpos isodate titlesec catchfile substr
 ```
-
-### Optional: Voice Interview Feature
-
-The voice interview feature requires the Pipecat framework with AWS dependencies:
-
-```bash
-cd backend
-pip install 'pipecat-ai[aws]'
-```
-
-**Note:** This is optional. The app will start and run normally without Pipecat; the voice feature will simply be unavailable.
 
 ### Running the Application
 
@@ -86,91 +70,105 @@ The application will be available at `http://localhost:5173`.
 
 ## Available Templates
 
-| Template | Description | LaTeX Engine |
-|----------|-------------|--------------|
-| **Professional CV** | Clean, traditional layout ideal for corporate roles | pdflatex |
-| **Deedy Resume** | Compact two-column design for tech roles | xelatex |
-| **McDowell CV** | Minimalist single-column with elegant spacing | xelatex |
+| Template | Description | LaTeX Engine | Web Editor |
+|----------|-------------|--------------|------------|
+| **Professional CV** (`med-length-proff-cv`) | Clean, traditional layout ideal for corporate roles | pdflatex | Full support |
+| **Deedy Resume** | Compact two-column design for tech roles | xelatex | Coming soon |
+| **McDowell CV** | Minimalist single-column with elegant spacing | xelatex | Coming soon |
 
-Each template includes a preview image and all necessary class files. Templates requiring xelatex use the `fontspec` package for custom fonts.
+Templates requiring xelatex use the `fontspec` package for custom fonts.
 
 ## Project Structure
 
 ```
 CV-Maker/
-├── frontend/          # React frontend application
-├── backend/           # FastAPI backend server
-│   ├── routes/        # API endpoints
-│   ├── services/      # Business logic (Bedrock, LaTeX compiler)
-│   ├── latex_templates/  # Jinja2 .tex.j2 templates
-│   ├── tests/         # pytest test suite
-│   └── main.py        # FastAPI app
-├── backend/latex_templates/_source/  # LaTeX CV template source files (cls/sty/tex)
-│   ├── med-length-proff-cv/   # Professional CV (pdflatex)
-│   ├── deedy-resume/          # Deedy resume (xelatex)
-│   └── mcdowell-cv-master/    # McDowell CV (xelatex)
-├── backend/user_data/ # User profile and saved CV versions (JSON files; runtime, gitignored)
-└── docs/              # Project documentation
+├── frontend/              # React frontend application
+│   └── src/
+│       ├── features/      # Feature folders (direct-edit, dashboard, landing, template-selection)
+│       ├── contexts/      # React context providers (Job, CV, Tools, EditorActions)
+│       ├── hooks/         # Shared hooks (useCompiler, useImport, useTemplates)
+│       ├── services/      # api.ts — sole HTTP boundary
+│       └── types/         # TypeScript interfaces (CVFormData, CVVersion, etc.)
+├── backend/               # FastAPI backend server
+│   ├── routes/            # API endpoints (thin handlers, Pydantic validation)
+│   ├── services/          # Business logic (bedrock, latex_compiler, cv_extractor, storage)
+│   ├── latex_templates/   # Jinja2 .tex.j2 templates
+│   ├── latex_templates/_source/  # LaTeX template source files (cls/sty/tex)
+│   │   ├── med-length-proff-cv/  # Professional CV (pdflatex)
+│   │   ├── deedy-resume/         # Deedy Resume (xelatex)
+│   │   └── mcdowell-cv-master/   # McDowell CV (xelatex)
+│   ├── prompts/           # System prompts for all AI features
+│   ├── tests/             # pytest test suite
+│   ├── user_data/         # Runtime JSON storage (gitignored)
+│   └── main.py            # FastAPI app entry point
+└── docs/                  # Project documentation
 ```
 
 ## Documentation
 
-📖 **Full documentation available in [`/docs`](./docs/):**
+Full documentation is in [`/docs`](./docs/):
 
-- **[Architecture](./docs/ARCHITECTURE.md)** - Technical architecture, data flow, design system
-- **[Development Guide](./docs/DEVELOPMENT.md)** - Setup and development guidelines
-- **[Decisions](./docs/DECISIONS.md)** - Architectural Decision Records (ADRs)
-- **[Changelog](./docs/CHANGELOG.md)** - Version history and changes
-- **[Roadmap](./docs/ROADMAP.md)** - Future plans and feature backlog
-- **[Key Learnings](./docs/key-learnings.md)** - Technical insights and gotchas
-- **[PRD: CV Import](./docs/PRD-cv-import.md)** - Product requirements for CV import feature
+- **[Architecture](./docs/ARCHITECTURE.md)** — Technical architecture, data flow, component diagram
+- **[Development Guide](./docs/DEVELOPMENT.md)** — Setup and development guidelines
+- **[Decisions](./docs/DECISIONS.md)** — Architectural Decision Records (ADRs)
+- **[Changelog](./docs/CHANGELOG.md)** — Version history and changes
+- **[Roadmap](./docs/ROADMAP.md)** — Future plans and feature backlog
+- **[Key Learnings](./docs/key-learnings.md)** — Technical insights and gotchas
 
 ## Testing
 
-Run the backend test suite:
+**Frontend** (Vitest + Testing Library):
+```bash
+cd frontend
+npm test
+```
 
+Tests live in `frontend/src/__tests__/`.
+
+**Backend** (pytest):
 ```bash
 cd backend
 
 # Run all tests
 python3 -m pytest tests/ -v
 
-# Run only fast tests (skip LaTeX compilation tests)
+# Skip slow LaTeX compilation tests
 pytest -m "not slow"
 
 # Run with coverage
 pytest --cov=routes --cov=services tests/
 ```
 
+Tests live in `backend/tests/`.
+
 ## Usage Examples
 
 ### Building a CV from scratch
 
 1. Open the app at `http://localhost:5173` and click **Build my CV**.
-2. Choose **Start from scratch** in the expansion panel, then select a template (Professional CV, Deedy Resume, or McDowell CV).
-3. The direct-edit page loads a web-rendered CV that matches the final PDF layout. Click any field -- name, job title, bullet point -- and type directly on the CV.
-4. Your changes auto-save. Click **Download PDF** in the navigation bar to compile and download a LaTeX-generated PDF.
+2. Choose **Start from scratch**, then select a template.
+3. The direct-edit page loads a web-rendered CV that matches the final PDF layout. Click any field and type directly on the CV.
+4. Changes auto-save. Click **Download PDF** in the nav bar to compile and download.
 
 ### Importing an existing CV
 
 1. From the landing screen, click **Build my CV**, then choose **Import existing CV**.
-2. Upload a PDF, DOCX, or JSON file (up to 10 MB). The AI extraction service parses your document into structured form data.
-3. Review the imported content in the direct-edit view and make any corrections inline.
+2. Upload a PDF, DOCX, or JSON file (up to 10 MB). AI extraction parses your document into structured CV data.
+3. Review the imported content in the direct-edit view and correct anything inline.
 
 ### Tailoring a CV for a job posting
 
 1. Save at least one base CV version first (auto-save handles this during editing).
-2. From the landing screen, click **Tune for a role**. If you have one base CV, it navigates directly to the apply flow; if you have multiple, select which base CV to tailor.
-3. In Step 1, enter the company name, role title, and paste the full job description.
-4. Step 2 runs a **Match Analysis** showing a quantitative score of how well your CV matches the job requirements.
-5. Step 3 presents AI-generated change suggestions as individual cards. Accept or reject each suggestion -- the read-only CV preview on the left updates in real time.
-6. Click **Save** to create a child version linked to the base CV with the job metadata attached.
+2. Click **Tune for a role** from the landing screen. Select a base CV if you have multiple.
+3. Enter the company name, role title, and paste the full job description.
+4. Review the **Match Analysis** score, then work through AI-generated change suggestions — accept or skip each one. The CV preview updates in real time.
+5. Click **Save** to create a child version linked to the base CV with job metadata attached.
 
 ### Managing versions from the dashboard
 
-1. Navigate to **My Saved CVs** (visible on the landing screen once you have saved versions).
-2. The dashboard displays base CVs with nested job application versions grouped underneath.
-3. Click any version row to open it in the editor. Use the download button to compile and download a PDF on demand, or click **Apply to Job** to start the tailoring flow from a selected base CV.
+1. Navigate to **My Saved CVs** from the landing screen.
+2. The dashboard shows base CVs with nested job-application versions grouped underneath.
+3. Click any version to open it in the editor, download it as a PDF, or start a new tailoring flow.
 
 ## Contributing
 

@@ -265,7 +265,6 @@ sketch
 # Per-user storage partitions (X-User-Id) land in backend/user_data/<user>/ —
 # ignore every subdirectory (the shared "local" versions/ and any anon-*/ dirs).
 backend/user_data/*/
-backend/user_data/voice_profile.json
 
 # Playwright MCP state
 .playwright-mcp/
