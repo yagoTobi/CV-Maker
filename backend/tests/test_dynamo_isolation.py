@@ -1,7 +1,7 @@
 """Per-user isolation tests against DynamoDB Local.
 
 Proves that user A's data is invisible to user B for ALL entity types:
-CV versions, USER_PROFILE, and VOICE_PROFILE. Isolation is structural —
+CV versions and USER_PROFILE. Isolation is structural —
 every entity lives under PK=USER#{user_id}, so distinct users never share keys.
 
 Run against DynamoDB Local (docker compose up -d dynamodb-local), with the

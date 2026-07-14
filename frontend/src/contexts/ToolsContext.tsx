@@ -30,7 +30,7 @@ export function useToolsContext() {
 export function ToolsProvider({ children }: { children: ReactNode }) {
   const {
     setCompanyName,
-    roleName, setRoleName,
+    setRoleName,
     jobDescription, setJobDescription,
   } = useJobContext();
 

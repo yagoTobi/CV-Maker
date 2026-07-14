@@ -338,6 +338,4 @@ Table creation: `DYNAMODB_ENDPOINT_URL=http://localhost:8100 python backend/scri
 
 ### Frontend–Backend Communication
 
-**REST:** Base URL set by `VITE_API_URL` env var (default `http://localhost:8000/api`). HTTP client: axios with 30 s default timeout; compile endpoint uses 120 s; import and tailor endpoints use 60 s.
-
-**SSE (streaming):** Match analysis uses `text/event-stream`. Frontend uses native `fetch` + `ReadableStream` (not axios). Protocol: `data: {"text": "..."}\n\n` lines terminated by `data: [DONE]\n\n`. Utility: `processSSEStream` in `frontend/src/services/api.ts` centralises SSE parsing.
+**REST:** Base URL set by `VITE_API_URL` env var (default `http://localhost:8000/api`). HTTP client: axios with 30 s default timeout; compile endpoint uses 120 s; import and tailor endpoints use 60 s. Match analysis uses a plain POST request via axios (not SSE).
