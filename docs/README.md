@@ -106,14 +106,14 @@ CV-Maker/
 
 ## Documentation
 
-Full documentation is in [`/docs`](./docs/):
+Full documentation index:
 
-- **[Architecture](./docs/ARCHITECTURE.md)** — Technical architecture, data flow, component diagram
-- **[Development Guide](./docs/DEVELOPMENT.md)** — Setup and development guidelines
-- **[Decisions](./docs/DECISIONS.md)** — Architectural Decision Records (ADRs)
-- **[Changelog](./docs/CHANGELOG.md)** — Version history and changes
-- **[Roadmap](./docs/ROADMAP.md)** — Future plans and feature backlog
-- **[Key Learnings](./docs/key-learnings.md)** — Technical insights and gotchas
+- **[Architecture](./ARCHITECTURE.md)** — Technical architecture, data flow, component diagram
+- **[Development Guide](./DEVELOPMENT.md)** — Setup and development guidelines
+- **[Decisions](./DECISIONS.md)** — Architectural Decision Records (ADRs)
+- **[Changelog](./CHANGELOG.md)** — Version history and changes
+- **[Roadmap](./ROADMAP.md)** — Future plans and feature backlog
+- **[Key Learnings](./key-learnings.md)** — Technical insights and gotchas
 
 ## Testing
 
