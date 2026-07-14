@@ -251,7 +251,6 @@ When `STORAGE_BACKEND=file` (or unset), data is stored as JSON files on disk:
 
 - CV versions: `backend/user_data/versions/{uuid}.json`
 - User profile: `backend/user_data/profile.json`
-- Voice profile: `backend/user_data/voice_profile.json`
 
 In Docker, mount a persistent volume at `/app/backend/user_data` to preserve data across container restarts. The Docker Compose config already defines a `cv-maker-data` volume for this.
 
@@ -281,7 +280,7 @@ To use DynamoDB for multi-user persistence:
    The script creates a table with the following schema:
    - **Table name:** value of `DYNAMODB_TABLE_NAME` (default: `cv-maker`)
    - **Partition key:** `PK` (String) -- e.g., `USER#local`
-   - **Sort key:** `SK` (String) -- e.g., `VERSION#{uuid}`, `PROFILE`, `VOICE_PROFILE`
+   - **Sort key:** `SK` (String) -- e.g., `VERSION#{uuid}`, `PROFILE`
    - **Billing mode:** PAY_PER_REQUEST (on-demand)
 
 3. **Migrate existing file data** (optional):
@@ -297,7 +296,7 @@ To use DynamoDB for multi-user persistence:
    docker exec cv-maker-backend python scripts/migrate_to_dynamodb.py
    ```
 
-   The migration script copies CV versions, user profile, and voice profile from `backend/user_data/` into DynamoDB.
+   The migration script copies CV versions and user profile from `backend/user_data/` into DynamoDB.
 
 ## AWS Bedrock Access
 
@@ -307,7 +306,7 @@ AI features (CV import, chat, match analysis, tailor suggestions) require AWS Be
 |------|-------|----------|
 | CV extraction (import) | Claude Haiku | `us.anthropic.claude-haiku-4-5-20251001-v1:0` |
 | Tailor suggestions | Claude Haiku (default) | Configurable via `TAILOR_MODEL_ID` |
-| Match analysis, Chat | Claude Sonnet | `us.anthropic.claude-sonnet-4-6` |
+| Match analysis | Claude Sonnet | `us.anthropic.claude-sonnet-4-6` |
 
 <!-- VERIFY: AWS account must have Bedrock model access enabled for the specified Claude models in the configured region -->
 
@@ -402,7 +401,7 @@ Since there is no CI/CD pipeline or platform-specific deployment config, rollbac
 
 No monitoring integration is detected in the application dependencies (no Sentry, Datadog, New Relic, or OpenTelemetry packages).
 
-The backend uses Python's `logging` module in route handlers and `loguru` in the voice interview module. Logs are written to stdout, which Docker captures automatically.
+The backend uses Python's `logging` module in route handlers. Logs are written to stdout, which Docker captures automatically.
 
 To monitor the application:
 

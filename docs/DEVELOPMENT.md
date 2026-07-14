@@ -34,12 +34,7 @@ venv\Scripts\activate     # Windows
 
 # Install dependencies
 pip install -r requirements.txt
-
-# Optional: Install voice interview feature (Pipecat + AWS dependencies)
-pip install 'pipecat-ai[aws]'
 ```
-
-**Note:** The voice interview feature is optional. The app will start and run normally without Pipecat installed; the voice feature will simply be disabled.
 
 ### Frontend Setup
 
@@ -301,7 +296,7 @@ Application state is managed through domain-specific React contexts composed in 
 |---------|------|---------|
 | `CVContext` | `frontend/src/contexts/CVContext.tsx` | CV form data, version management, template selection |
 | `JobContext` | `frontend/src/contexts/JobContext.tsx` | Job description, company name, role, match analysis |
-| `ToolsContext` | `frontend/src/contexts/ToolsContext.tsx` | AI chat, import, tailor tool state |
+| `ToolsContext` | `frontend/src/contexts/ToolsContext.tsx` | Import, tailor tool state, compiler, and version handlers |
 | `EditorActionsContext` | `frontend/src/contexts/EditorActionsContext.tsx` | Direct-edit editor actions and state |
 
 All four contexts are composed inside `<AppProvider>`. A backwards-compatible shim `useAppContext()` merges the first three into one flat object, but new code should use the domain-specific hooks directly:
@@ -322,10 +317,8 @@ Domain logic and API interactions are encapsulated in hooks located in `frontend
 |------|---------|
 | `useTemplates` | Fetch and manage available CV templates |
 | `useCompiler` | Compile LaTeX to PDF via the backend, with AbortController cleanup |
-| `useChat` | AI chat and match analysis with streaming SSE support |
 | `useImport` | CV import from PDF, DOCX, or JSON files |
 | `useTailor` | AI-powered tailor suggestions for job applications |
-| `useVoiceInterview` | Voice interview pipeline (WebSocket-based) |
 
 When adding a new feature, create a hook in `frontend/src/hooks/` and wire it into the appropriate context provider.
 

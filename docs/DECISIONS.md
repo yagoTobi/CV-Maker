@@ -187,7 +187,7 @@ Use structured JSON blocks within AI responses with `find` and `replace` fields.
 
 **Date:** 2026-03-02
 
-**Status:** Accepted
+**Status:** Superseded by the direct-edit editor (Phases 1-13; see .planning/ROADMAP.md)
 
 **Context:**
 Two user types emerged: those who want to build a CV from scratch (no LaTeX knowledge) and those who want to tune an existing CV for a specific job posting.
@@ -439,7 +439,7 @@ Reframe versioning as a **hierarchical, job-centric model** with base CVs as par
 
 **Date:** 2026-03-15
 
-**Status:** Accepted
+**Status:** Superseded (2026-07 — feature removed; frontend widget deleted earlier, backend vertical removed in debloat-streamline)
 
 **Context:**
 Users need an alternative to manual form filling. Typing structured CV data into a form is tedious and interrupts the flow of thought. Voice is a more natural modality for storytelling and biographical information. Speech-to-speech AI (S2S) enables real-time conversation without separate transcription and synthesis steps.

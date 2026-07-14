@@ -13,7 +13,7 @@ Install the following before proceeding:
 | npm | Bundled with Node.js | Frontend package manager |
 | Python | 3.12 | Backend runtime |
 | TeX Live | Latest | LaTeX compilation (pdflatex + xelatex) |
-| AWS credentials | N/A | Bedrock AI features (chat, import, tailor) |
+| AWS credentials | N/A | Bedrock AI features (import, tailor, match analysis) |
 
 **TeX Live packages required for local development (non-Docker):**
 
@@ -29,7 +29,7 @@ sudo apt-get install texlive-base texlive-latex-base texlive-latex-recommended \
   texlive-bibtex-extra texlive-plain-generic
 ```
 
-**AWS credentials** are needed for AI-powered features (CV import, chat, job tailoring, match analysis). The backend uses `boto3` which reads credentials from the standard AWS credential chain (`~/.aws/credentials`, environment variables, or IAM roles). Core CV editing and PDF compilation work without AWS credentials.
+**AWS credentials** are needed for AI-powered features (CV import, job tailoring, match analysis). The backend uses `boto3` which reads credentials from the standard AWS credential chain (`~/.aws/credentials`, environment variables, or IAM roles). Core CV editing and PDF compilation work without AWS credentials.
 
 ## Installation Steps
 

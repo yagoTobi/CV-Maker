@@ -20,7 +20,7 @@ cp backend/.env.example backend/.env
 | `CORS_ORIGINS` | Optional | `http://localhost:5173,http://127.0.0.1:5173` | Comma-separated list of allowed CORS origins. Add your frontend URL(s) here. |
 | `AWS_DEFAULT_REGION` | Optional | `us-east-1` | AWS region for Bedrock AI and DynamoDB calls. |
 | `AWS_PROFILE` | Optional | `default` | AWS CLI profile name. Used when `AWS_ACCESS_KEY_ID` is not set (falls back to the default credential chain). |
-| `AWS_ACCESS_KEY_ID` | **Required** | *(none)* | AWS access key for Bedrock and DynamoDB. Required for any AI feature (import, chat, tailor, match analysis, voice). |
+| `AWS_ACCESS_KEY_ID` | **Required** | *(none)* | AWS access key for Bedrock and DynamoDB. Required for any AI feature (import, tailor, match analysis). |
 | `AWS_SECRET_ACCESS_KEY` | **Required** | *(none)* | AWS secret key, paired with `AWS_ACCESS_KEY_ID`. |
 | `STORAGE_BACKEND` | Optional | `file` | Storage engine selection. Set to `"file"` for local JSON file storage or `"dynamodb"` for AWS DynamoDB. |
 | `DYNAMODB_TABLE_NAME` | Optional | `cv-maker` | DynamoDB table name. Only used when `STORAGE_BACKEND=dynamodb`. |
@@ -38,11 +38,8 @@ cp frontend/.env.example frontend/.env
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `VITE_API_URL` | Optional | `http://localhost:8000/api` | Backend API base URL. All HTTP requests from the frontend are sent to this URL. |
-| `VITE_WS_URL` | Optional | *(derived from `VITE_API_URL`)* | WebSocket URL for the voice interview feature. If not set, it is derived by replacing `http` with `ws` in `VITE_API_URL` and appending `/ws/voice-interview`. |
 
 Vite injects these at build time. Variables must be prefixed with `VITE_` to be exposed to the frontend bundle.
-
-`import.meta.env.DEV` is a Vite built-in (not user-configurable) that is `true` during `npm run dev` and `false` in production builds. It is used to enable verbose logging in the voice interview hook and widget.
 
 ## Config File Format
 
@@ -83,7 +80,7 @@ Model IDs are defined as module-level constants:
 |---|---|---|
 | `MODEL_HAIKU` | `us.anthropic.claude-haiku-4-5-20251001-v1:0` | CV import extraction, tailor suggestions (default) |
 | `EXTRACTION_MODEL_ID` | Value of `CV_IMPORT_MODEL_ID`, `EXTRACTION_MODEL_ID`, or `MODEL_HAIKU` equivalent | CV import structuring for text-based PDF/DOCX |
-| `MODEL_SONNET` | `us.anthropic.claude-sonnet-4-6` | Match analysis, chat conversations |
+| `MODEL_SONNET` | `us.anthropic.claude-sonnet-4-6` | Match analysis, tailor suggestions |
 | `MODEL_TAILOR` | Value of `TAILOR_MODEL_ID` env var, or `MODEL_HAIKU` | Tailor suggestions (overridable) |
 
 The default instance model (`BedrockClient.model_id`) is Haiku 3.5 (`us.anthropic.claude-3-5-haiku-20241022-v1:0`), used as a fallback when no `model_id` argument is passed to the `chat()` method.
@@ -121,7 +118,7 @@ The following settings must be present for the application to function beyond th
 
 | Setting | Failure Mode |
 |---|---|
-| `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` | All AI features fail (import, chat, tailor, match analysis, voice interview). The backend starts but returns errors on AI-dependent endpoints. |
+| `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` | All AI features fail (import, tailor, match analysis). The backend starts but returns errors on AI-dependent endpoints. |
 
 ### Required for DynamoDB storage
 
@@ -151,7 +148,6 @@ All other settings have sensible defaults and the application runs without them:
 | `AWS_DEFAULT_REGION` | Defaults to `us-east-1`. |
 | `STORAGE_BACKEND` | Defaults to `file` (JSON files in `backend/user_data/versions/`). |
 | `VITE_API_URL` | Defaults to `http://localhost:8000/api`. |
-| `VITE_WS_URL` | Derived from `VITE_API_URL` by replacing the protocol. |
 | `TAILOR_MODEL_ID` | Defaults to Haiku for speed-optimized tailor suggestions. |
 
 ## Defaults
@@ -168,7 +164,6 @@ Defaults are defined inline in the source code using `os.getenv("VAR", "default"
 | `EXTRACTION_MODEL_ID` | `us.anthropic.claude-haiku-4-5-20251001-v1:0` | Legacy import-model override in `backend/services/cv_extractor/models.py:12` |
 | `TAILOR_MODEL_ID` | `us.anthropic.claude-haiku-4-5-20251001-v1:0` (value of `MODEL_HAIKU`) | `backend/services/ai/bedrock.py:18` |
 | `VITE_API_URL` | `http://localhost:8000/api` | `frontend/src/services/api.ts:5` |
-| `VITE_WS_URL` | *(derived)* | `frontend/src/hooks/useVoiceInterview.ts:14` |
 
 ## Per-Environment Overrides
 
