@@ -103,43 +103,46 @@ export default function AppCard({
           )}
         </button>
 
-        <div
-          className={styles.moveContainer}
-          ref={isThisMoveOpen ? moveDropdownRef : undefined}
-        >
-          <button
-            className={styles.moveBtn}
-            onClick={() => onSetMoveDropdown(isThisMoveOpen ? null : app.id)}
-            title="Move to different baseline CV"
+        {parentId === null && (
+          <div
+            className={styles.moveContainer}
+            ref={isThisMoveOpen ? moveDropdownRef : undefined}
           >
-            <MoveIcon />
-          </button>
+            <button
+              className={styles.moveBtn}
+              onClick={() => onSetMoveDropdown(isThisMoveOpen ? null : app.id)}
+              title="Move to different baseline CV"
+              aria-label="Move to baseline"
+            >
+              <MoveIcon />
+            </button>
 
-          {isThisMoveOpen && (
-            <div className={styles.moveDropdown}>
-              <div className={styles.moveDropdownTitle}>Move to</div>
-              {baseCvs.map(base => (
-                <button
-                  key={base.id}
-                  className={`${styles.moveOption} ${base.id === parentId ? styles.active : ''}`}
-                  onClick={() => onMove(app.id, base.id)}
-                  disabled={base.id === parentId}
-                >
-                  {base.name}
-                  {base.id === parentId && ' (current)'}
-                </button>
-              ))}
-              {parentId && (
-                <button
-                  className={styles.moveOptionUngroup}
-                  onClick={() => onMove(app.id, null)}
-                >
-                  Remove from group
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+            {isThisMoveOpen && (
+              <div className={styles.moveDropdown}>
+                <div className={styles.moveDropdownTitle}>Move to</div>
+                {baseCvs.map(base => (
+                  <button
+                    key={base.id}
+                    className={`${styles.moveOption} ${base.id === parentId ? styles.active : ''}`}
+                    onClick={() => onMove(app.id, base.id)}
+                    disabled={base.id === parentId}
+                  >
+                    {base.name}
+                    {base.id === parentId && ' (current)'}
+                  </button>
+                ))}
+                {parentId && (
+                  <button
+                    className={styles.moveOptionUngroup}
+                    onClick={() => onMove(app.id, null)}
+                  >
+                    Remove from group
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         <button
           className={styles.appDeleteBtn}
