@@ -36,6 +36,7 @@ import { useTuneFlow } from './hooks/useTuneFlow';
 import { useCVContext } from '../../contexts/CVContext';
 import { api } from '../../services/api';
 import { getStoredActiveVersionId, persistActiveVersionId } from '../../utils/activeVersionStorage';
+import { takeImportReviewNote } from '../../utils/importReviewStorage';
 import { generateId } from '../../utils/idHelpers';
 import { generateCVFilename } from '../../utils/cvFilename';
 import { downloadPdf } from '../../utils/downloadPdf';
@@ -130,6 +131,7 @@ export default function DirectEditPage() {
   const location = useLocation();
   const cvContainerRef = useRef<HTMLDivElement>(null);
   const templateRef = useRef<HTMLDivElement>(null);
+  const importReviewFiredRef = useRef(false);
   // Fast CSS estimate of page boundaries (instant, approximate).
   const { offsets: pageBreakEstimateOffsets, estPages } = usePageBreak(templateRef);
   // Authoritative page count from a real compile. While the tune rail is open we force the
@@ -258,6 +260,49 @@ export default function DirectEditPage() {
     bootstrap();
     return () => { cancelled = true; };
   }, [bootstrapAttempt, formData, setActiveVersion, setFormData, selectedTemplateForBuild]);
+
+  useEffect(() => {
+    if (isBootstrapping || !formData) return;
+    if (importReviewFiredRef.current) return;
+    importReviewFiredRef.current = true;
+
+    const note = takeImportReviewNote();
+    if (!note) return;
+
+    const humanize = (dotPath: string): string => {
+      const root = dotPath.split(/[.[]/)[0] ?? dotPath;
+      const map: Record<string, string> = {
+        personalInfo: 'contact details',
+        workExperience: 'work experience',
+        education: 'education',
+        skills: 'skills',
+        projects: 'projects',
+        awards: 'awards',
+        summary: 'summary',
+        additionalSections: 'additional sections',
+      };
+      return map[root] ?? root;
+    };
+
+    const humanRoots = [...new Set(note.lowFields.map(humanize))];
+    let message: string;
+
+    if (humanRoots.length > 0) {
+      const shown = humanRoots.slice(0, 4);
+      const rest = humanRoots.length - shown.length;
+      const listed = rest > 0 ? `${shown.join(', ')} and ${rest} more` : shown.join(', ');
+      message = `Imported with AI — double-check: ${listed}`;
+    } else if (note.warnings.length > 0) {
+      const warning = note.warnings[0];
+      if (!warning) return;
+      const firstSentence = warning.split('.')[0];
+      message = `Imported with AI — ${firstSentence}`;
+    } else {
+      return;
+    }
+
+    toast.warning(message, { duration: 10000 });
+  }, [isBootstrapping, formData, toast]);
 
   // Open tune rail from navigation state (e.g., from a landing panel or the Dashboard)
   useEffect(() => {

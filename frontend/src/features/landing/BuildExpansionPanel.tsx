@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCVContext } from '../../contexts/CVContext';
 import { useToolsContext } from '../../contexts/ToolsContext';
+import { saveImportReviewNote } from '../../utils/importReviewStorage';
 import { useFileUpload } from '../shared/useFileUpload';
 import styles from './BuildExpansionPanel.module.css';
 
@@ -24,6 +25,15 @@ export function BuildExpansionPanel() {
   // On successful import, push data into shared context and go to template selector
   useEffect(() => {
     if (!cvImport.importResult?.success) return;
+
+    if (cvImport.importResult.source !== 'json') {
+      const fields = cvImport.importResult.confidence?.fields ?? {};
+      const lowFields = Object.keys(fields).filter((key) => fields[key] === 'low');
+      const warnings = cvImport.importResult.warnings ?? [];
+      if (lowFields.length > 0 || warnings.length > 0) {
+        saveImportReviewNote({ lowFields, warnings, ts: Date.now() });
+      }
+    }
 
     setFormData(cvImport.importResult.formData);
     if (cvImport.importResult.source === 'json') {
