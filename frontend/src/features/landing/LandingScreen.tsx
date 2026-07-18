@@ -2,17 +2,14 @@ import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCVContext } from '../../contexts/CVContext';
 import { useToolsContext } from '../../contexts/ToolsContext';
-import { useToast } from '../../contexts/ToastContext';
-import { api } from '../../services/api';
 import { BuildExpansionPanel } from './BuildExpansionPanel';
 import { TuneExpansionPanel } from './TuneExpansionPanel';
 import styles from './LandingScreen.module.css';
 
 export default function LandingScreen() {
   const navigate = useNavigate();
-  const { savedVersions, resetForNewBuild, setSelectedTemplateForBuild } = useCVContext();
-  const { cvImport, handleVersionLoad } = useToolsContext();
-  const toast = useToast();
+  const { savedVersions, resetForNewBuild } = useCVContext();
+  const { cvImport } = useToolsContext();
   const [expandedPanel, setExpandedPanel] = useState<'build' | 'tune' | null>(null);
 
   const handleBuildClick = useCallback(() => {
@@ -25,25 +22,13 @@ export default function LandingScreen() {
     setExpandedPanel('build');
   }, [expandedPanel, resetForNewBuild, cvImport.isImporting]);
 
-  const handleTuneClick = useCallback(async () => {
-    const baselineCVs = savedVersions.filter(v => !v.parentVersionId);
-    if (baselineCVs.length === 1) {
-      const version = await api.getVersion(baselineCVs[0].id);
-      if (!version || !version.formData) {
-        toast.error("Couldn't load that CV. Check your connection and try again.");
-        return;
-      }
-      handleVersionLoad(version);
-      setSelectedTemplateForBuild(version.templateId);
-      navigate('/build/form', { state: { tune: true } });
-      return;
-    }
+  const handleTuneClick = useCallback(() => {
     if (expandedPanel === 'tune') {
       setExpandedPanel(null);
       return;
     }
     setExpandedPanel('tune');
-  }, [expandedPanel, savedVersions, navigate, handleVersionLoad, setSelectedTemplateForBuild, toast]);
+  }, [expandedPanel]);
 
   const handleBuildFromTune = useCallback(() => {
     resetForNewBuild();

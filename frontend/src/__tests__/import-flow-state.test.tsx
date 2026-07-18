@@ -162,7 +162,7 @@ describe('Navigation Flow State Management', () => {
       expect(ctaButtons.length).toBeGreaterThanOrEqual(2);
     });
 
-    it('Tune with exactly 1 baseline CV loads version and navigates to /build/form with tune state (NAV-03)', async () => {
+    it('Tune with exactly 1 baseline CV shows the picker; selecting it loads and navigates (NAV-03 revised)', async () => {
       const { api } = await import('../services/api');
       vi.mocked(api.listVersions).mockResolvedValue({
         versions: [
@@ -193,7 +193,13 @@ describe('Navigation Flow State Management', () => {
       const tuneCard = screen.getByText('Apply to job').closest('button')!;
       fireEvent.click(tuneCard);
 
-      // Should navigate away from landing — Apply to job card should disappear
+      await waitFor(() => {
+        expect(screen.getByText('Choose a baseline CV')).toBeInTheDocument();
+      });
+      expect(screen.getByText('My CV')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText('My CV'));
+
       await waitFor(() => {
         expect(screen.queryByText('Apply to job')).not.toBeInTheDocument();
       });

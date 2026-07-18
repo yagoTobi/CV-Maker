@@ -10,7 +10,6 @@ import { ToolsProvider, useToolsContext } from '../contexts/ToolsContext';
 import DirectEditPage from '../features/direct-edit/DirectEditPage';
 import { CVSwitcherDropdown } from '../features/direct-edit/components/CVSwitcherDropdown';
 import { useTuneFlow } from '../features/direct-edit/hooks/useTuneFlow';
-import LandingScreen from '../features/landing/LandingScreen';
 import { TuneExpansionPanel } from '../features/landing/TuneExpansionPanel';
 import { api } from '../services/api';
 import type { CVFormData, CVVersion, CVVersionMeta } from '../types';
@@ -243,20 +242,6 @@ describe('version load failures', () => {
     });
 
     await clickVersionNamed('Base CV');
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(LOAD_FAILURE);
-    expect(navigateMock).not.toHaveBeenCalled();
-  });
-
-  it('(a2) LandingScreen fast path toasts and does not navigate when getVersion returns null', async () => {
-    vi.mocked(api.getVersion).mockResolvedValue(null);
-
-    renderWithProviders(<LandingScreen />, {
-      savedVersions: [makeVersionMeta()],
-    });
-
-    await screen.findByRole('button', { name: /cv workspace/i });
-    fireEvent.click(await screen.findByRole('button', { name: /apply to job/i }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(LOAD_FAILURE);
     expect(navigateMock).not.toHaveBeenCalled();
