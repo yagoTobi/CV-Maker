@@ -35,13 +35,17 @@ const mockUseEditorActions = useEditorActions as ReturnType<typeof vi.fn>;
 function makeEditorActions(overrides = {}) {
   return {
     onDownload: vi.fn(),
+    onExportJson: vi.fn(),
     onTuneForJob: vi.fn(),
     saveStatus: 'saved' as const,
     isDownloading: false,
     isTuning: false,
+    isTunedVersion: false,
     cvName: 'My Test CV',
     tuneCompanyName: '',
     tuneRole: '',
+    pageCount: null,
+    isCheckingPageCount: false,
     onRetrySave: vi.fn(),
     overflowWarning: null,
     ...overrides,

@@ -38,8 +38,9 @@ import { api } from '../../services/api';
 import { getStoredActiveVersionId, persistActiveVersionId } from '../../utils/activeVersionStorage';
 import { takeImportReviewNote } from '../../utils/importReviewStorage';
 import { generateId } from '../../utils/idHelpers';
-import { generateCVFilename } from '../../utils/cvFilename';
+import { generateCVFilename, generateCVJsonFilename } from '../../utils/cvFilename';
 import { downloadPdf } from '../../utils/downloadPdf';
+import { downloadJson } from '../../utils/downloadJson';
 import { truncateError } from '../../utils/errorMessages';
 import type { CVFormData, CVVersion, CVVersionMeta } from '../../types';
 import { NamePromptDialog } from './components/dialogs/NamePromptDialog';
@@ -348,6 +349,11 @@ export default function DirectEditPage() {
     setIsDownloading(false);
   }, [formData, toast]);
 
+  const handleExportJson = useCallback(() => {
+    if (!formData) return;
+    downloadJson(formData, generateCVJsonFilename({ fullName: formData.personalInfo.fullName }));
+  }, [formData]);
+
   const handleTuneForJob = useCallback(() => {
     setTunePanelOpen(true);
   }, []);
@@ -360,6 +366,7 @@ export default function DirectEditPage() {
       : (activeVersion?.name ?? 'Untitled CV');
     setEditorActions({
       onDownload: handleDownload,
+      onExportJson: handleExportJson,
       onTuneForJob: handleTuneForJob,
       saveStatus,
       isDownloading,
@@ -374,7 +381,7 @@ export default function DirectEditPage() {
       overflowWarning,
     });
     return () => setEditorActions(null);
-  }, [setEditorActions, handleDownload, handleTuneForJob, saveStatus, isDownloading,
+  }, [setEditorActions, handleDownload, handleExportJson, handleTuneForJob, saveStatus, isDownloading,
       tunePanelOpen, activeVersion, savedVersions, tuneCompanyName, tuneRole,
       pageCount, isCheckingPageCount, retrySave, overflowWarning]);
 

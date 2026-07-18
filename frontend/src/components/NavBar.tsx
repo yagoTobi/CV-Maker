@@ -4,7 +4,7 @@
  * Left side: "CV Maker" logo (navigates to /). On editor pages it also shows the
  * CV name + switcher dropdown (or a tune breadcrumb). Per D-08 there is no
  * "My CVs" link — the dashboard is reached via the logo -> landing -> CV Workspace.
- * Right side (editor pages): Tune for Job, Download PDF, and SaveIndicator.
+ * Right side (editor pages): Tune for Job, Export JSON, Download PDF, and SaveIndicator.
  * Right side (non-editor pages): empty (no actions).
  *
  * Editor detection: pathname === '/build/form' AND editorActions is non-null.
@@ -102,6 +102,13 @@ export function NavBar() {
                 Tune for Job
               </button>
             )}
+            <button
+              className={styles.ghostBtn}
+              onClick={editorActions.onExportJson}
+              type="button"
+            >
+              Export JSON
+            </button>
             <button
               className={styles.accentBtn}
               onClick={editorActions.onDownload}

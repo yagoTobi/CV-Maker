@@ -12,6 +12,7 @@ import type { SaveStatus } from '../features/direct-edit/hooks/useAutoSave';
 
 interface EditorActions {
   onDownload: () => void;
+  onExportJson: () => void;
   onTuneForJob: () => void;
   saveStatus: SaveStatus;
   isDownloading: boolean;
