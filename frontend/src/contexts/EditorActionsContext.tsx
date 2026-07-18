@@ -22,6 +22,8 @@ interface EditorActions {
   tuneRole: string;         // TunePanel Tier 2 roleName (set by DirectEditPage)
   pageCount: number | null;     // true page count from the last compile (null = unknown)
   isCheckingPageCount: boolean; // a page-count compile is in flight
+  onRetrySave: () => void;
+  overflowWarning: string | null;
 }
 
 interface EditorActionsContextValue {

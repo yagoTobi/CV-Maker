@@ -20,13 +20,15 @@
  */
 import { renderHook, act } from '@testing-library/react';
 import { useAutoSave } from '../features/direct-edit/hooks/useAutoSave';
-import type { SaveStatus } from '../features/direct-edit/hooks/useAutoSave';
+import type { SaveStatus, AutoSaveState } from '../features/direct-edit/hooks/useAutoSave';
 import { api } from '../services/api';
 import type { CVFormData, CVVersion } from '../types';
 
 // Verify exported type is available
 const _typeCheck: SaveStatus = 'idle';
 void _typeCheck;
+const _stateTypeCheck: AutoSaveState = { status: 'idle', isDirty: false, retry: () => {} };
+void _stateTypeCheck;
 
 // Mock the api module
 vi.mock('../services/api', () => ({
@@ -38,6 +40,7 @@ vi.mock('../services/api', () => ({
 
 const mockSaveVersion = vi.mocked(api.saveVersion);
 const mockUpdateVersionFull = vi.mocked(api.updateVersionFull);
+const DEBOUNCE_MS = 2500;
 
 function makeFormData(overrides: Partial<CVFormData> = {}): CVFormData {
   return {
@@ -79,7 +82,7 @@ describe('useAutoSave', () => {
 
   it('initial status is idle', () => {
     const { result } = renderHook(() => useAutoSave(null, null));
-    expect(result.current).toBe('idle');
+    expect(result.current.status).toBe('idle');
   });
 
   it('status becomes saving after 2500ms debounce when formData changes', async () => {
@@ -95,14 +98,14 @@ describe('useAutoSave', () => {
       { initialProps: { fd: formData, vid: 'v1' } }
     );
 
-    expect(result.current).toBe('idle');
+    expect(result.current.status).toBe('idle');
 
     // Advance past the debounce threshold
     await act(async () => {
       vi.advanceTimersByTime(2500);
     });
 
-    expect(result.current).toBe('saving');
+    expect(result.current.status).toBe('saving');
 
     // Clean up: resolve the pending promise
     await act(async () => {
@@ -125,7 +128,7 @@ describe('useAutoSave', () => {
       vi.advanceTimersByTime(2500);
     });
 
-    expect(result.current).toBe('saved');
+    expect(result.current.status).toBe('saved');
     expect(mockUpdateVersionFull).toHaveBeenCalledTimes(1);
   });
 
@@ -143,7 +146,7 @@ describe('useAutoSave', () => {
       vi.advanceTimersByTime(2500);
     });
 
-    expect(result.current).toBe('error');
+    expect(result.current.status).toBe('error');
   });
 
   it('status becomes error when save returns null', async () => {
@@ -160,7 +163,7 @@ describe('useAutoSave', () => {
       vi.advanceTimersByTime(2500);
     });
 
-    expect(result.current).toBe('error');
+    expect(result.current.status).toBe('error');
   });
 
   it('resets debounce when formData changes before timeout', async () => {
@@ -182,7 +185,7 @@ describe('useAutoSave', () => {
       vi.advanceTimersByTime(1500);
     });
 
-    expect(result.current).toBe('idle');
+    expect(result.current.status).toBe('idle');
     expect(mockUpdateVersionFull).not.toHaveBeenCalled();
 
     // Change formData -- should reset timer
@@ -193,7 +196,7 @@ describe('useAutoSave', () => {
       vi.advanceTimersByTime(1500);
     });
 
-    expect(result.current).toBe('idle');
+    expect(result.current.status).toBe('idle');
     expect(mockUpdateVersionFull).not.toHaveBeenCalled();
 
     // Advance to full 2500ms from last change
@@ -201,7 +204,7 @@ describe('useAutoSave', () => {
       vi.advanceTimersByTime(1000);
     });
 
-    expect(result.current).toBe('saved');
+    expect(result.current.status).toBe('saved');
     expect(mockUpdateVersionFull).toHaveBeenCalledTimes(1);
   });
 
@@ -219,7 +222,7 @@ describe('useAutoSave', () => {
       vi.advanceTimersByTime(2500);
     });
 
-    expect(result.current).toBe('saved');
+    expect(result.current.status).toBe('saved');
     expect(mockUpdateVersionFull).toHaveBeenCalledTimes(1);
 
     // Rerender with the same formData (same reference even)
@@ -243,7 +246,7 @@ describe('useAutoSave', () => {
       vi.advanceTimersByTime(5000);
     });
 
-    expect(result.current).toBe('idle');
+    expect(result.current.status).toBe('idle');
     expect(mockSaveVersion).not.toHaveBeenCalled();
     expect(mockUpdateVersionFull).not.toHaveBeenCalled();
   });
@@ -344,7 +347,7 @@ describe('useAutoSave', () => {
 
     await act(async () => { vi.advanceTimersByTime(2500); });
 
-    expect(result.current).toBe('saved');
+    expect(result.current.status).toBe('saved');
     expect(mockUpdateVersionFull).toHaveBeenCalledWith(
       'existing-id',
       expect.objectContaining({ formData, texContent: '' })
@@ -363,7 +366,7 @@ describe('useAutoSave', () => {
 
     await act(async () => { vi.advanceTimersByTime(2500); });
 
-    expect(result.current).toBe('error');
+    expect(result.current.status).toBe('error');
   });
 
   it('calls onNeedName and uses returned name for first POST when versionId is null', async () => {
@@ -432,7 +435,186 @@ describe('useAutoSave', () => {
 
     await act(async () => { vi.advanceTimersByTime(2500); });
 
-    expect(result.current).toBe('error');
+    expect(result.current.status).toBe('error');
     expect(mockOnFirstSave).not.toHaveBeenCalled();
+  });
+
+  describe('isDirty and retry', () => {
+    it('(a) isDirty false after hydration, true after change, false after save', async () => {
+      mockUpdateVersionFull.mockResolvedValue(true);
+      const cv1 = makeFormData();
+      const cv2 = makeFormData({ personalInfo: { ...makeFormData().personalInfo, fullName: 'Edited' } });
+
+      const { result, rerender } = renderHook(
+        ({ fd, vid }: { fd: CVFormData | null; vid: string | null }) => useAutoSave(fd, vid),
+        { initialProps: { fd: null as CVFormData | null, vid: null as string | null } },
+      );
+
+      act(() => { rerender({ fd: cv1, vid: 'v1' }); });
+      expect(result.current.isDirty).toBe(false);
+
+      act(() => { rerender({ fd: cv2, vid: 'v1' }); });
+      expect(result.current.isDirty).toBe(true);
+
+      await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_MS));
+      expect(result.current.isDirty).toBe(false);
+    });
+
+    it('(a2) SWITCH: change formData+versionId together after save → isDirty false, no PATCH', async () => {
+      mockUpdateVersionFull.mockResolvedValue(true);
+      const cv1 = makeFormData();
+      const cv2 = makeFormData({ personalInfo: { ...makeFormData().personalInfo, fullName: 'CV2' } });
+
+      const { result, rerender } = renderHook(
+        ({ fd, vid }: { fd: CVFormData; vid: string }) => useAutoSave(fd, vid),
+        { initialProps: { fd: cv1, vid: 'v1' } },
+      );
+
+      await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_MS));
+      expect(result.current.isDirty).toBe(false);
+      expect(mockUpdateVersionFull).toHaveBeenCalledTimes(1);
+
+      act(() => { rerender({ fd: cv2, vid: 'v2' }); });
+      expect(result.current.isDirty).toBe(false);
+
+      await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_MS));
+      expect(mockUpdateVersionFull).toHaveBeenCalledTimes(1);
+    });
+
+    it('(a3) HYDRATION: null+null → data+id → no save, isDirty false, beforeunload not prevented', async () => {
+      const cv1 = makeFormData();
+
+      const { result, rerender } = renderHook(
+        ({ fd, vid }: { fd: CVFormData | null; vid: string | null }) => useAutoSave(fd, vid),
+        { initialProps: { fd: null as CVFormData | null, vid: null as string | null } },
+      );
+
+      act(() => { rerender({ fd: cv1, vid: 'v1' }); });
+      expect(result.current.isDirty).toBe(false);
+
+      await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_MS));
+      expect(mockSaveVersion).not.toHaveBeenCalled();
+      expect(mockUpdateVersionFull).not.toHaveBeenCalled();
+
+      const e = new Event('beforeunload', { cancelable: true });
+      window.dispatchEvent(e);
+      expect(e.defaultPrevented).toBe(false);
+    });
+
+    it('(a4) UNSAVED: formData non-null, versionId null → POST after debounce, isDirty true before', async () => {
+      let resolvePost: (v: CVVersion | null) => void;
+      mockSaveVersion.mockImplementation(() => new Promise(r => { resolvePost = r; }));
+
+      const cv1 = makeFormData();
+      const { result } = renderHook(() =>
+        useAutoSave(cv1, null, { onNeedName: async () => 'Test CV' }),
+      );
+
+      expect(result.current.isDirty).toBe(true);
+
+      await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_MS));
+      expect(mockSaveVersion).toHaveBeenCalledTimes(1);
+      expect(result.current.status).toBe('saving');
+
+      await act(async () => { resolvePost!(makeVersion('v1')); });
+      expect(result.current.status).toBe('saved');
+    });
+
+    it('(a5) POST-RACE: edit during POST + versionId arrives → isDirty true, PATCH scheduled', async () => {
+      let resolvePost: (v: CVVersion | null) => void;
+      mockSaveVersion.mockImplementation(() => new Promise(r => { resolvePost = r; }));
+      mockUpdateVersionFull.mockResolvedValue(true);
+
+      const cv1 = makeFormData();
+      const cv2 = makeFormData({ personalInfo: { ...makeFormData().personalInfo, fullName: 'Edited' } });
+
+      const { result, rerender } = renderHook(
+        ({ fd, vid }: { fd: CVFormData; vid: string | null }) => useAutoSave(fd, vid, { onNeedName: async () => 'Test' }),
+        { initialProps: { fd: cv1, vid: null as string | null } },
+      );
+
+      await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_MS));
+      expect(mockSaveVersion).toHaveBeenCalledTimes(1);
+
+      act(() => { rerender({ fd: cv2, vid: null }); });
+
+      await act(async () => {
+        resolvePost!(makeVersion('v1'));
+        rerender({ fd: cv2, vid: 'v1' });
+      });
+
+      await act(() => vi.advanceTimersByTimeAsync(0));
+      expect(result.current.isDirty).toBe(true);
+
+      await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_MS));
+      expect(mockUpdateVersionFull).toHaveBeenCalledWith('v1', expect.objectContaining({ formData: cv2 }));
+    });
+
+    it('(b) retry() triggers immediate save without waiting debounce', async () => {
+      mockUpdateVersionFull.mockResolvedValue(true);
+      const cv1 = makeFormData();
+
+      const { result } = renderHook(() => useAutoSave(cv1, 'v1'));
+
+      await act(async () => {
+        result.current.retry();
+      });
+
+      expect(mockUpdateVersionFull).toHaveBeenCalledTimes(1);
+    });
+
+    it('(b2) NAME-CACHE: onNeedName called once even when first POST fails and retry succeeds', async () => {
+      const onNeedName = vi.fn().mockResolvedValue('Alice CV');
+      mockSaveVersion
+        .mockResolvedValueOnce(null)
+        .mockResolvedValue(makeVersion('v1'));
+
+      const cv1 = makeFormData();
+      const { result } = renderHook(() => useAutoSave(cv1, null, { onNeedName }));
+
+      await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_MS));
+      expect(result.current.status).toBe('error');
+      expect(onNeedName).toHaveBeenCalledTimes(1);
+
+      await act(async () => { result.current.retry(); });
+      expect(result.current.status).toBe('saved');
+      expect(onNeedName).toHaveBeenCalledTimes(1);
+    });
+
+    it('(c) beforeunload: defaultPrevented when dirty, not prevented when clean', async () => {
+      mockUpdateVersionFull.mockResolvedValue(true);
+      const cv1 = makeFormData();
+
+      const { result } = renderHook(() => useAutoSave(cv1, 'v1'));
+
+      expect(result.current.isDirty).toBe(true);
+
+      const e1 = new Event('beforeunload', { cancelable: true });
+      window.dispatchEvent(e1);
+      expect(e1.defaultPrevented).toBe(true);
+
+      await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_MS));
+      expect(result.current.isDirty).toBe(false);
+
+      const e2 = new Event('beforeunload', { cancelable: true });
+      window.dispatchEvent(e2);
+      expect(e2.defaultPrevented).toBe(false);
+    });
+
+    it('failure: updateVersionFull returns false → status error, isDirty true, retry re-attempts', async () => {
+      mockUpdateVersionFull
+        .mockResolvedValueOnce(false)
+        .mockResolvedValue(true);
+
+      const cv1 = makeFormData();
+      const { result } = renderHook(() => useAutoSave(cv1, 'v1'));
+
+      await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_MS));
+      expect(result.current.status).toBe('error');
+      expect(result.current.isDirty).toBe(true);
+
+      await act(async () => { result.current.retry(); });
+      expect(mockUpdateVersionFull).toHaveBeenCalledTimes(2);
+    });
   });
 });

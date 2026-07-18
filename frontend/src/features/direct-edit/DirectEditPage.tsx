@@ -114,7 +114,7 @@ export default function DirectEditPage() {
     setSavedVersions([meta, ...savedVersions]);
   }, [setActiveVersion, setSavedVersions, savedVersions]);
 
-  const saveStatus = useAutoSave(formData, activeVersion?.id ?? null, {
+  const { status: saveStatus, retry: retrySave } = useAutoSave(formData, activeVersion?.id ?? null, {
     onNeedName,
     onFirstSave: handleFirstSave,
   });
@@ -307,11 +307,13 @@ export default function DirectEditPage() {
       tuneRole: isTunedVersion ? (tuneRole || activeVersion?.role || '') : tuneRole,
       pageCount,
       isCheckingPageCount,
+      onRetrySave: retrySave,
+      overflowWarning: null,
     });
     return () => setEditorActions(null);
   }, [setEditorActions, handleDownload, handleTuneForJob, saveStatus, isDownloading,
       tunePanelOpen, activeVersion, savedVersions, tuneCompanyName, tuneRole,
-      pageCount, isCheckingPageCount]);
+      pageCount, isCheckingPageCount, retrySave]);
 
   if (isBootstrapping || !formData) {
     return <div className={styles.loading}>Loading...</div>;

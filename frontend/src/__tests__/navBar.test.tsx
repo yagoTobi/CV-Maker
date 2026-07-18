@@ -42,6 +42,8 @@ function makeEditorActions(overrides = {}) {
     cvName: 'My Test CV',
     tuneCompanyName: '',
     tuneRole: '',
+    onRetrySave: vi.fn(),
+    overflowWarning: null,
     ...overrides,
   };
 }
