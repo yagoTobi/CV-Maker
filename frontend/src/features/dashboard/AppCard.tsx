@@ -1,5 +1,6 @@
 import { formatDate, scoreColorClass } from '../../utils/cvDisplayUtils';
 import { scoreToFitBand } from '../../utils/fitBand';
+import { ConfirmDialog } from '../../features/direct-edit/components/dialogs/ConfirmDialog';
 import { DownloadIcon, TrashIcon, MoveIcon } from './icons';
 import type { CVVersionMeta, CVVersionWithChildren } from '../../types';
 import styles from './AppCard.module.css';
@@ -12,9 +13,12 @@ interface AppCardProps {
   downloadingId: string | null;
   deletingId: string | null;
   moveDropdownId: string | null;
+  confirmDeleteId: string | null;
   onOpen: (id: string) => void;
   onDownload: (id: string, meta: CVVersionMeta, e: React.MouseEvent) => void;
-  onDelete: (id: string) => void;
+  onRequestDelete: (id: string) => void;
+  onConfirmDelete: (id: string) => void;
+  onCancelDelete: () => void;
   onMove: (id: string, newParentId: string | null) => void;
   onSetMoveDropdown: (id: string | null) => void;
   moveDropdownRef: React.RefObject<HTMLDivElement | null>;
@@ -49,14 +53,20 @@ export default function AppCard({
   downloadingId,
   deletingId,
   moveDropdownId,
+  confirmDeleteId,
   onOpen,
   onDownload,
-  onDelete,
+  onRequestDelete,
+  onConfirmDelete,
+  onCancelDelete,
   onMove,
   onSetMoveDropdown,
   moveDropdownRef,
 }: AppCardProps) {
   const isThisMoveOpen = moveDropdownId === app.id;
+  const name = displayName(app);
+  const hasChildren = false;
+  const childCount = 0;
 
   return (
     <div className={styles.appCard}>
@@ -133,7 +143,7 @@ export default function AppCard({
 
         <button
           className={styles.appDeleteBtn}
-          onClick={() => onDelete(app.id)}
+          onClick={() => onRequestDelete(app.id)}
           disabled={deletingId === app.id}
           title="Delete"
         >
@@ -143,6 +153,17 @@ export default function AppCard({
             <TrashIcon />
           )}
         </button>
+        {confirmDeleteId === app.id && (
+          <ConfirmDialog
+            message={hasChildren
+              ? `Delete "${name}"? Its ${childCount} application(s) will move to Ungrouped.`
+              : `Delete "${name}"? This can't be undone.`}
+            onConfirm={() => onConfirmDelete(app.id)}
+            onCancel={onCancelDelete}
+            noBackdrop
+            dialogClassName={styles.deleteConfirm}
+          />
+        )}
       </div>
     </div>
   );

@@ -3,8 +3,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../../services/api';
 import { useCVContext } from '../../contexts/CVContext';
 import { useToolsContext } from '../../contexts/ToolsContext';
+import { useToast } from '../../contexts/ToastContext';
 import { generateCVFilename } from '../../utils/cvFilename';
 import { downloadPdf } from '../../utils/downloadPdf';
+import { truncateError } from '../../utils/errorMessages';
 import { useDashboardVersions } from './useDashboardVersions';
 import BaseGroup from './BaseGroup';
 import AppCard from './AppCard';
@@ -19,6 +21,7 @@ export default function Dashboard() {
 
   const { setSelectedTemplateForBuild } = useCVContext();
   const { handleVersionLoad } = useToolsContext();
+  const toast = useToast();
 
   const versions = useDashboardVersions();
 
@@ -28,6 +31,7 @@ export default function Dashboard() {
   const [expandUngrouped, setExpandUngrouped] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const moveDropdownRef = useRef<HTMLDivElement | null>(null);
 
@@ -47,37 +51,67 @@ export default function Dashboard() {
     setLoadingId(id);
     const version = await api.getVersion(id);
     setLoadingId(null);
-    if (version) {
-      handleVersionLoad(version);
-      setSelectedTemplateForBuild(version.templateId);
-      navigate('/build/form');
+    if (!version) {
+      toast.error("Couldn't load that CV. Check your connection and try again.");
+      return;
     }
-  }, [handleVersionLoad, setSelectedTemplateForBuild, navigate]);
+    handleVersionLoad(version);
+    setSelectedTemplateForBuild(version.templateId);
+    navigate('/build/form');
+  }, [handleVersionLoad, setSelectedTemplateForBuild, navigate, toast]);
 
   const handleApplyToJob = useCallback(async (baseId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const version = await api.getVersion(baseId);
-    if (version) {
-      handleVersionLoad(version);
-      setSelectedTemplateForBuild(version.templateId);
-      navigate('/build/form', { state: { tune: true } });
+    if (!version) {
+      toast.error("Couldn't load that CV. Check your connection and try again.");
+      return;
     }
-  }, [handleVersionLoad, setSelectedTemplateForBuild, navigate]);
+    handleVersionLoad(version);
+    setSelectedTemplateForBuild(version.templateId);
+    navigate('/build/form', { state: { tune: true } });
+  }, [handleVersionLoad, setSelectedTemplateForBuild, navigate, toast]);
 
   const handleDownload = useCallback(async (versionId: string, meta: CVVersionMeta, e: React.MouseEvent) => {
     e.stopPropagation();
     setDownloadingId(versionId);
-    const version = await api.getVersion(versionId);
-    if (!version) { setDownloadingId(null); return; }
-    const result = await api.compileLatex(version.texContent, version.templateId);
-    if (result.success && result.pdf_base64) {
-      downloadPdf(result.pdf_base64, generateCVFilename({
-        fullName: version.formData?.personalInfo?.fullName,
-        company: meta.companyName ?? undefined,
-        role: meta.role ?? undefined,
-      }));
+    try {
+      const version = await api.getVersion(versionId);
+      if (!version || !version.texContent) {
+        toast.error("Couldn't load that CV. Check your connection and try again.");
+        return;
+      }
+      const result = await api.compileLatex(version.texContent, version.templateId);
+      if (result.success && result.pdf_base64) {
+        downloadPdf(result.pdf_base64, generateCVFilename({
+          fullName: version.formData?.personalInfo?.fullName,
+          company: meta.companyName ?? undefined,
+          role: meta.role ?? undefined,
+        }));
+        if (result.warnings?.length) {
+          toast.warning(result.warnings.join(' '));
+        }
+      } else {
+        toast.error(`PDF compilation failed. ${result.error ? truncateError(result.error) : 'The compiler did not return a PDF.'}`);
+      }
+    } catch {
+      toast.error('Download failed. Check your connection and try again.');
+    } finally {
+      setDownloadingId(null);
     }
-    setDownloadingId(null);
+  }, [toast, truncateError]);
+
+  const handleRequestDelete = useCallback((id: string) => {
+    setConfirmDeleteId(id);
+  }, []);
+
+  const handleConfirmDelete = useCallback(async (id: string) => {
+    setConfirmDeleteId(null);
+    await versions.remove(id);
+  }, [versions]);
+
+  const handleCancelDelete = useCallback(() => {
+    setConfirmDeleteId(null);
   }, []);
 
   const handleRenameStart = useCallback((id: string, currentName: string) => {
@@ -183,13 +217,16 @@ export default function Dashboard() {
                 renamingId={renamingId}
                 renameValue={renameValue}
                 moveDropdownId={moveDropdownId}
+                confirmDeleteId={confirmDeleteId}
                 moveDropdownRef={moveDropdownRef}
                 onToggle={versions.toggleGroup}
                 onOpen={handleOpen}
                 onApplyToJob={handleApplyToJob}
                 onDownload={handleDownload}
                 onDuplicate={handleDuplicate}
-                onDelete={versions.remove}
+                onRequestDelete={handleRequestDelete}
+                onConfirmDelete={handleConfirmDelete}
+                onCancelDelete={handleCancelDelete}
                 onMove={handleMove}
                 onSetMoveDropdown={setMoveDropdownId}
                 onRenameStart={handleRenameStart}
@@ -224,9 +261,12 @@ export default function Dashboard() {
                         downloadingId={downloadingId}
                         deletingId={versions.deletingId}
                         moveDropdownId={moveDropdownId}
+                        confirmDeleteId={confirmDeleteId}
                         onOpen={handleOpen}
                         onDownload={handleDownload}
-                        onDelete={versions.remove}
+                        onRequestDelete={handleRequestDelete}
+                        onConfirmDelete={handleConfirmDelete}
+                        onCancelDelete={handleCancelDelete}
                         onMove={handleMove}
                         onSetMoveDropdown={setMoveDropdownId}
                         moveDropdownRef={moveDropdownRef}

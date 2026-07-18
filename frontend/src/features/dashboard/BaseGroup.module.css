@@ -6,7 +6,7 @@
   margin-bottom: 1rem;
   box-shadow: var(--shadow-sm);
   animation: fadeIn 0.3s ease-out;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .groupHeader {
@@ -77,6 +77,14 @@
   align-items: center;
   gap: 0.5rem;
   margin-left: 0.75rem;
+  position: relative;
+}
+
+.deleteConfirm {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.25rem);
+  z-index: 20;
 }
 
 .newAppBtn {

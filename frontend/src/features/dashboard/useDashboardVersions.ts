@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../services/api';
 import { useCVContext } from '../../contexts/CVContext';
+import { useToast } from '../../contexts/ToastContext';
 import type { CVVersionMeta, CVVersionWithChildren } from '../../types';
 
 export interface SaveVersionData {
@@ -44,6 +45,7 @@ async function fetchVersions(): Promise<{ versions: CVVersionWithChildren[]; ung
 
 export function useDashboardVersions(): DashboardVersionsAPI {
   const { setSavedVersions } = useCVContext();
+  const toast = useToast();
 
   const [state, setState] = useState<DashboardVersionsState>({
     baseCvs: [],
@@ -112,7 +114,10 @@ export function useDashboardVersions(): DashboardVersionsAPI {
 
   const rename = useCallback(async (id: string, newName: string) => {
     const version = await api.getVersion(id);
-    if (!version) return;
+    if (!version || !version.formData) {
+      toast.error("Couldn't load that CV. Check your connection and try again.");
+      return;
+    }
     const saved = await api.saveVersion({
       name: newName.trim() || version.name,
       templateId: version.templateId,
@@ -130,18 +135,20 @@ export function useDashboardVersions(): DashboardVersionsAPI {
       const { versions, ungrouped } = await fetchVersions();
       applyFetch(versions, ungrouped);
     }
-  }, [applyFetch]);
+  }, [applyFetch, toast]);
 
   const duplicate = useCallback(async (id: string): Promise<string | null> => {
     setDuplicatingId(id);
     const version = await api.getVersion(id);
     let newId: string | null = null;
-    if (version) {
+    if (!version || !version.formData) {
+      toast.error("Couldn't load that CV. Check your connection and try again.");
+    } else {
       const saved = await api.saveVersion({
         name: `${version.name} (copy)`,
         templateId: version.templateId,
         texContent: version.texContent,
-        formData: version.formData || undefined,
+        formData: version.formData,
       });
       if (saved) {
         newId = saved.id;
@@ -151,7 +158,7 @@ export function useDashboardVersions(): DashboardVersionsAPI {
     }
     setDuplicatingId(null);
     return newId;
-  }, [applyFetch]);
+  }, [applyFetch, toast]);
 
   const reparent = useCallback(async (id: string, newParentId: string | null) => {
     const ok = await api.updateVersion(id, { parentVersionId: newParentId });

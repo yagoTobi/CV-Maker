@@ -1,4 +1,5 @@
 import AppCard from './AppCard';
+import { ConfirmDialog } from '../../features/direct-edit/components/dialogs/ConfirmDialog';
 import { ChevronRightIcon, TuneIcon, EditIcon, DownloadIcon, DuplicateIcon, TrashIcon } from './icons';
 import type { CVVersionMeta, CVVersionWithChildren } from '../../types';
 import styles from './BaseGroup.module.css';
@@ -14,13 +15,16 @@ interface BaseGroupProps {
   renamingId: string | null;
   renameValue: string;
   moveDropdownId: string | null;
+  confirmDeleteId: string | null;
   moveDropdownRef: React.RefObject<HTMLDivElement | null>;
   onToggle: (id: string) => void;
   onOpen: (id: string) => void;
   onApplyToJob: (baseId: string, e: React.MouseEvent) => void;
   onDownload: (id: string, meta: CVVersionMeta, e: React.MouseEvent) => void;
   onDuplicate: (id: string, e: React.MouseEvent) => void;
-  onDelete: (id: string) => void;
+  onRequestDelete: (id: string) => void;
+  onConfirmDelete: (id: string) => void;
+  onCancelDelete: () => void;
   onMove: (id: string, newParentId: string | null) => void;
   onSetMoveDropdown: (id: string | null) => void;
   onRenameStart: (id: string, currentName: string) => void;
@@ -40,13 +44,16 @@ export default function BaseGroup({
   renamingId,
   renameValue,
   moveDropdownId,
+  confirmDeleteId,
   moveDropdownRef,
   onToggle,
   onOpen,
   onApplyToJob,
   onDownload,
   onDuplicate,
-  onDelete,
+  onRequestDelete,
+  onConfirmDelete,
+  onCancelDelete,
   onMove,
   onSetMoveDropdown,
   onRenameStart,
@@ -55,6 +62,8 @@ export default function BaseGroup({
   onRenameCancel,
 }: BaseGroupProps) {
   const children = base.children || [];
+  const hasChildren = children.length > 0;
+  const childCount = children.length;
 
   return (
     <div className={styles.group}>
@@ -140,7 +149,7 @@ export default function BaseGroup({
           </button>
           <button
             className={styles.groupDeleteBtn}
-            onClick={() => onDelete(base.id)}
+            onClick={() => onRequestDelete(base.id)}
             disabled={deletingId === base.id}
             title="Delete baseline CV"
           >
@@ -150,6 +159,17 @@ export default function BaseGroup({
               <TrashIcon />
             )}
           </button>
+          {confirmDeleteId === base.id && (
+            <ConfirmDialog
+              message={hasChildren
+                ? `Delete "${base.name}"? Its ${childCount} application(s) will move to Ungrouped.`
+                : `Delete "${base.name}"? This can't be undone.`}
+              onConfirm={() => onConfirmDelete(base.id)}
+              onCancel={onCancelDelete}
+              noBackdrop
+              dialogClassName={styles.deleteConfirm}
+            />
+          )}
         </div>
       </div>
 
@@ -170,9 +190,12 @@ export default function BaseGroup({
                 downloadingId={downloadingId}
                 deletingId={deletingId}
                 moveDropdownId={moveDropdownId}
+                confirmDeleteId={confirmDeleteId}
                 onOpen={onOpen}
                 onDownload={onDownload}
-                onDelete={onDelete}
+                onRequestDelete={onRequestDelete}
+                onConfirmDelete={onConfirmDelete}
+                onCancelDelete={onCancelDelete}
                 onMove={onMove}
                 onSetMoveDropdown={onSetMoveDropdown}
                 moveDropdownRef={moveDropdownRef}
