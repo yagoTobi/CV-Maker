@@ -26,6 +26,7 @@ import { usePageBreak } from './hooks/usePageBreak';
 import { usePageCount } from './hooks/usePageCount';
 import { MedLengthTemplate } from './components/MedLengthTemplate';
 import { useSetEditorActions } from '../../contexts/EditorActionsContext';
+import { useToast } from '../../contexts/ToastContext';
 import { TuneRail } from './components/TuneRail';
 import { ChangePopover } from './components/change-review/ChangePopover';
 import { PostSavePrompt } from './components/PostSavePrompt';
@@ -38,6 +39,7 @@ import { getStoredActiveVersionId } from '../../utils/activeVersionStorage';
 import { generateId } from '../../utils/idHelpers';
 import { generateCVFilename } from '../../utils/cvFilename';
 import { downloadPdf } from '../../utils/downloadPdf';
+import { truncateError } from '../../utils/errorMessages';
 import type { CVFormData, CVVersion, CVVersionMeta } from '../../types';
 import { NamePromptDialog } from './components/dialogs/NamePromptDialog';
 import { loadTuneSession } from './utils/tuneSession';
@@ -122,6 +124,7 @@ export default function DirectEditPage() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [tunePanelOpen, setTunePanelOpen] = useState(false);
   const setEditorActions = useSetEditorActions();
+  const toast = useToast();
   const location = useLocation();
   const cvContainerRef = useRef<HTMLDivElement>(null);
   const templateRef = useRef<HTMLDivElement>(null);
@@ -129,7 +132,7 @@ export default function DirectEditPage() {
   const { offsets: pageBreakEstimateOffsets, estPages } = usePageBreak(templateRef);
   // Authoritative page count from a real compile. While the tune rail is open we force the
   // compile (bypass the cost-saving gate) so the count reflects the optimisation live.
-  const { pageCount, isChecking: isCheckingPageCount } = usePageCount(formData, estPages, true, tunePanelOpen);
+  const { pageCount, isChecking: isCheckingPageCount, overflowWarning } = usePageCount(formData, estPages, true, tunePanelOpen);
 
   // Tune flow: orchestration (useTailor + match analysis + save) + on-CV inline review.
   const tuneFlow = useTuneFlow({ formData, activeVersion, cvContainerRef });
@@ -269,21 +272,27 @@ export default function DirectEditPage() {
       const { texContent, error: genError } = await api.generateLatex(formData);
       if (!texContent || genError) {
         console.error('LaTeX generation failed:', genError);
+        toast.error(`Couldn't generate your PDF. ${truncateError(genError)}`);
         setIsDownloading(false);
         return;
       }
       const result = await api.compileLatex(texContent, formData.templateId);
       if (!result.success || !result.pdf_base64) {
         console.error('PDF compilation failed:', result.error);
+        toast.error(`PDF compilation failed. ${result.error ? truncateError(result.error) : 'The compiler did not return a PDF.'}`);
         setIsDownloading(false);
         return;
       }
       downloadPdf(result.pdf_base64, generateCVFilename({ fullName: formData.personalInfo.fullName }));
+      if (result.warnings?.length) {
+        toast.warning(result.warnings.join(' '));
+      }
     } catch (err) {
       console.error('Download failed:', err);
+      toast.error('Download failed. Check your connection and try again.');
     }
     setIsDownloading(false);
-  }, [formData]);
+  }, [formData, toast]);
 
   const handleTuneForJob = useCallback(() => {
     setTunePanelOpen(true);
@@ -308,12 +317,12 @@ export default function DirectEditPage() {
       pageCount,
       isCheckingPageCount,
       onRetrySave: retrySave,
-      overflowWarning: null,
+      overflowWarning,
     });
     return () => setEditorActions(null);
   }, [setEditorActions, handleDownload, handleTuneForJob, saveStatus, isDownloading,
       tunePanelOpen, activeVersion, savedVersions, tuneCompanyName, tuneRole,
-      pageCount, isCheckingPageCount, retrySave]);
+      pageCount, isCheckingPageCount, retrySave, overflowWarning]);
 
   if (isBootstrapping || !formData) {
     return <div className={styles.loading}>Loading...</div>;

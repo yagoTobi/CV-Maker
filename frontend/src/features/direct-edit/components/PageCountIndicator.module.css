@@ -31,3 +31,11 @@
 .multi .dot {
   background: #D97706;
 }
+
+.overflowChip {
+  color: #B45309;
+  background: #FEF3C7;
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-size: 12px;
+}

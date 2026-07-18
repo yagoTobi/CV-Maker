@@ -91,6 +91,7 @@ export function NavBar() {
             <PageCountIndicator
               pageCount={editorActions.pageCount ?? null}
               isChecking={editorActions.isCheckingPageCount ?? false}
+              warning={editorActions.overflowWarning ?? null}
             />
             {!isTunedVersion && (
               <button

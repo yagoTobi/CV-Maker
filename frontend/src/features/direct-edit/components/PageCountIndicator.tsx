@@ -11,9 +11,10 @@ import styles from './PageCountIndicator.module.css';
 interface PageCountIndicatorProps {
   pageCount: number | null;
   isChecking: boolean;
+  warning?: string | null;
 }
 
-export function PageCountIndicator({ pageCount, isChecking }: PageCountIndicatorProps) {
+export function PageCountIndicator({ pageCount, isChecking, warning = null }: PageCountIndicatorProps) {
   if (pageCount === null && !isChecking) return null;
 
   const isMulti = pageCount !== null && pageCount > 1;
@@ -21,7 +22,6 @@ export function PageCountIndicator({ pageCount, isChecking }: PageCountIndicator
   return (
     <div
       className={`${styles.indicator}${isMulti ? ` ${styles.multi}` : ''}`}
-      role="status"
       aria-live="polite"
       title={isMulti ? 'Your CV spans more than one page' : undefined}
     >
@@ -29,6 +29,15 @@ export function PageCountIndicator({ pageCount, isChecking }: PageCountIndicator
       {isChecking
         ? 'Checking…'
         : `${pageCount} ${pageCount === 1 ? 'page' : 'pages'}`}
+      {warning && (
+        <span
+          className={styles.overflowChip}
+          title={warning}
+          role="status"
+        >
+          Text overflow
+        </span>
+      )}
     </div>
   );
 }
