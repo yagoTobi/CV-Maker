@@ -10,9 +10,10 @@ import styles from './SaveIndicator.module.css';
 interface SaveIndicatorProps {
   status: SaveStatus;
   inline?: boolean;
+  onRetry?: () => void;
 }
 
-export function SaveIndicator({ status, inline }: SaveIndicatorProps) {
+export function SaveIndicator({ status, inline, onRetry }: SaveIndicatorProps) {
   const text = status === 'saving' ? 'Saving...'
              : status === 'saved'  ? 'Saved'
              : status === 'error'  ? 'Save failed'
@@ -24,12 +25,18 @@ export function SaveIndicator({ status, inline }: SaveIndicatorProps) {
                   : styles.idle;
 
   return (
-    <div
-      className={`${styles.indicator} ${className}${inline ? ` ${styles.inline}` : ''}`}
-      aria-live="polite"
-      aria-atomic="true"
-    >
-      {text}
+    <div className={`${styles.indicator} ${className}${inline ? ` ${styles.inline}` : ''}`}>
+      <span aria-live="polite" aria-atomic="true">{text}</span>
+      {status === 'error' && onRetry && (
+        <button
+          type="button"
+          className={styles.retryBtn}
+          onClick={onRetry}
+          aria-label="Retry save"
+        >
+          Retry
+        </button>
+      )}
     </div>
   );
 }

@@ -87,7 +87,7 @@ export function NavBar() {
       <div className={styles.rightGroup}>
         {isEditorPage ? (
           <>
-            <SaveIndicator status={editorActions.saveStatus} inline />
+            <SaveIndicator status={editorActions.saveStatus} inline onRetry={editorActions.onRetrySave} />
             <PageCountIndicator
               pageCount={editorActions.pageCount ?? null}
               isChecking={editorActions.isCheckingPageCount ?? false}

@@ -1,0 +1,24 @@
+Task: T5 pre-launch UX refinements — Save failed gains Retry action in NavBar
+
+Changed:
+- frontend/src/features/direct-edit/components/SaveIndicator.tsx
+- frontend/src/features/direct-edit/components/SaveIndicator.module.css
+- frontend/src/components/NavBar.tsx
+- frontend/src/__tests__/saveIndicatorRetry.test.tsx
+
+Verified DirectEditPage.tsx already includes `onRetrySave: retrySave` in `setEditorActions`.
+
+Verification:
+- `cd frontend && npx tsc --noEmit` — passed
+- `cd frontend && npx vitest run src/__tests__/saveIndicatorRetry.test.tsx` — passed
+  - Test Files: 1 passed
+  - Tests: 3 passed
+
+No-excuse LOC check:
+- SaveIndicator.tsx: 38 pure LOC
+- SaveIndicator.module.css: 54 pure LOC
+- NavBar.tsx: 129 pure LOC
+- saveIndicatorRetry.test.tsx: 21 pure LOC
+
+Commit message:
+- feat(ui): retry action on failed autosave in the navbar

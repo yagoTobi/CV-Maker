@@ -44,3 +44,19 @@
   min-width: 72px;
   text-align: right;
 }
+
+.retryBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-family-sans, 'IBM Plex Sans', sans-serif);
+  font-size: 13px;
+  color: var(--color-accent, #3B82F6);
+  padding: 0;
+  margin-left: 6px;
+  text-decoration: underline;
+}
+
+.retryBtn:hover {
+  opacity: 0.8;
+}
