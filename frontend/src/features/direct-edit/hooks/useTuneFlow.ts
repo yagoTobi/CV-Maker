@@ -14,6 +14,7 @@ import type { RefObject } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../../services/api';
 import { useCVContext } from '../../../contexts/CVContext';
+import { useToast } from '../../../contexts/ToastContext';
 import { useTailor } from './useTailor';
 import { useInlineReview } from './useInlineReview';
 import type { CVFormData, CVVersion, MatchAnalysis } from '../../../types';
@@ -26,9 +27,11 @@ export interface UseTuneFlowParams {
 
 export function useTuneFlow({ formData, activeVersion, cvContainerRef }: UseTuneFlowParams) {
   const navigate = useNavigate();
+  const toast = useToast();
   const { setActiveVersion, setFormData } = useCVContext();
 
   const [matchAnalysis, setMatchAnalysis] = useState<MatchAnalysis | null>(null);
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
   const [baselineScore, setBaselineScore] = useState(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -52,26 +55,38 @@ export function useTuneFlow({ formData, activeVersion, cvContainerRef }: UseTune
       const trimmed = name.trim();
       if (!trimmed || !formData) return;
       const { texContent } = await api.generateLatex(formData);
+      if (!texContent) {
+        toast.error("Couldn't save your base CV. Try again.");
+        return;
+      }
       const saved = await api.saveVersion({
         name: trimmed,
         templateId: formData.templateId,
-        texContent: texContent || '',
+        texContent,
         formData,
       });
-      if (saved) {
-        const full = await api.getVersion(saved.id);
-        if (full) setActiveVersion(full);
+      if (!saved) {
+        toast.error("Couldn't save your base CV. Try again.");
+        return;
       }
+      const full = await api.getVersion(saved.id);
+      if (!full || !full.formData) {
+        toast.error("Saved your base CV, but couldn't reload it. Refresh the page before continuing.");
+        return;
+      }
+      setActiveVersion(full);
     },
-    [formData, setActiveVersion],
+    [formData, setActiveVersion, toast],
   );
 
   const onAnalyze = useCallback(
     async (company: string, _role: string, jobDescription: string) => {
+      setAnalyzeError(null);
       if (!jobDescription.trim() || !formData) return;
       setIsAnalyzing(true);
       const { texContent } = await api.generateLatex(formData);
       if (!texContent) {
+        setAnalyzeError("Couldn't prepare your CV for analysis. Try again.");
         setIsAnalyzing(false);
         return;
       }
@@ -80,6 +95,8 @@ export function useTuneFlow({ formData, activeVersion, cvContainerRef }: UseTune
         setMatchAnalysis(analysis);
         setBaselineScore(analysis.match_score);
         tailor.setBaselineScore(analysis.match_score);
+      } else {
+        setAnalyzeError('Match analysis failed. Try again.');
       }
       setIsAnalyzing(false);
     },
@@ -92,6 +109,7 @@ export function useTuneFlow({ formData, activeVersion, cvContainerRef }: UseTune
       setIsSaving(true);
       const { texContent } = await api.generateLatex(formData);
       if (!texContent) {
+        toast.error("Couldn't save the tailored CV. Try again.");
         setIsSaving(false);
         return;
       }
@@ -112,15 +130,18 @@ export function useTuneFlow({ formData, activeVersion, cvContainerRef }: UseTune
       if (saved) {
         savedBaseIdRef.current = activeVersion.id;
         setSavedSuccessfully(true);
+      } else {
+        toast.error("Couldn't save the tailored CV. Try again.");
       }
       setIsSaving(false);
     },
-    [activeVersion, formData, baselineScore, tailor],
+    [activeVersion, formData, baselineScore, tailor, toast],
   );
 
   const resetFlow = useCallback(() => {
     tailor.reset();
     setMatchAnalysis(null);
+    setAnalyzeError(null);
     setBaselineScore(0);
     setSavedSuccessfully(false);
     setFlowKey((k) => k + 1);
@@ -152,6 +173,7 @@ export function useTuneFlow({ formData, activeVersion, cvContainerRef }: UseTune
     tailor,
     inlineReview,
     matchAnalysis,
+    analyzeError,
     isAnalyzing,
     isSaving,
     savedSuccessfully,

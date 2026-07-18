@@ -375,6 +375,7 @@ export default function DirectEditPage() {
             tailor={tuneFlow.tailor}
             isAnalyzing={tuneFlow.isAnalyzing}
             isSaving={tuneFlow.isSaving}
+            analyzeError={tuneFlow.analyzeError}
             onSaveAsBase={tuneFlow.onSaveAsBase}
             onAnalyze={tuneFlow.onAnalyze}
             onSaveTailored={tuneFlow.onSaveTailored}

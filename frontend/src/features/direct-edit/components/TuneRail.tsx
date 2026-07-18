@@ -25,6 +25,7 @@ export interface TuneRailProps {
   tailor: UseTailorReturn;
   isAnalyzing?: boolean;
   isSaving?: boolean;
+  analyzeError?: string | null;
   onSaveAsBase: (name: string) => void;
   onAnalyze?: (company: string, role: string, jobDescription: string) => void;
   onSaveTailored?: (details: { company: string; role: string; jobDescription: string }) => void;
@@ -35,6 +36,17 @@ export interface TuneRailProps {
 const STEP_ORDER: readonly TuneStep[] = ['setup', 'gap', 'review'];
 const STEP_LABELS: Record<TuneStep, string> = { setup: 'Setup', gap: 'Gap', review: 'Review' };
 
+function ErrorBanner({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div role="alert" style={{ color: '#DC2626', fontSize: '13px', marginBottom: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+      <span>{message}</span>
+      <button type="button" onClick={onRetry} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#DC2626', textDecoration: 'underline', fontSize: '13px', padding: 0 }}>
+        Try again
+      </button>
+    </div>
+  );
+}
+
 export function TuneRail({
   activeVersion,
   formData,
@@ -42,6 +54,7 @@ export function TuneRail({
   tailor,
   isAnalyzing = false,
   isSaving = false,
+  analyzeError = null,
   onSaveAsBase,
   onAnalyze,
   onSaveTailored,
@@ -187,6 +200,9 @@ export function TuneRail({
                 aria-label="Job description"
                 rows={8}
               />
+              {analyzeError && (
+                <ErrorBanner message={analyzeError} onRetry={() => onAnalyze?.(company, role, jobDescription)} />
+              )}
               <button
                 type="button"
                 className={styles.primaryBtn}
@@ -207,6 +223,7 @@ export function TuneRail({
               </div>
             ) : (
               <>
+                {tailor.error && <ErrorBanner message={tailor.error} onRetry={handleRunTune} />}
                 <h3 className={styles.heading}>Anything we&rsquo;re missing?</h3>
                 <p className={styles.hint}>Optional &mdash; add evidence for any gap, or skip straight to tuning.</p>
                 <GapPromptChips
