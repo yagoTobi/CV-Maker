@@ -51,7 +51,7 @@ export default function Dashboard() {
     setLoadingId(id);
     const version = await api.getVersion(id);
     setLoadingId(null);
-    if (!version) {
+    if (!version || !version.formData) {
       toast.error("Couldn't load that CV. Check your connection and try again.");
       return;
     }
@@ -63,7 +63,7 @@ export default function Dashboard() {
   const handleApplyToJob = useCallback(async (baseId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const version = await api.getVersion(baseId);
-    if (!version) {
+    if (!version || !version.formData) {
       toast.error("Couldn't load that CV. Check your connection and try again.");
       return;
     }
