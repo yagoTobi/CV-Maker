@@ -15,6 +15,7 @@ function defaultProps(overrides = {}) {
     onBackToOriginal: vi.fn(),
     onViewInDashboard: vi.fn(),
     onDismiss: vi.fn(),
+    onDownload: vi.fn(),
     ...overrides,
   };
 }
@@ -25,9 +26,10 @@ describe('PostSavePrompt', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('when isOpen=true, renders heading "What\'s next?" and three action buttons', () => {
+  it('when isOpen=true, renders heading "What\'s next?" and four action buttons', () => {
     render(<PostSavePrompt {...defaultProps()} />);
     expect(screen.getByText(/what's next\?/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /download pdf/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /tune for another job/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /back to original cv/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /view in dashboard/i })).toBeInTheDocument();

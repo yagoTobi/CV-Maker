@@ -14,6 +14,8 @@ export interface PostSavePromptProps {
   onBackToOriginal: () => void;
   onViewInDashboard: () => void;
   onDismiss: () => void;
+  onDownload: () => void;
+  isDownloading?: boolean;
 }
 
 export function PostSavePrompt({
@@ -22,6 +24,8 @@ export function PostSavePrompt({
   onBackToOriginal,
   onViewInDashboard,
   onDismiss,
+  onDownload,
+  isDownloading = false,
 }: PostSavePromptProps): React.JSX.Element | null {
   const viewRef = useRef<HTMLButtonElement>(null);
 
@@ -51,6 +55,14 @@ export function PostSavePrompt({
         <h2 className={styles.heading}>{"What's next?"}</h2>
         <p className={styles.sub}>Your tailored CV is saved as a job application.</p>
         <div className={styles.actions}>
+          <button
+            type="button"
+            className={styles.secondaryBtn}
+            onClick={onDownload}
+            disabled={isDownloading}
+          >
+            {isDownloading ? 'Generating…' : 'Download PDF'}
+          </button>
           <button type="button" className={styles.secondaryBtn} onClick={onTuneAnotherJob}>
             Tune for another job
           </button>

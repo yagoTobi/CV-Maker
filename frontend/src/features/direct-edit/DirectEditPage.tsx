@@ -502,6 +502,8 @@ export default function DirectEditPage() {
         onBackToOriginal={tuneFlow.onBackToOriginal}
         onViewInDashboard={tuneFlow.onViewInDashboard}
         onDismiss={tuneFlow.onDismissPostSave}
+        onDownload={handleDownload}
+        isDownloading={isDownloading}
       />
       {isNamePromptOpen && (
         <NamePromptDialog
