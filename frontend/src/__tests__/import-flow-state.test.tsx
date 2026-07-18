@@ -175,7 +175,12 @@ describe('Navigation Flow State Management', () => {
         name: 'My CV',
         templateId: 'med-length-proff-cv',
         texContent: '\\documentclass{article}',
-        formData: null,
+        formData: {
+          templateId: 'med-length-proff-cv',
+          personalInfo: { fullName: 'Test User', email: '', phone: '', location: '', links: [] },
+          workExperience: [], education: [], skills: [], projects: [], awards: [],
+          sectionOrder: [],
+        },
         createdAt: '2026-01-01T00:00:00Z',
       } as Awaited<ReturnType<typeof api.getVersion>>);
 
