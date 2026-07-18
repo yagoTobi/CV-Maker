@@ -91,6 +91,35 @@ describe('Dashboard download feedback', () => {
     mockApi.generateLatex.mockResolvedValue({ texContent: 'latex' });
   });
 
+  it('downloads a saved CV when stored texContent is empty but formData is present', async () => {
+    mockApi.getVersion.mockResolvedValue({ ...fullBase, texContent: '' });
+    mockApi.generateLatex.mockResolvedValue({ texContent: '\\documentclass{article}...' });
+    mockApi.compileLatex.mockResolvedValue({
+      success: true,
+      pdf_base64: 'PDFDATA',
+      page_count: 1,
+    });
+    await renderLoadedDashboard();
+
+    fireEvent.click(screen.getByTitle('Download PDF'));
+
+    await waitFor(() => expect(mockApi.generateLatex).toHaveBeenCalledWith(formData));
+    expect(mockApi.compileLatex).toHaveBeenCalledWith('\\documentclass{article}...', 'med-length-proff-cv');
+    expect(mockDownloadPdf).toHaveBeenCalledWith('PDFDATA', 'Ada_Lovelace_CV.pdf');
+    expect(screen.queryByText("Couldn't load that CV. Check your connection and try again.")).not.toBeInTheDocument();
+  });
+
+  it('shows a generation error toast when LaTeX generation fails', async () => {
+    mockApi.generateLatex.mockResolvedValue({ texContent: '', error: 'gen broke' });
+    await renderLoadedDashboard();
+
+    fireEvent.click(screen.getByTitle('Download PDF'));
+
+    expect(await screen.findByText("Couldn't generate your PDF. gen broke")).toBeInTheDocument();
+    expect(mockApi.compileLatex).not.toHaveBeenCalled();
+    expect(mockDownloadPdf).not.toHaveBeenCalled();
+  });
+
   it('(f) compile fail shows a truncated error toast and clears downloading state', async () => {
     const rawError = 'LaTeX error\n'.repeat(40);
     mockApi.compileLatex.mockResolvedValue({ success: false, error: rawError, page_count: 0 });

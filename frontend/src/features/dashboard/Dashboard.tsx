@@ -77,11 +77,16 @@ export default function Dashboard() {
     setDownloadingId(versionId);
     try {
       const version = await api.getVersion(versionId);
-      if (!version || !version.texContent) {
+      if (!version || !version.formData) {
         toast.error("Couldn't load that CV. Check your connection and try again.");
         return;
       }
-      const result = await api.compileLatex(version.texContent, version.templateId);
+      const { texContent, error: genError } = await api.generateLatex(version.formData);
+      if (!texContent) {
+        toast.error(`Couldn't generate your PDF. ${truncateError(genError)}`);
+        return;
+      }
+      const result = await api.compileLatex(texContent, version.templateId);
       if (result.success && result.pdf_base64) {
         downloadPdf(result.pdf_base64, generateCVFilename({
           fullName: version.formData?.personalInfo?.fullName,
@@ -99,7 +104,7 @@ export default function Dashboard() {
     } finally {
       setDownloadingId(null);
     }
-  }, [toast, truncateError]);
+  }, [toast]);
 
   const handleRequestDelete = useCallback((id: string) => {
     setConfirmDeleteId(id);
