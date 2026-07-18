@@ -33,11 +33,14 @@ export interface PageCountInfo {
   pageCount: number | null;
   /** A compile is currently in flight. */
   isChecking: boolean;
+  /** Human-readable page-margin overflow warning from the last real compile, or null. */
+  overflowWarning: string | null;
 }
 
 interface CompiledCount {
   hash: string;
   count: number;
+  warning: string | null;
 }
 
 export function usePageCount(
@@ -58,6 +61,7 @@ export function usePageCount(
     // Nothing to compile: disabled, no data, or confidently single-page.
     if (!enabled || !formData || belowGate) {
       abortRef.current?.abort();
+      if (belowGate) setCompiled(null);
       return;
     }
 
@@ -82,7 +86,11 @@ export function usePageCount(
 
       setIsChecking(false);
       if (result.success) {
-        setCompiled({ hash, count: result.page_count || 1 });
+        setCompiled({
+          hash,
+          count: result.page_count || 1,
+          warning: result.warnings?.length ? result.warnings.join(' ') : null,
+        });
       }
     }, DEBOUNCE_MS);
 
@@ -102,5 +110,10 @@ export function usePageCount(
     pageCount = compiled?.count ?? null;
   }
 
-  return { pageCount, isChecking };
+  const overflowWarning: string | null =
+    !enabled || !formData ? null
+    : belowGate ? null
+    : compiled?.warning ?? null;
+
+  return { pageCount, isChecking, overflowWarning };
 }

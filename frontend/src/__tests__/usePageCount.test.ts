@@ -138,4 +138,75 @@ describe('usePageCount', () => {
     expect(result.current.pageCount).toBeNull();
     expect(result.current.isChecking).toBe(false);
   });
+
+  it('surfaces the overflow warning string from an above-gate compile', async () => {
+    mockCompile.mockResolvedValue({
+      success: true,
+      pdf_base64: 'AA==',
+      page_count: 1,
+      warnings: ['1 line overflows the page margin — some text may be cut off'],
+    });
+
+    const { result } = renderHook(
+      ({ fd, est }) => usePageCount(fd, est, true),
+      { initialProps: { fd: makeFormData(), est: 1.4 } }
+    );
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1600); });
+
+    expect(result.current.overflowWarning).toBe(
+      '1 line overflows the page margin — some text may be cut off'
+    );
+  });
+
+  it('reports no overflow warning when the compile returns none', async () => {
+    mockCompile.mockResolvedValue({ success: true, pdf_base64: 'AA==', page_count: 1 });
+
+    const { result } = renderHook(
+      ({ fd, est }) => usePageCount(fd, est, true),
+      { initialProps: { fd: makeFormData(), est: 1.4 } }
+    );
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1600); });
+
+    expect(result.current.pageCount).toBe(1);
+    expect(result.current.overflowWarning).toBeNull();
+  });
+
+  it('has no overflow warning and never compiles below the gate', async () => {
+    const { result } = renderHook(
+      ({ fd, est }) => usePageCount(fd, est, true),
+      { initialProps: { fd: makeFormData(), est: 0.5 } }
+    );
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+
+    expect(result.current.overflowWarning).toBeNull();
+    expect(mockGenerate).not.toHaveBeenCalled();
+    expect(mockCompile).not.toHaveBeenCalled();
+  });
+
+  it('clears a stale overflow warning after dropping back below the gate', async () => {
+    mockCompile.mockResolvedValue({
+      success: true,
+      pdf_base64: 'AA==',
+      page_count: 2,
+      warnings: ['1 line overflows the page margin — some text may be cut off'],
+    });
+
+    const { result, rerender } = renderHook(
+      ({ fd, est }) => usePageCount(fd, est, true),
+      { initialProps: { fd: makeFormData(), est: 1.4 } }
+    );
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1600); });
+    expect(result.current.overflowWarning).toBe(
+      '1 line overflows the page margin — some text may be cut off'
+    );
+
+    rerender({ fd: makeFormData(), est: 0.5 });
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+
+    expect(result.current.overflowWarning).toBeNull();
+  });
 });
