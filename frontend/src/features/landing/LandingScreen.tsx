@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCVContext } from '../../contexts/CVContext';
 import { useToolsContext } from '../../contexts/ToolsContext';
+import { useToast } from '../../contexts/ToastContext';
 import { api } from '../../services/api';
 import { BuildExpansionPanel } from './BuildExpansionPanel';
 import { TuneExpansionPanel } from './TuneExpansionPanel';
@@ -11,6 +12,7 @@ export default function LandingScreen() {
   const navigate = useNavigate();
   const { savedVersions, resetForNewBuild, setSelectedTemplateForBuild } = useCVContext();
   const { cvImport, handleVersionLoad } = useToolsContext();
+  const toast = useToast();
   const [expandedPanel, setExpandedPanel] = useState<'build' | 'tune' | null>(null);
 
   const handleBuildClick = useCallback(() => {
@@ -27,11 +29,13 @@ export default function LandingScreen() {
     const baselineCVs = savedVersions.filter(v => !v.parentVersionId);
     if (baselineCVs.length === 1) {
       const version = await api.getVersion(baselineCVs[0].id);
-      if (version) {
-        handleVersionLoad(version);
-        setSelectedTemplateForBuild(version.templateId);
-        navigate('/build/form', { state: { tune: true } });
+      if (!version || !version.formData) {
+        toast.error("Couldn't load that CV. Check your connection and try again.");
+        return;
       }
+      handleVersionLoad(version);
+      setSelectedTemplateForBuild(version.templateId);
+      navigate('/build/form', { state: { tune: true } });
       return;
     }
     if (expandedPanel === 'tune') {
@@ -39,7 +43,7 @@ export default function LandingScreen() {
       return;
     }
     setExpandedPanel('tune');
-  }, [expandedPanel, savedVersions, navigate, handleVersionLoad, setSelectedTemplateForBuild]);
+  }, [expandedPanel, savedVersions, navigate, handleVersionLoad, setSelectedTemplateForBuild, toast]);
 
   const handleBuildFromTune = useCallback(() => {
     resetForNewBuild();

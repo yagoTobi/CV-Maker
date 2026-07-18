@@ -54,3 +54,29 @@
   color: var(--text-muted);
   font-size: 14px;
 }
+
+.bootstrapError {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  font-family: var(--font-family-sans, 'IBM Plex Sans', sans-serif);
+  color: var(--color-text-primary, #1E293B);
+}
+
+.bootstrapActions {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.bootstrapActions button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border, #E2E8F0);
+  background: white;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: inherit;
+}

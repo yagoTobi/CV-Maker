@@ -154,13 +154,16 @@ export function useTuneFlow({ formData, activeVersion, cvContainerRef }: UseTune
     setSavedSuccessfully(false);
     if (baseId) {
       const base = await api.getVersion(baseId);
-      if (base?.formData) {
-        setFormData(base.formData);
-        setActiveVersion(base);
+      if (!base || !base.formData) {
+        toast.error("Couldn't load that CV. Check your connection and try again.");
+        setSavedSuccessfully(false);
+        return;
       }
+      setFormData(base.formData);
+      setActiveVersion(base);
     }
     resetFlow();
-  }, [resetFlow, setActiveVersion, setFormData]);
+  }, [resetFlow, setActiveVersion, setFormData, toast]);
 
   const onViewInDashboard = useCallback(() => {
     const baseId = savedBaseIdRef.current;

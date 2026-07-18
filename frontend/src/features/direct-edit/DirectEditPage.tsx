@@ -35,7 +35,7 @@ import type { HighlightContextValue } from './components/editor-primitives/Highl
 import { useTuneFlow } from './hooks/useTuneFlow';
 import { useCVContext } from '../../contexts/CVContext';
 import { api } from '../../services/api';
-import { getStoredActiveVersionId } from '../../utils/activeVersionStorage';
+import { getStoredActiveVersionId, persistActiveVersionId } from '../../utils/activeVersionStorage';
 import { generateId } from '../../utils/idHelpers';
 import { generateCVFilename } from '../../utils/cvFilename';
 import { downloadPdf } from '../../utils/downloadPdf';
@@ -121,6 +121,8 @@ export default function DirectEditPage() {
     onFirstSave: handleFirstSave,
   });
   const [isBootstrapping, setIsBootstrapping] = useState(!formData);
+  const [bootstrapFailed, setBootstrapFailed] = useState(false);
+  const [bootstrapAttempt, setBootstrapAttempt] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
   const [tunePanelOpen, setTunePanelOpen] = useState(false);
   const setEditorActions = useSetEditorActions();
@@ -237,6 +239,13 @@ export default function DirectEditPage() {
           setIsBootstrapping(false);
           return;
         }
+        if (activeId && (!full || !full.formData)) {
+          if (!cancelled) {
+            setBootstrapFailed(true);
+            setIsBootstrapping(false);
+          }
+          return;
+        }
       }
 
       // No known in-progress version → start with an empty template.
@@ -248,7 +257,7 @@ export default function DirectEditPage() {
 
     bootstrap();
     return () => { cancelled = true; };
-  }, [formData, setActiveVersion, setFormData, selectedTemplateForBuild]);
+  }, [bootstrapAttempt, formData, setActiveVersion, setFormData, selectedTemplateForBuild]);
 
   // Open tune rail from navigation state (e.g., from a landing panel or the Dashboard)
   useEffect(() => {
@@ -323,6 +332,37 @@ export default function DirectEditPage() {
   }, [setEditorActions, handleDownload, handleTuneForJob, saveStatus, isDownloading,
       tunePanelOpen, activeVersion, savedVersions, tuneCompanyName, tuneRole,
       pageCount, isCheckingPageCount, retrySave, overflowWarning]);
+
+  if (bootstrapFailed) {
+    return (
+      <div className={styles.bootstrapError}>
+        <p>Couldn't load your CV.</p>
+        <div className={styles.bootstrapActions}>
+          <button
+            type="button"
+            onClick={() => {
+              setBootstrapFailed(false);
+              setIsBootstrapping(true);
+              setBootstrapAttempt(a => a + 1);
+            }}
+          >
+            Retry
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              persistActiveVersionId(null);
+              setActiveVersion(null);
+              setBootstrapFailed(false);
+              setFormData(createEmptyFormData());
+            }}
+          >
+            Start fresh
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (isBootstrapping || !formData) {
     return <div className={styles.loading}>Loading...</div>;

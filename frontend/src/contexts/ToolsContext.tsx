@@ -5,6 +5,7 @@ import { useImport } from '../hooks/useImport';
 import { api } from '../services/api';
 import { useJobContext } from './JobContext';
 import { useCVContext } from './CVContext';
+import { useToast } from './ToastContext';
 import type { SaveVersionData } from '../features/dashboard';
 import type { CVVersion, CVVersionMeta } from '../types';
 
@@ -44,6 +45,7 @@ export function ToolsProvider({ children }: { children: ReactNode }) {
   const templates = useTemplates();
   const cvImport = useImport();
   const compiler = useCompiler();
+  const toast = useToast();
 
   const handleVersionLoad = useCallback((version: CVVersion) => {
     templates.updateContent(version.texContent);
@@ -88,8 +90,12 @@ export function ToolsProvider({ children }: { children: ReactNode }) {
 
   const handleSwitchVersion = useCallback(async (id: string) => {
     const version = await api.getVersion(id);
-    if (version) handleVersionLoad(version);
-  }, [handleVersionLoad]);
+    if (!version || !version.formData) {
+      toast.error("Couldn't load that CV. Check your connection and try again.");
+      return;
+    }
+    handleVersionLoad(version);
+  }, [handleVersionLoad, toast]);
 
   const value = useMemo(() => ({
     templates,

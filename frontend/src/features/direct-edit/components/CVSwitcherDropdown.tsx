@@ -9,6 +9,7 @@ import { useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCVContext } from '../../../contexts/CVContext';
 import { useToolsContext } from '../../../contexts/ToolsContext';
+import { useToast } from '../../../contexts/ToastContext';
 import { api } from '../../../services/api';
 import type { CVVersionMeta } from '../../../types';
 import styles from './CVSwitcherDropdown.module.css';
@@ -21,6 +22,7 @@ interface CVSwitcherDropdownProps {
 export function CVSwitcherDropdown({ isOpen, onClose }: CVSwitcherDropdownProps) {
   const { savedVersions, activeVersion, resetForNewBuild } = useCVContext();
   const { handleVersionLoad } = useToolsContext();
+  const toast = useToast();
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -53,9 +55,12 @@ export function CVSwitcherDropdown({ isOpen, onClose }: CVSwitcherDropdownProps)
 
   const handleItemClick = async (meta: CVVersionMeta) => {
     const full = await api.getVersion(meta.id);
-    if (full) {
-      handleVersionLoad(full);
+    if (!full || !full.formData) {
+      toast.error("Couldn't load that CV. Check your connection and try again.");
+      onClose();
+      return;
     }
+    handleVersionLoad(full);
     onClose();
   };
 
